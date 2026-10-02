@@ -102,7 +102,35 @@ def mini_fleet_dashboard():
     </html>
     '''
     return render_template_string(html_layout, fleet_rows=fleet_rows)
-
+@app.route('/api/data', methods=['POST'])
+def receive_data_simple():
+    data = request.json
+    if not data:
+        return jsonify({"status": "ERROR"}), 400
+    
+    dev_id = data.get("device_id")
+    dev_pass = data.get("device_pass")
+    live_temp = data.get("current_temp", data.get("max_temp", "0.0"))
+    power_stat = data.get("power_status", "MAIN AC")
+    
+    init_db()
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT device_pass FROM mini_fleet WHERE device_id = ?", (dev_id,))
+    record = cursor.fetchone()
+    
+    if not record or record[0] != dev_pass:
+        conn.close()
+        return jsonify({"auth": "UNAUTHORIZED"}), 403
+    
+    utc_now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    cursor.execute('''
+        UPDATE mini_fleet SET last_ping_utc = ?, highest_temp = ?, power_status = ? WHERE device_id = ?
+    ''', (utc_now_str, str(live_temp), power_stat, dev_id))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({"status": "SUCCESS"}), 200
 if __name__ == '__main__':
     init_db()
     port = int(os.environ.get("PORT", 8080))
