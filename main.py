@@ -6,7 +6,8 @@ import sqlite3
 from datetime import datetime, timezone
 
 app = Flask(__name__)
-DB_NAME = "safeelec_v1_7_national.db"
+DB_NAME = "safeelec_v1_7_perfect.db"
+
 
 def init_v1_7_db():
     conn = sqlite3.connect(DB_NAME)
