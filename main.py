@@ -69,7 +69,7 @@ def index():
 def receive_data():
     data = request.get_json()
     dev_id = data.get('device_id')
-    temp = data.get('temperature')
+    temp = data.get('current_temp')
     
     conn = sqlite3.connect('safeelec.db')
     c = conn.cursor()
