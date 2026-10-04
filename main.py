@@ -1,140 +1,283 @@
-# ==============================================================================
-# 🌐 SAFE-ELEC V1.7 - 7-ELEVEN & INDUSTRIAL NATIONAL FLEET COMMAND (PRODUCTION)
-# ==============================================================================
 from flask import Flask, jsonify, request, render_template_string
 import sqlite3
+import json
 from datetime import datetime, timezone
 
 app = Flask(__name__)
-DB_NAME = "safeelec_v1_7_perfect.db"
+DB_NAME = "safeelec_v2.db"
 
-
-def init_v1_7_db():
+# ==============================================
+# 🗄️ สร้างฐานข้อมูล
+# ==============================================
+def init_db():
     conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    # 📊 ฐานข้อมูลรองรับระบบไฟฟ้า 3 เฟส, แยกหมวดหมู่ธุรกิจ, แยกลูกเซอร์กิตย่อย และล็อกรหัสฮาร์ดแวร์เปลี่ยนรุ่น
-    cursor.execute('''
+    cur = conn.cursor()
+    cur.execute('''
     CREATE TABLE IF NOT EXISTS industrial_fleet (
-        device_id TEXT PRIMARY KEY, site_code TEXT, business_type TEXT, region TEXT, province TEXT,
-        status TEXT, last_ping TEXT, temp_max TEXT, grid_status TEXT, gnd_leakage TEXT,
-        system_mad_status TEXT, wiring_fault_status TEXT, sensor_1_id TEXT, pzem_a_id TEXT,
-        v_a TEXT, a_a TEXT, r_a TEXT, v_b TEXT, a_b TEXT, r_b TEXT, v_c TEXT, a_c TEXT, r_c TEXT,
-        cb1 TEXT, cb2 TEXT, cb3 TEXT, cb4 TEXT, cb5 TEXT, cb6 TEXT, daily_kwh TEXT, power_factor TEXT
+        device_id TEXT PRIMARY KEY,
+        device_pass TEXT,
+        site_code TEXT,
+        region TEXT DEFAULT 'ภาคอีสาน',
+        province TEXT DEFAULT 'ขอนแก่น',
+        business_type TEXT DEFAULT 'ร้านสะดวกซื้อ',
+        status TEXT DEFAULT 'ACTIVE',
+        last_ping TEXT,
+        temp_max TEXT,
+        grid_status TEXT,
+        gnd_leakage TEXT,
+        system_mad_status TEXT,
+        cb_total INTEGER DEFAULT 0,
+        cb_active INTEGER DEFAULT 0,
+        cb_vacant INTEGER DEFAULT 0,
+        cb_warning INTEGER DEFAULT 0,
+        cb_danger INTEGER DEFAULT 0,
+        cb_data TEXT,
+        is_backup INTEGER DEFAULT 0,
+        assigned_to TEXT DEFAULT 'ทีมช่างจังหวัดขอนแก่น',
+        backup_device_id TEXT,
+        daily_kwh TEXT,
+        power_factor TEXT
     )
     ''')
     
-    # 🏬 ลงทะเบียนข้อมูลตู้จำลองแยกหมวดหมู่สำหรับใช้รูดขายไอเดียพรีเซนต์งาน
-    sample_nodes = [
-        ('SAFE-TH001', 'STORE-14201', '🏪 ร้านสะดวกซื้อ 7-Eleven', 'ภาคอีสาน', 'ขอนแก่น', 'ACTIVE', '-', '41.5', 'MAIN AC', '0.00', 'OPERATIONAL', 'NORMAL_WIRING', '28-AA-7B-45-00-11', 'PZEM-V3.0', '220.1', '12.5', '17.6', '219.5', '11.8', '18.6', '220.8', '13.2', '16.7', '14.2', '15.1', '0.0', '8.4', '0.0', '19.5', '45.8', '0.88'),
-        ('SAFE-PUB-S012', 'CLUB-00892', '🍹 สถานบันเทิง ผับ/บาร์', 'ภาคใต้', 'ภูเก็ต', 'ACTIVE', '-', '44.2', 'MAIN AC', '0.00', 'OPERATIONAL', 'NORMAL_WIRING', '28-AA-9C-88-22-33', 'PZEM-V3.0', '219.2', '45.4', '4.8', '218.6', '42.1', '5.1', '220.1', '44.8', '4.7', '22.4', '24.1', '35.0', '12.4', '8.5', '6.2', '124.5', '0.74'),
-        ('SAFE-FAC-C005', 'FACTORY-99', '🏭 โรงงานอุตสาหกรรม', 'ภาคกลาง', 'ชลบุรี', 'ACTIVE', '-', '39.8', 'MAIN AC', '0.00', 'OPERATIONAL', 'NORMAL_WIRING', '28-BB-11-22-33-44', 'PZEM-V4.0', '222.4', '88.5', '2.5', '221.8', '84.2', '2.6', '223.1', '89.1', '2.4', '45.2', '52.4', '12.5', '0.0', '0.0', '0.0', '485.2', '0.81')
+    # ข้อมูลเริ่มต้น
+    init_nodes = [
+        ('SAFE-TH001', 'A2K9M4P7', 'CP_ALL_WOKWI_TEST', 'ภาคอีสาน', 'ขอนแก่น', 'ร้านสะดวกซื้อ', 'ACTIVE', '-', '41.5', 'MAIN AC', '0.00', 'OPERATIONAL', 38, 0, 38, 0, 0, '{}', 0, 'SAFE-TH001-BAK', '45.8', '0.88'),
+        ('SAFE-TH002', 'A2K9M4P7', 'CP_ALL_KHONKAEN_MAIN', 'ภาคอีสาน', 'ขอนแก่น', 'ร้านสะดวกซื้อ', 'ACTIVE', '-', '42.0', 'MAIN AC', '0.00', 'OPERATIONAL', 38, 0, 38, 0, 0, '{}', 0, 'SAFE-TH002-BAK', '42.3', '0.89'),
+        ('SAFE-TH003', 'A2K9M4P7', 'CPF_TEST_NODE', 'ภาคอีสาน', 'ขอนแก่น', 'ทดสอบระบบ', 'ACTIVE', '-', '39.5', 'MAIN AC', '0.00', 'OPERATIONAL', 38, 0, 38, 0, 0, '{}', 0, 'SAFE-TH003-BAK', '38.2', '0.91')
     ]
-    cursor.executemany("INSERT OR IGNORE INTO industrial_fleet VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", sample_nodes)
+    cur.executemany('''
+        INSERT OR IGNORE INTO industrial_fleet VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ''', init_nodes)
     conn.commit()
     conn.close()
 
+init_db()
+
+# ==============================================
+# 📡 รับข้อมูลจากอุปกรณ์
+# ==============================================
 @app.route('/api/data', methods=['POST'])
-def wokwi_direct_gateway():
-    """ 📡 ท่อดักรับข้อมูล JSON ตรงจากบอร์ด Wokwi คุณพี่เพื่อแปรผลขึ้นระบบออนไลน์เรียลไทม์ """
+def receive_data():
     data = request.json
-    if not data: return jsonify({"status": "ERROR"}), 400
+    if not data:
+        return jsonify({"status": "ERROR"}), 400
+    
     dev_id = data.get("device_id")
-    
+    dev_pass = data.get("device_pass")
+    if not dev_id:
+        return jsonify({"status": "MISSING_ID"}), 400
+
+    cb_count = int(data.get("cb_count", 0))
+    cb_data = {}
+    active = vacant = warning = danger = 0
+    max_rating = 20.0
+
+    for i in range(1, cb_count + 1):
+        val = float(data.get(f"cb{i}", 0))
+        cb_data[f"cb{i}"] = round(val, 1)
+        if val > 0.1:
+            active += 1
+            if val >= max_rating * 0.9:
+                danger += 1
+            elif val >= max_rating * 0.7:
+                warning += 1
+        else:
+            vacant += 1
+
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    utc_now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    cur = conn.cursor()
     
-    cursor.execute('''
-        UPDATE industrial_fleet 
-        SET last_ping=?, temp_max=?, grid_status=?, gnd_leakage=?, system_mad_status=?, wiring_fault_status=?,
-            sensor_1_id=?, pzem_a_id=?,
-            v_a=?, a_a=?, r_a=?, v_b=?, a_b=?, r_b=?, v_c=?, a_c=?, r_c=?,
-            cb1=?, cb2=?, cb3=?, cb4=?, cb5=?, cb6=?, daily_kwh=?, power_factor=?
+    cur.execute('''
+        UPDATE industrial_fleet SET
+            device_pass=?, site_code=?, last_ping=?, temp_max=?, grid_status=?,
+            gnd_leakage=?, system_mad_status=?, cb_total=?, cb_active=?, cb_vacant=?,
+            cb_warning=?, cb_danger=?, cb_data=?, is_backup=?, daily_kwh=?, power_factor=?
         WHERE device_id=?
-    ''', (utc_now, data.get("current_temp"), data.get("power_status"), data.get("gnd_leakage", "0.00"), data.get("system_mad_status", "OPERATIONAL"), data.get("wiring_fault_status", "NORMAL_WIRING"),
-          data.get("sensor_1_id", "28-AA-7B-45-00-11"), data.get("pzem_a_id", "PZEM-V3.0"),
-          data.get("v_a", "220.0"), data.get("a_a", "10.0"), data.get("r_a", "22.0"), data.get("v_b", "220.0"), data.get("a_b", "10.0"), data.get("r_b", "22.0"), data.get("v_c", "220.0"), data.get("a_c", "10.0"), data.get("r_c", "22.0"),
-          data.get("cb1", "12.0"), data.get("cb2", "15.0"), data.get("cb3", "0.0"), data.get("cb4", "8.0"), data.get("cb5", "0.0"), data.get("cb6", "19.5"), data.get("daily_kwh", "45.8"), data.get("power_factor", "0.88"), dev_id))
+    ''', (
+        dev_pass,
+        data.get("site_code", "-"),
+        now,
+        data.get("current_temp", "-"),
+        data.get("power_status", "-"),
+        data.get("gnd_leakage", "0.00"),
+        data.get("system_mad_status", "OPERATIONAL"),
+        cb_count,
+        active,
+        vacant,
+        warning,
+        danger,
+        json.dumps(cb_data),
+        1 if data.get("is_backup") else 0,
+        data.get("daily_kwh", "0"),
+        data.get("power_factor", "0"),
+        dev_id
+    ))
+    
     conn.commit()
     conn.close()
-    return jsonify({"status": "SUCCESS"}), 200
+    return jsonify({"status": "SUCCESS", "device_id": dev_id}), 200
 
-@app.route('/global-fleet')
-def global_fleet_dashboard():
+# ==============================================
+# 📊 หน้าแรก — แสดงรายการอุปกรณ์
+# ==============================================
+@app.route('/')
+def mini_console():
     conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM industrial_fleet ORDER BY business_type ASC, device_id ASC")
-    all_nodes = cursor.fetchall()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT device_id, site_code, status, temp_max, grid_status, 
+               cb_total, cb_active, cb_vacant, cb_warning, cb_danger
+        FROM industrial_fleet ORDER BY device_id
+    """)
+    devices = cur.fetchall()
     conn.close()
 
-    html_layout = '''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>SAFE-ELEC Infrastructure Console</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="https://cloudflare.com">
-        <style>
-            body { font-family: Arial, sans-serif; background-color: #060913; color: #c9d1d9; padding: 12px; margin: 0; }
-            .header { text-align: center; padding: 12px; background: #161b22; border-bottom: 2px solid #00ffff; border-radius: 6px; margin-bottom: 12px; }
-            h2 { color: #00ffff; font-size: 13px; margin: 0; text-transform: uppercase; }
-            .card { background-color: #121622; border: 1px solid #21263d; border-radius: 6px; padding: 14px; margin-bottom: 15px; }
-            .biz-type { background: #00ffff; color: #0b0f19; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; }
-            .section-title { font-size: 11px; color: #58a6ff; font-weight: bold; margin: 12px 0 5px 0; text-transform: uppercase; border-bottom: 1px solid #21263d; padding-bottom: 2px; }
-            .row { display: flex; justify-content: space-between; font-size: 12px; margin: 4px 0; }
-            .val-bold { font-weight: bold; color: #ffffff; }
-            .cb-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 8px; }
-            .cb-box { background: #1c2135; padding: 8px; border-radius: 4px; border: 1px solid #2d3554; text-align: center; font-size: 10px; }
-            .cb-active { border-left: 4px solid #00ff66; }
-            .cb-vacant { border-left: 4px solid #8b949e; color: #8b949e; }
-            .cb-full { border-left: 4px solid #ff3333; background: #421c1c; animation: blinker 1.5s infinite; }
-            .ai-box { background: #0b1a30; border: 1px solid #1c3d6e; padding: 10px; border-radius: 4px; margin-top: 10px; font-size: 11px; }
-            .btn-buy { display: inline-block; background: #ff9800; color: #0d1117; padding: 4px 8px; text-decoration: none; border-radius: 3px; font-weight: bold; font-size: 10px; margin-top: 5px; text-transform: uppercase; }
-            @keyframes blinker { 50% { opacity: 0.3; } }
-        </style>
-    </head>
-    <body>
-        <div class="header"><h2>📊 SAFE-ELEC ศูนย์ควบคุมโครงข่ายตู้ไฟฟ้า 3 เฟสระดับประเทศ (V1.7)</h2></div>
-        
-        {% for node in all_nodes %}
-        <div class="card">
-            <div class="row">
-                <span class="val-bold" style="color:#00ffff;"><i class="fa-solid fa-building-shield"></i> {{ node[2] }}</span>
-                <span class="biz-type">{{ node[2] }}</span>
-            </div>
-            <div class="row"><span>🆔 รหัสตู้ควบคุม:</span> <span class="val-bold">{{ node[0] }} (จังหวัด{{ node[4] }})</span></div>
-            <div class="row"><span>🌡️ อุณหภูมิภายในตู้สูงสุด:</span> <span class="val-bold" style="color:#ff3333;">{{ node[7] }} °C</span></div>
-            
-            <div class="section-title">🔮 ระบบจัดเก็บและรองรับชิ้นส่วนอุปกรณ์ไอทีเปลี่ยนรุ่น (Auto/Manual Registry)</div>
-            <div class="status-box" style="background:#161b22; padding:8px; border-radius:4px; font-size:10.5px; border:1px solid #232a3d;">
-                <div>📌 รหัสโมดูลเซนเซอร์ (ROM ID): <span class="val-bold" style="color:#00ff66;">{{ node[12] }}</span></div>
-                <div style="margin-top:4px;">⚡ โมเดลชิปมิเตอร์ 3 เฟส: <span class="val-bold" style="color:#00e6ff;">{{ node[13] }}</span></div>
-                <div style="color:#8b949e; font-size:9.5px; margin-top:4px;"><i class="fa-solid fa-circle-info"></i> เปลี่ยนชิ้นส่วนไอทีต่างรุ่นข้ามคลาวด์ได้ระบบจะดึงรหัสลงทะเบียนออโต้ทันที [1.3]</div>
-            </div>
+    html = '''<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAFE-ELEC Mini Console</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#0b0e17;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;padding:12px;}
+.header{text-align:center;padding:15px 10px 20px;}
+.header h1{color:#00ffff;font-size:18px;}
+.card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px;margin-bottom:14px;}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.dev-id{background:#7928ca;color:#fff;padding:5px 12px;border-radius:4px;font-weight:bold;font-size:15px;}
+.active{color:#00ff88;font-weight:bold;}
+.row{display:flex;align-items:center;margin:9px 0;font-size:14px;}
+.label{width:90px;color:#8b949e;}
+.val{font-weight:bold;}
+.temp{color:#ff6b6b;}
+.power{color:#58a6ff;}
+.stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:12px;}
+.stat{background:#1c2135;padding:8px 5px;border-radius:4px;text-align:center;font-size:12px;}
+.stat b{display:block;font-size:16px;}
+.total{background:#1c2135;}
+.on{background:#132e1f;}
+.empty{background:#212634;}
+.warn{background:#3d2e08;}
+.danger{background:#421c1c;}
+.cb-section{margin-top:14px;}
+.cb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:6px;margin-top:8px;}
+.cb{padding:8px 4px;border-radius:4px;font-size:11px;text-align:center;}
+.cb-vacant{background:#212634;border-left:4px solid #6e7681;color:#8b949e;}
+.cb-ok{background:#132e1f;border-left:4px solid #28c840;color:#8fffa8;}
+.cb-warn{background:#3d2e08;border-left:4px solid #d29922;color:#ffd670;}
+.cb-danger{background:#421c1c;border-left:4px solid #ff4444;color:#ff9999;animation:blink 1.5s infinite;}
+@keyframes blink{50%{opacity:0.4;}}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>📊 SAFE-ELEC แดชบอร์ดระบบคลาวด์ฟรี</h1>
+</div>
+'''
 
-            <div class="section-title">⚡ ผังไดอะแกรมแรงดันและความต้านทาน 3 เฟสเมนหลัก</div>
-            <div class="row"><span>🔴 Phase A (L1):</span> <span class="val-bold">{{ node[14] }}V | {{ node[15] }}A | {{ node[16] }}Ω</span></div>
-            <div class="row"><span>🟡 Phase B (L2):</span> <span class="val-bold">{{ node[17] }}V | {{ node[18] }}A | {{ node[19] }}Ω</span></div>
-            <div class="row"><span>🔵 Phase C (L3):</span> <span class="val-bold">{{ node[20] }}V | {{ node[21] }}A | {{ node[22] }}Ω</span></div>
-            <div class="row"><span>🟢 กระแสไฟรั่วลงดิน:</span> <span class="val-bold" style="color:#00ff66;">{{ node[9] }} mA</span></div>
+    for d in devices:
+        dev_id, site, status, temp, power, total, active, vacant, warn, danger = d
+        power_text = "ไฟหลัก AC" if power == "MAIN AC" else "แบตเตอรี่สำรอง"
+        html += f'''
+<div class="card">
+  <div class="top">
+    <span class="dev-id">{dev_id}</span>
+    <span class="active">● ACTIVE</span>
+  </div>
+  <div class="row"><span class="label">📍 Site:</span><span class="val">{site}</span></div>
+  <div class="row"><span class="label">🌡️ Temp:</span><span class="val temp">{temp} °C</span></div>
+  <div class="row"><span class="label">⚡ Power:</span><span class="val power">{power_text}</span></div>
+  <div class="stat-grid">
+    <div class="stat total">ทั้งหมด<b>{total}</b></div>
+    <div class="stat on">ใช้งาน<b>{active}</b></div>
+    <div class="stat empty">ว่าง<b>{vacant}</b></div>
+    <div class="stat warn">เฝ้าระวัง<b>{warn}</b></div>
+    <div class="stat danger">อันตราย<b>{danger}</b></div>
+  </div>
+</div>
+'''
 
-            <div class="section-title">⚡ สถานะโหลดกระแสพ่วงแอมป์รายลูกเซอร์กิตย่อย (Branch Breakers)</div>
-            <div class="cb-grid">
-                {% for i in range(1, 7) %}
-                {% set cb_val = node[22+i]|float %}
-                <div class="cb-box {% if cb_val >= 20.0 %}cb-full{% elif cb_val > 0.1 %}cb-active{% else %}cb-vacant{% endif %}">
-                    <b>ลูกย่อยที่ {{ i }}</b><br>
-                    {% if cb_val >= 20.0 %}
-                        ⚠️ โหลดเต็มพิกัด!<br><b style="color:#ff3333;">{{ cb_val }} A</b><br>🛑 ห้ามพ่วงเพิ่มเด็ดขาด
-                    {% elif cb_val > 0.1 %}
-                        🟢 ใช้งานปกติ<br><span style="color:#00ff66;">{{ cb_val }} A</span>
-                    {% else %}
-                        ⚫ ช่องว่าง (VACANT)<br><span style="color:#8b949e;">0.0 A</span>
-                    {% endif %}
-                </div>
-                {% endfor %}
-            </div>
+    html += '''
+</body>
+</html>
+'''
+    return html
 
-            <div class="ai-box">
-                <b style="color:#58a6ff;"><i class="fa-solid fa-brain"></i> AI วิเคราะห์กลยุทธ์ลดต้นทุนพลังงานและการใช้ไฟ (ENERGY REPORT)</b><br>
+# ==============================================
+# 📋 หน้าผังวงจรละเอียด
+# ==============================================
+@app.route('/detail/<device_id>')
+def detail(device_id):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT device_id, site_code, temp_max, grid_status, cb_total, cb_data
+        FROM industrial_fleet WHERE device_id=?
+    """, (device_id,))
+    d = cur.fetchone()
+    conn.close()
+    
+    if not d:
+        return "ไม่พบอุปกรณ์", 404
+    
+    dev_id, site, temp, power, total, cb_json = d
+    cb_data = json.loads(cb_json) if cb_json else {}
 
+    html = f'''<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{dev_id} — ผังวงจร</title>
+<style>
+body{{background:#0b0e17;color:#c9d1d9;font-family:sans-serif;padding:12px;}}
+.back{{color:#00ffff;text-decoration:none;display:inline-block;margin-bottom:15px;}}
+.card{{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px;}}
+h2{{color:#00ffff;margin-bottom:10px;}}
+.cb-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-top:15px;}}
+.cb{{padding:10px 6px;border-radius:5px;text-align:center;font-size:13px;}}
+.cb-vacant{{background:#212634;border-left:4px solid #6e7681;color:#8b949e;}}
+.cb-ok{{background:#132e1f;border-left:4px solid #28c840;color:#8fffa8;}}
+.cb-warn{{background:#3d2e08;border-left:4px solid #d29922;color:#ffd670;}}
+.cb-danger{{background:#421c1c;border-left:4px solid #ff4444;color:#ff9999;animation:blink 1.5s infinite;}}
+@keyframes blink{{50%{{opacity:0.4;}}}}
+</style>
+</head>
+<body>
+<a href="/" class="back">← กลับหน้าหลัก</a>
+<div class="card">
+  <h2>{dev_id}</h2>
+  <p>📍 {site} | 🌡️ {temp} °C | ⚡ {power}</p>
+  <h3 style="margin-top:15px;">ผังวงจรภายในตู้ — ทั้งหมด {total} ช่อง</h3>
+  <div class="cb-grid">
+'''
+    for i in range(1, total + 1):
+        val = float(cb_data.get(f"cb{i}", 0))
+        if val < 0.1:
+            cls = "cb-vacant"
+            txt = "ว่าง"
+        elif val >= 18.0:
+            cls = "cb-danger"
+            txt = f"{val}A ⚠️"
+        elif val >= 14.0:
+            cls = "cb-warn"
+            txt = f"{val}A"
+        else:
+            cls = "cb-ok"
+            txt = f"{val}A"
+        html += f'<div class="cb {cls}"><b>ช่อง {i}</b><br>{txt}</div>'
+    
+    html += '''
+  </div>
+</div>
+</body>
+</html>
+'''
+    return html
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+          
