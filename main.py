@@ -1,8 +1,10 @@
 from flask import Flask, render_template_string, request, jsonify
+from flask_cors import CORS
 import sqlite3
 from datetime import datetime
 
 app = Flask(__name__)
+CORS(app)
 
 def init_db():
     conn = sqlite3.connect('safeelec.db')
@@ -44,18 +46,20 @@ def index():
         .status{display:inline-block;width:12px;height:12px;border-radius:50%;background:#4ade80;margin-right:8px}
         .id{font-size:18px;font-weight:bold;color:#a855f7}
         .row{margin:10px 0}
-        .label{color:#94a3b8;display:inline-block;width:80px}
+        .label{color:#94a3b8;display:inline-block;width:90px}
         .value{font-weight:500}
-        a{color:#4cc9f0;text-decoration:none}
     </style>
 </head>
 <body>
     <h1>📊 SAFE-ELEC แดชบอร์ดระบบคลาวด์ฟรี</h1>
     {% for dev in devices %}
     <div class="device">
-        <div class="id"><span class="status"></span>{{dev[0]}} <span style="float:right;color:#4ade80">● ACTIVE</span></div>
+        <div class="id">
+            <span class="status"></span>{{dev[0]}}
+            <span style="float:right;color:#4ade80">● ACTIVE</span>
+        </div>
         <div class="row"><span class="label">📍 Site:</span> <span class="value">{{dev[1]}}</span></div>
-        <div class="row"><span class="label">🌡️ Temp:</span> <span class="value">{{dev[2] if dev[2] else '-'}} °C</span></div>
+        <div class="row"><span class="label">🌡️ Temp:</span> <span class="value">{{dev[2] if dev[2] is not none else '-'}} °C</span></div>
         <div class="row"><span class="label">⚡ Power:</span> <span class="value" style="color:#60a5fa">{{dev[3]}}</span></div>
         <div class="row"><span class="label">🕐 อัปเดต:</span> <span class="value">{{dev[4] if dev[4] else '-'}}</span></div>
     </div>
@@ -67,17 +71,31 @@ def index():
 
 @app.route('/api/data', methods=['POST'])
 def receive_data():
-    data = request.get_json()
+    data = request.get_json(force=True)
+    print(f"✅ ได้รับ: {data}")
+    
     dev_id = data.get('device_id')
-    temp = data.get('current_temp')
+    temp = data.get('temperature')
+    power = data.get('power_status')
+    
+    if not dev_id:
+        return jsonify({"error": "missing device_id"}), 400
     
     conn = sqlite3.connect('safeelec.db')
     c = conn.cursor()
-    c.execute('''UPDATE devices SET temp=?, updated_at=? WHERE id=?''',
-              (temp, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), dev_id))
+    c.execute('''UPDATE devices SET temp=?, power=?, updated_at=? WHERE id=?''',
+              (temp, power, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), dev_id))
+    
+    if c.rowcount == 0:
+        return jsonify({"error": "device not found"}), 404
+    
     conn.commit()
     conn.close()
-    return jsonify({"status":"ok"}), 200
+    return jsonify({"status": "ok"}), 200
+
+@app.route('/api/data/cmd', methods=['GET'])
+def get_command():
+    return jsonify({"cmd": "none"}), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
