@@ -1,470 +1,454 @@
 from flask import Flask, request, jsonify, render_template_string, session, redirect, url_for
 from flask_cors import CORS
 from datetime import datetime
+import uuid
 
 app = Flask(__name__)
-app.secret_key = "SAFE-ELEC-2026-SECRET-KEY-CHANGE-ME-PLEASE"
+app.secret_key = "SAFE-ELEC-PRODUCTION-SECRET-KEY-2026"
 CORS(app)
 
 # ==============================================================
-# 🔐 บัญชีผู้ใช้
+# 📍 กำหนดค่าทั้งหมดที่นี่ที่เดียว — ไม่ต้องแก้ที่อื่น
 # ==============================================================
-USER_DB = {
-    "admin": {"password": "123456", "name": "ผู้ดูแลระบบ", "customer_id": "ALL"},
-    "cust0891": {"password": "123456", "name": "อาคารหลัก ขอนแก่น", "customer_id": "CUST-0891"},
+
+# 🔑 บัญชีผู้ใช้ — เพิ่ม/ลูกค้าได้เลย
+ACCOUNTS = {
+    "admin":    {"password": "123456", "name": "ผู้ดูแลระบบ",       "customer_id": "ALL"},
+    "khonkaen": {"password": "123456", "name": "อาคารหลัก ขอนแก่น", "customer_id": "CUST-0891"},
+    "chiangmai":{"password": "123456", "name": "สาขาเชียงใหม่",       "customer_id": "CUST-0002"},
+    "rayong":   {"password": "123456", "name": "โรงงานผลิต ระยอง",   "customer_id": "CUST-0004"},
 }
 
-# ==============================================================
-# ⚙️ ค่าคงที่
-# ==============================================================
-CONFIG = {
-    "SYSTEM_NAME": "SAFE-ELEC",
-    "VERSION": "3.0.0-ESP-BACKUP",
-    "STANDARD": {
-        "V3_NOM": 380, "V3_MIN": 342, "V3_MAX": 418,
-        "V1_NOM": 220, "V1_MIN": 198, "V1_MAX": 242,
-        "TEMP_MIN": -10, "TEMP_MAX": 75, "TEMP_ALERT": 60,
-        "HUMI_MIN": 20, "HUMI_MAX": 90,
-        "BALANCE_MAX_A": 5.0, "BALANCE_MAX_PCT": 10.0,
-        "OFFLINE_SEC": 90,       # หลังจากหมดเวลานี้ ถือว่า ESP หลักเสีย
-        "BACKUP_ACTIVE_SEC": 15,  # เวลารอหลัง ESP สำรองทำงาน
-        "GND_RES_OK": 10.0, "GND_RES_WARN": 30.0,
-        "GND_V_OK": 2.0,
-    },
+# ⚙️ มาตรฐาน — ปรับเกณฑ์ที่นี่
+STANDARDS = {
+    "V3":  {"min": 342, "max": 418, "nom": 380},
+    "V1":  {"min": 198, "max": 242, "nom": 220},
+    "TEMP":{"min": -10, "max": 75, "alert": 60},
+    "HUMI":{"min": 20, "max": 90},
+    "BALANCE": {"max_amp": 5.0, "max_pct": 10.0},
+    "GROUND":  {"res_ok": 10.0, "res_warn": 30.0, "volt_ok": 2.0},
+    "OFFLINE_SEC": 90,
 }
 
-# ==============================================================
-# 📋 รายการอุปกรณ์
-# ==============================================================
-DEVICE_LIST = [
+# 🏗️ รายการอุปกรณ์ — เพิ่มเครื่องใหม่แค่บรรทัดเดียว
+DEVICES_CONFIG = [
+    # (device_id, site_name, customer_id, province, site_type)
     ("SAFE-001", "แผงหลัก+ย่อย อาคารหลัก", "CUST-0891", "ขอนแก่น", "office"),
+    # เพิ่มต่อตรงนี้ เช่น:
+    # ("SAFE-002", "สาขาเชียงใหม่-ชั้น1", "CUST-0002", "เชียงใหม่", "office"),
+    # ("SAFE-003", "โรงงาน-โซนA", "CUST-0004", "ระยอง", "factory"),
 ]
 
 # ==============================================================
-# 📐 โครงสร้างข้อมูล — เพิ่มฟิลด์ ESP สำรอง
+# 🔧 สร้างระบบอัตโนมัติ — ไม่ต้องแก้โค้ดข้างล่าง
 # ==============================================================
-TEMPLATE = {
-    "device_id": "", "site_name": "", "customer_id": "",
-    "province": "", "site_type": "",
-    "last_updated": "-", "last_seen": None,
-    "is_online": False, "status_summary": "offline",
-    
-    # === ระบบ ESP หลัก/สำรอง ===
-    "esp_main_status": "online",      # online / fault / replaced
-    "esp_backup_active": False,       # True = กำลังใช้ตัวสำรอง
-    "esp_backup_since": None,         # เวลาที่เปลี่ยนไปใช้สำรอง
-    "esp_replaced_at": None,          # เวลาที่เปลี่ยนตัวใหม่แล้ว
-    
-    "current_temp": 0.0, "humidity": 0.0,
-    "power_status": "MAIN AC",
-    
-    "v_l1_l2": 380.0, "v_l2_l3": 380.0, "v_l3_l1": 380.0,
-    "a_l1": 0.0, "a_l2": 0.0, "a_l3": 0.0,
-    "z1_v": 220.0, "z1_a": 0.0, "z2_v": 220.0, "z2_a": 0.0,
-    "gnd_resistance_ohm": 0.0, "gnd_voltage_v": 0.0,
-    
-    "sensors": {
-        "temp":      {"name": "อุณหภูมิตู้", "value": 0.0, "ok": None},
-        "humidity":  {"name": "ความชื้น", "value": 0.0, "ok": None},
-        "comm":      {"name": "สื่อสาร", "value": "ไม่เชื่อมต่อ", "ok": None},
-        "psu":       {"name": "แหล่งจ่ายภายใน", "value": "ตรวจสอบ", "ok": None},
-        "esp":       {"name": "อุปกรณ์ ESP", "value": "ไม่เชื่อมต่อ", "ok": None},
-        "a_l1":     {"name": "กระแสเฟส 1", "value": 0.0, "ok": None},
-        "a_l2":     {"name": "กระแสเฟส 2", "value": 0.0, "ok": None},
-        "a_l3":     {"name": "กระแสเฟส 3", "value": 0.0, "ok": None},
-        "v_l1_l2":  {"name": "แรงดัน L1-L2", "value": 0.0, "ok": None},
-        "v_l2_l3":  {"name": "แรงดัน L2-L3", "value": 0.0, "ok": None},
-        "v_l3_l1":  {"name": "แรงดัน L3-L1", "value": 0.0, "ok": None},
-        "z1_v":     {"name": "โซน1 แรงดัน", "value": 0.0, "ok": None},
-        "z1_a":     {"name": "โซน1 กระแส", "value": 0.0, "ok": None},
-        "z2_v":     {"name": "โซน2 แรงดัน", "value": 0.0, "ok": None},
-        "z2_a":     {"name": "โซน2 กระแส", "value": 0.0, "ok": None},
-        "gnd_resist":{"name": "กราวด์-ความต้านทาน", "value": 0.0, "unit": "Ω", "ok": None},
-        "gnd_volt": {"name": "กราวด์-แรงดันรั่ว", "value": 0.0, "unit": "V", "ok": None},
-    },
-    
-    "fault_list": [], "alert_level": "normal",
-}
 
+def create_device_template():
+    """คืนค่าแม่แบบอุปกรณ์ — เพิ่มฟิลด์ที่นี่ครั้งเดียว"""
+    return {
+        "last_updated": "-",
+        "last_seen": None,
+        "is_online": False,
+        "status_summary": "offline",
+        "esp_main_status": "online",
+        "esp_backup_active": False,
+        "esp_replaced_at": None,
+        "current_temp": 0.0,
+        "humidity": 0.0,
+        "power_status": "MAIN AC",
+        "wiring_fault": False,
+        "critical_shutdown": False,
+        "v_l1_l2": 0.0, "v_l2_l3": 0.0, "v_l3_l1": 0.0,
+        "a_l1": 0.0, "a_l2": 0.0, "a_l3": 0.0, "a_n": 0.0,
+        "power_kw": 0.0, "balance_3ph_ok": True,
+        "zones": {
+            1: {"v": 0.0, "a": 0.0, "w": 0.0, "ok": None},
+            2: {"v": 0.0, "a": 0.0, "w": 0.0, "ok": None},
+            3: {"v": 0.0, "a": 0.0, "w": 0.0, "ok": None},
+        },
+        "gnd_resistance_ohm": 0.0,
+        "gnd_voltage_v": 0.0,
+        "gnd_system_ok": True,
+        "sensors": {},
+        "fault_list": [],
+        "alert_level": "normal",
+    }
+
+def init_sensors_struct(dev):
+    """สร้างโครงสร้างเซนเซอร์อัตโนมัติ"""
+    dev["sensors"] = {
+        "a_l1":      {"name": "กระแสเฟส 1",       "value": 0.0,  "ok": None},
+        "a_l2":      {"name": "กระแสเฟส 2",       "value": 0.0,  "ok": None},
+        "a_l3":      {"name": "กระแสเฟส 3",       "value": 0.0,  "ok": None},
+        "comm":      {"name": "สถานะสื่อสาร",      "value": "ไม่เชื่อมต่อ", "ok": None},
+        "esp":       {"name": "สถานะอุปกรณ์",      "value": "ไม่เชื่อมต่อ", "ok": None},
+        "psu":       {"name": "แหล่งจ่ายภายใน",    "value": "ตรวจสอบ",     "ok": None},
+        "temp":      {"name": "อุณหภูมิตู้",       "value": 0.0,  "ok": None, "unit": "°C"},
+        "humidity":  {"name": "ความชื้นสัมพัทธ์",  "value": 0,    "ok": None, "unit": "%"},
+        "v_l1_l2":  {"name": "แรงดัน L1-L2",      "value": 0.0,  "ok": None, "unit": "V"},
+        "v_l2_l3":  {"name": "แรงดัน L2-L3",      "value": 0.0,  "ok": None, "unit": "V"},
+        "v_l3_l1":  {"name": "แรงดัน L3-L1",      "value": 0.0,  "ok": None, "unit": "V"},
+        "z1_a":      {"name": "โซน 1 — กระแส",     "value": 0.0,  "ok": None, "unit": "A"},
+        "z1_v":      {"name": "โซน 1 — แรงดัน",     "value": 0.0,  "ok": None, "unit": "V"},
+        "z2_a":      {"name": "โซน 2 — กระแส",     "value": 0.0,  "ok": None, "unit": "A"},
+        "z2_v":      {"name": "โซน 2 — แรงดัน",     "value": 0.0,  "ok": None, "unit": "V"},
+        "z3_a":      {"name": "โซน 3 — กระแส",     "value": 0.0,  "ok": None, "unit": "A"},
+        "z3_v":      {"name": "โซน 3 — แรงดัน",     "value": 0.0,  "ok": None, "unit": "V"},
+        "gnd_resist":{"name": "กราวด์ — ความต้านทาน", "value": 0.0, "ok": None, "unit": "Ω"},
+        "gnd_volt": {"name": "กราวด์ — แรงดันรั่ว",  "value": 0.0, "ok": None, "unit": "V"},
+    }
+
+# 📦 สร้างรายการอุปกรณ์ทั้งหมด — อัตโนมัติ
 devices = []
-for dev_id, site, cust, prov, stype in DEVICE_LIST:
-    d = TEMPLATE.copy()
-    d["device_id"] = dev_id
-    d["site_name"] = site
-    d["customer_id"] = cust
-    d["province"] = prov
-    d["site_type"] = stype
-    devices.append(d)
+for dev_id, site, cust_id, prov, stype in DEVICES_CONFIG:
+    dev = create_device_template()
+    dev.update({
+        "device_id": dev_id,
+        "site_name": site,
+        "customer_id": cust_id,
+        "province": prov,
+        "site_type": stype,
+    })
+    init_sensors_struct(dev)
+    devices.append(dev)
 
 # ==============================================================
-# 🔍 ตรวจสอบสถานะ ESP หลัก/สำรอง
+# 🧠 ตรวจสอบสถานะ — ไม่ต้องแก้เมื่อเพิ่มเครื่อง
 # ==============================================================
+
 def check_esp_status(dev):
-    """
-    ตรวจสอบและตั้งสถานะ ESP:
-    - ออนไลน์ปกติ → "เชื่อมต่อปกติ" ✅
-    - ขาดการติดต่อเกินเวลา → เปลี่ยนเป็น ESP สำรอง ⚠️
-    - ส่งสัญญาณเปลี่ยนใหม่ → กลับเป็นปกติ ✅
-    """
     now = datetime.now()
-    S = CONFIG["STANDARD"]
-    
     if dev["last_seen"]:
-        sec_since_seen = (now - dev["last_seen"]).total_seconds()
-        dev["is_online"] = sec_since_seen < S["OFFLINE_SEC"]
+        sec_since = (now - dev["last_seen"]).total_seconds()
+        dev["is_online"] = sec_since < STANDARDS["OFFLINE_SEC"]
     else:
         dev["is_online"] = False
-        sec_since_seen = 9999
-    
-    # 1. ESP กลับมาออนไลน์หลังจากเคยเสีย → แจ้งเปลี่ยนเรียบร้อย
-    if dev["is_online"] and dev["esp_main_status"] in ["fault", "recovering"]:
-        if dev["esp_replaced_at"]:
-            dev["esp_main_status"] = "replaced"
-            dev["esp_backup_active"] = False
-            dev["sensors"]["esp"]["value"] = "✅ ESP เปลี่ยนใหม่ — ปกติ"
-            dev["sensors"]["esp"]["ok"] = True
-        else:
-            dev["esp_main_status"] = "online"
-            dev["esp_backup_active"] = False
-            dev["sensors"]["esp"]["value"] = "เชื่อมต่อปกติ"
-            dev["sensors"]["esp"]["ok"] = True
-    
-    # 2. ESP ขาดการติดต่อเกินเวลา → เปิดโหมดสำรอง
-    elif not dev["is_online"] and sec_since_seen >= S["OFFLINE_SEC"]:
-        if dev["esp_main_status"] == "online":
-            dev["esp_main_status"] = "fault"
-            dev["esp_backup_active"] = True
-            dev["esp_backup_since"] = now
-        elif dev["esp_main_status"] == "fault":
-            # ยังใช้สำรองอยู่
-            dev["sensors"]["esp"]["value"] = "⚠️ ใช้โหมด ESP สำรอง – รอเปลี่ยน"
-            dev["sensors"]["esp"]["ok"] = False
-            dev["sensors"]["comm"]["value"] = "ทำงานผ่านสำรอง"
-            dev["sensors"]["comm"]["ok"] = False
-            dev["sensors"]["psu"]["value"] = "ตรวจสอบ"
-            dev["sensors"]["psu"]["ok"] = None
-    
-    # 3. ยังไม่เคยเชื่อมต่อเลย
-    else:
-        dev["sensors"]["esp"]["value"] = "ไม่เชื่อมต่อ"
-        dev["sensors"]["esp"]["ok"] = None
-        dev["sensors"]["comm"]["value"] = "ไม่เชื่อมต่อ"
-        dev["sensors"]["comm"]["ok"] = None
-        dev["sensors"]["psu"]["value"] = "ตรวจสอบ"
-        dev["sensors"]["psu"]["ok"] = None
+        sec_since = 99999
 
-# ==============================================================
-# 🔍 ตรวจสอบเซนเซอร์อื่นๆ
-# ==============================================================
-def check_sensors(dev):
-    S = CONFIG["STANDARD"]
-    faults = []
-    
+    s = dev["sensors"]
+    if dev["is_online"]:
+        dev["esp_main_status"] = "online"
+        dev["esp_backup_active"] = False
+        s["esp"]["value"] = "ทำงานปกติ"; s["esp"]["ok"] = True
+        s["comm"]["value"] = "เชื่อมต่อปกติ"; s["comm"]["ok"] = True
+        s["psu"]["value"] = "ปกติ"; s["psu"]["ok"] = True
+    elif sec_since >= STANDARDS["OFFLINE_SEC"]:
+        dev["esp_main_status"] = "fault"
+        dev["esp_backup_active"] = True
+        s["esp"]["value"] = "ขาดการติดต่อ"; s["esp"]["ok"] = False
+        s["comm"]["value"] = "ขาดสัญญาณ"; s["comm"]["ok"] = False
+        s["psu"]["value"] = "ผิดปกติ"; s["psu"]["ok"] = False
+    else:
+        s["esp"]["value"] = "รอสัญญาณ"; s["esp"]["ok"] = None
+        s["comm"]["value"] = "รอเชื่อมต่อ"; s["comm"]["ok"] = None
+        s["psu"]["value"] = "ตรวจสอบ"; s["psu"]["ok"] = None
+
+def check_balance(i1, i2, i3):
+    total = i1 + i2 + i3
+    if total <= 0: return True
+    avg = total / 3
+    for v in (i1, i2, i3):
+        if abs(v - avg) > STANDARDS["BALANCE"]["max_amp"]: return False
+        if avg > 0 and abs(v - avg) / avg * 100 > STANDARDS["BALANCE"]["max_pct"]: return False
+    return True
+
+def evaluate(dev):
+    """ประเมินทุกค่า — เรียกอัตโนมัติ ไม่ต้องแก้เมื่อเพิ่มเครื่อง"""
+    S = STANDARDS
+    dev["fault_list"] = []
+    s = dev["sensors"]
+
+    check_esp_status(dev)
+
     # อุณหภูมิ
     t = dev["current_temp"]
-    dev["sensors"]["temp"]["value"] = t
-    if t != 0:
-        if t < S["TEMP_MIN"] or t > S["TEMP_MAX"]:
-            dev["sensors"]["temp"]["ok"] = False
-            faults.append(f"❌ อุณหภูมิผิดปกติ: {t}°C")
-        elif t >= S["TEMP_ALERT"]:
-            dev["sensors"]["temp"]["ok"] = False
-            faults.append(f"⚠️ อุณหภูมิสูง: {t}°C")
-        else:
-            dev["sensors"]["temp"]["ok"] = True
+    s["temp"]["value"] = t
+    if not dev["is_online"] or t == 0:
+        s["temp"]["ok"] = None
+    elif t < S["TEMP"]["min"] or t > S["TEMP"]["max"]:
+        s["temp"]["ok"] = False; dev["fault_list"].append(f"🔴 อุณหภูมิผิดปกติ: {t}°C")
+    elif t >= S["TEMP"]["alert"]:
+        s["temp"]["ok"] = False; dev["fault_list"].append(f"🔴 อุณหภูมิสูง: {t}°C")
     else:
-        dev["sensors"]["temp"]["ok"] = None
-    
+        s["temp"]["ok"] = True
+
     # ความชื้น
     h = dev["humidity"]
-    dev["sensors"]["humidity"]["value"] = h
-    if h != 0:
-        dev["sensors"]["humidity"]["ok"] = S["HUMI_MIN"] <= h <= S["HUMI_MAX"]
+    s["humidity"]["value"] = h
+    if not dev["is_online"] or h == 0:
+        s["humidity"]["ok"] = None
+    elif not (S["HUMI"]["min"] <= h <= S["HUMI"]["max"]):
+        s["humidity"]["ok"] = False; dev["fault_list"].append(f"🔴 ความชื้นผิดปกติ: {h}%")
     else:
-        dev["sensors"]["humidity"]["ok"] = None
-    
+        s["humidity"]["ok"] = True
+
     # แรงดัน 3 เฟส
-    for k, v in [("v_l1_l2", dev["v_l1_l2"]), ("v_l2_l3", dev["v_l2_l3"]), ("v_l3_l1", dev["v_l3_l1"])]:
-        dev["sensors"][k]["value"] = v
-        dev["sensors"][k]["ok"] = S["V3_MIN"] <= v <= S["V3_MAX"] if v != 0 else None
-    
-    # กระแส
-    for k, v in [("a_l1", dev["a_l1"]), ("a_l2", dev["a_l2"]), ("a_l3", dev["a_l3"])]:
-        dev["sensors"][k]["value"] = v
-        dev["sensors"][k]["ok"] = True if v != 0 else None
-    
+    for key, val in [("v_l1_l2", dev["v_l1_l2"]), ("v_l2_l3", dev["v_l2_l3"]), ("v_l3_l1", dev["v_l3_l1"])]:
+        s[key]["value"] = val
+        if not dev["is_online"] or val == 0:
+            s[key]["ok"] = None
+        elif not (S["V3"]["min"] <= val <= S["V3"]["max"]):
+            s[key]["ok"] = False; dev["fault_list"].append(f"🔴 {s[key]['name']}: {val}V")
+        else:
+            s[key]["ok"] = True
+
+    # กระแสเฟส
+    for idx, key in enumerate(["a_l1", "a_l2", "a_l3"], start=1):
+        val = dev[key]
+        s[key]["value"] = val
+        if not dev["is_online"] or val == 0:
+            s[key]["ok"] = None
+        else:
+            s[key]["ok"] = True
+
+    # ความสมดุล 3 เฟส
+    dev["balance_3ph_ok"] = check_balance(dev["a_l1"], dev["a_l2"], dev["a_l3"])
+    if not dev["balance_3ph_ok"] and dev["is_online"]:
+        dev["fault_list"].append("🔴 ระบบ 3 เฟสไม่สมดุล")
+
+    # โซน 1-3
+    for z in range(1, 4):
+        v_key, a_key = f"z{z}_v", f"z{z}_a"
+        v, a = dev[v_key], dev[a_key]
+        s[v_key]["value"] = v; s[a_key]["value"] = a
+        if not dev["is_online"] or v == 0:
+            s[v_key]["ok"] = None; s[a_key]["ok"] = None
+        elif not (S["V1"]["min"] <= v <= S["V1"]["max"]):
+            s[v_key]["ok"] = False; dev["fault_list"].append(f"🔴 โซน{z} แรงดันผิดปกติ: {v}V")
+        else:
+            s[v_key]["ok"] = True; s[a_key]["ok"] = True if a > 0 else None
+
     # กราวด์
     gr = dev["gnd_resistance_ohm"]
-    dev["sensors"]["gnd_resist"]["value"] = gr
-    if gr > 0:
-        if gr > S["GND_RES_WARN"]:
-            dev["sensors"]["gnd_resist"]["ok"] = False
-            faults.append(f"🔴 กราวด์ไม่ดี! {gr}Ω")
-        elif gr > S["GND_RES_OK"]:
-            dev["sensors"]["gnd_resist"]["ok"] = False
-            faults.append(f"⚠️ กราวด์ควรปรับปรุง: {gr}Ω")
+    s["gnd_resist"]["value"] = gr
+    if gr <= 0:
+        s["gnd_resist"]["ok"] = None
+    elif gr > S["GROUND"]["res_ok"]:
+        s["gnd_resist"]["ok"] = False
+        if gr > S["GROUND"]["res_warn"]:
+            dev["fault_list"].append(f"🔴 กราวด์ไม่ดีมาก: {gr}Ω")
         else:
-            dev["sensors"]["gnd_resist"]["ok"] = True
+            dev["fault_list"].append(f"🔴 กราวด์ต้องปรับปรุง: {gr}Ω")
     else:
-        dev["sensors"]["gnd_resist"]["ok"] = None
-    
+        s["gnd_resist"]["ok"] = True
+
     gv = dev["gnd_voltage_v"]
-    dev["sensors"]["gnd_volt"]["value"] = gv
-    if gv > 0:
-        dev["sensors"]["gnd_volt"]["ok"] = True if gv <= S["GND_V_OK"] else False
+    s["gnd_volt"]["value"] = gv
+    if gv <= 0:
+        s["gnd_volt"]["ok"] = None
+    elif gv > S["GROUND"]["volt_ok"]:
+        s["gnd_volt"]["ok"] = False; dev["fault_list"].append(f"🔴 แรงดันรั่วสูง: {gv}V")
     else:
-        dev["sensors"]["gnd_volt"]["ok"] = None
-    
-    return faults
+        s["gnd_volt"]["ok"] = True
 
-# ==============================================================
-# ✅ ตรวจสอบทั้งหมด
-# ==============================================================
-def check_all(dev):
-    check_esp_status(dev)
-    faults = check_sensors(dev)
-    
-    # สรุประดับความสำคัญ
-    if dev["esp_backup_active"]:
-        dev["status_summary"] = "warning"
-        dev["alert_level"] = "warning"
-        faults.insert(0, "⚠️ กำลังใช้ ESP สำรอง — กรุณาเปลี่ยนอุปกรณ์หลัก")
-    elif not dev["is_online"]:
-        dev["status_summary"] = "offline"
-        dev["alert_level"] = "critical"
-    elif any("🔴" in f for f in faults):
-        dev["status_summary"] = "critical"
-        dev["alert_level"] = "critical"
-    elif any("⚠️" in f for f in faults):
-        dev["status_summary"] = "warning"
-        dev["alert_level"] = "warning"
+    # สรุประดับ
+    if not dev["is_online"]:
+        dev["status_summary"] = "offline"; dev["alert_level"] = "critical"
+    elif dev["fault_list"]:
+        dev["status_summary"] = "warning"; dev["alert_level"] = "critical" if any("ไม่ดี" in f or "สูง" in f for f in dev["fault_list"]) else "warning"
     else:
-        dev["status_summary"] = "online"
-        dev["alert_level"] = "normal"
-    
-    dev["fault_list"] = faults
-    return dev
+        dev["status_summary"] = "online"; dev["alert_level"] = "normal"
 
-# ==============================================================
-# 🛡️ ตรวจสอบล็อกอิน
-# ==============================================================
+# อัปเดตทุกอุปกรณ์ก่อนเรียกหน้า
 @app.before_request
-def check_login():
-    if request.path in ["/login", "/do_login", "/logout", "/api/data", "/api/replace-esp"]:
-        return
-    if "username" not in session:
-        return redirect("/login")
-
-@app.before_request
-def update_status():
-    for d in devices:
-        check_all(d)
+def refresh_all():
+    for dev in devices:
+        evaluate(dev)
 
 # ==============================================================
-# 🌐 API รับข้อมูล
+# 🌐 API & หน้าเว็บ
 # ==============================================================
-@app.route("/api/data", methods=["POST"])
-def receive():
-    data = request.get_json(force=True)
-    now = datetime.now()
-    
-    dev_id = data.get("device_id", "")
-    d = next((dev for dev in devices if dev["device_id"] == dev_id), None)
-    
-    if not d:
-        return jsonify({"ok": False, "error": f"ไม่พบอุปกรณ์: {dev_id}"}), 404
-    
-    # อัปเดตค่าทุกอย่าง
-    d["current_temp"] = data.get("current_temp", d["current_temp"])
-    d["humidity"] = data.get("humidity", d["humidity"])
-    d["v_l1_l2"] = data.get("v_l1_l2", d["v_l1_l2"])
-    d["v_l2_l3"] = data.get("v_l2_l3", d["v_l2_l3"])
-    d["v_l3_l1"] = data.get("v_l3_l1", d["v_l3_l1"])
-    d["a_l1"] = data.get("a_l1", d["a_l1"])
-    d["a_l2"] = data.get("a_l2", d["a_l2"])
-    d["a_l3"] = data.get("a_l3", d["a_l3"])
-    d["z1_v"] = data.get("z1_v", d["z1_v"])
-    d["z1_a"] = data.get("z1_a", d["z1_a"])
-    d["z2_v"] = data.get("z2_v", d["z2_v"])
-    d["z2_a"] = data.get("z2_a", d["z2_a"])
-    d["gnd_resistance_ohm"] = data.get("gnd_resistance_ohm", d["gnd_resistance_ohm"])
-    d["gnd_voltage_v"] = data.get("gnd_voltage_v", d["gnd_voltage_v"])
-    
-    d["last_updated"] = now.strftime("%H:%M:%S")
-    d["last_seen"] = now
-    
-    # ถ้ามี flag บอกว่าเปลี่ยน ESP แล้ว
-    if data.get("esp_replaced", False):
-        d["esp_replaced_at"] = now
-        d["esp_main_status"] = "recovering"
-    
-    check_all(d)
-    return jsonify({"ok": True, "esp_status": d["esp_main_status"]}), 200
 
-# ==============================================================
-# 🔧 API แจ้งเปลี่ยน ESP
-# ==============================================================
-@app.route("/api/replace-esp", methods=["POST"])
-def replace_esp():
-    """เรียกเมื่อเปลี่ยนตัว ESP ใหม่เสร็จแล้ว"""
-    data = request.get_json(force=True)
-    dev_id = data.get("device_id", "")
-    d = next((dev for dev in devices if dev["device_id"] == dev_id), None)
-    
-    if not d:
-        return jsonify({"ok": False, "error": "ไม่พบอุปกรณ์"}), 404
-    
-    d["esp_replaced_at"] = datetime.now()
-    d["esp_main_status"] = "recovering"
-    d["esp_backup_active"] = False
-    
-    return jsonify({
-        "ok": True,
-        "message": "บันทึกการเปลี่ยน ESP เรียบร้อย — รอสัญญาณจากอุปกรณ์เพื่อกลับสู่สถานะปกติ"
-    })
-
-@app.route("/api/devices")
-def get_devices():
-    my_cust = session.get("cust_id", "")
-    list_filtered = devices if my_cust == "ALL" else [d for d in devices if d["customer_id"] == my_cust]
-    return jsonify(list_filtered)
-
-# ==============================================================
-# 📲 ล็อกอิน
-# ==============================================================
-@app.route("/login")
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    err = request.args.get("err", "")
-    return render_template_string("""
-<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>เข้าสู่ระบบ — SAFE-ELEC</title>
-<style>body{background:#0f1629;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh}.box{background:#1a2342;padding:30px;border-radius:16px;width:100%;max-width:400px;border:1px solid #2a3b63}h2{text-align:center;color:#6cf;margin-bottom:25px}input{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:none;background:#0f1f3f;color:#fff;font-size:16px}button{width:100%;padding:12px;background:#2f9;border:none;border-radius:8px;color:#032;font-weight:bold;font-size:16px;margin-top:10px;cursor:pointer}.err{color:#f44;text-align:center;margin-top:15px}</style>
-</head><body><div class="box"><h2>🔐 เข้าสู่ระบบ SAFE-ELEC</h2><form method="post" action="/do_login"><input type="text" name="user" placeholder="ชื่อผู้ใช้" required><input type="password" name="pwd" placeholder="รหัสผ่าน" required><button type="submit">เข้าสู่ระบบ</button><div class="err">{{err}}</div></form></div></body></html>
-""", err=err)
-
-@app.route("/do_login", methods=["POST"])
-def do_login():
-    user = request.form.get("user", "").strip()
-    pwd = request.form.get("pwd", "")
-    if user in USER_DB and USER_DB[user]["password"] == pwd:
-        session["username"] = user
-        session["cust_id"] = USER_DB[user]["customer_id"]
-        session["name"] = USER_DB[user]["name"]
-        return redirect("/")
-    return redirect("/login?err=ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
+    if request.method == "POST":
+        u = request.form.get("username", "")
+        p = request.form.get("password", "")
+        if u in ACCOUNTS and ACCOUNTS[u]["password"] == p:
+            session["user"] = u
+            session["cid"] = ACCOUNTS[u]["customer_id"]
+            return redirect("/")
+        return render_template_string(LOGIN_PAGE, error="ชื่อหรือรหัสไม่ถูกต้อง")
+    return render_template_string(LOGIN_PAGE)
 
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/login")
 
-# ==============================================================
-# 📊 หน้าจอหลัก
-# ==============================================================
 @app.route("/")
-def dashboard():
-    return render_template_string("""
-<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>SAFE-ELEC PLATFORM</title>
+def index():
+    if "user" not in session:
+        return redirect("/login")
+    cid = session["cid"]
+    visible = [d for d in devices if cid == "ALL" or d["customer_id"] == cid]
+    return render_template_string(DASHBOARD_PAGE, devices=visible, user=session["user"])
+
+@app.route("/api/data", methods=["POST"])
+def upload_data():
+    """รับข้อมูลจากอุปกรณ์ — ส่งได้เลย ระบบรู้จักเอง"""
+    data = request.get_json(silent=True) or {}
+    dev_id = data.get("device_id")
+    if not dev_id:
+        return jsonify({"ok": False, "msg": "ต้องระบุ device_id"}), 400
+
+    dev = next((d for d in devices if d["device_id"] == dev_id), None)
+    if not dev:
+        return jsonify({"ok": False, "msg": "ไม่พบอุปกรณ์"}), 404
+
+    # อัปเดตค่าทุกฟิลด์อัตโนมัติ
+    for k, v in data.items():
+        if k in dev and k not in ["sensors", "fault_list"]:
+            dev[k] = v
+    dev["last_updated"] = datetime.now().strftime("%H:%M:%S %d/%m/%y")
+    dev["last_seen"] = datetime.now()
+    return jsonify({"ok": True, "device_id": dev_id})
+
+@app.route("/api/devices")
+def list_devices():
+    if "user" not in session:
+        return jsonify({"error": "เข้าสู่ระบบก่อน"}), 401
+    cid = session["cid"]
+    visible = [d for d in devices if cid == "ALL" or d["customer_id"] == cid]
+    return jsonify(visible)
+
+@app.route("/api/replace-esp", methods=["POST"])
+def mark_replaced():
+    data = request.get_json(silent=True) or {}
+    dev_id = data.get("device_id")
+    dev = next((d for d in devices if d["device_id"] == dev_id), None)
+    if not dev:
+        return jsonify({"ok": False}), 404
+    dev["esp_replaced_at"] = datetime.now()
+    return jsonify({"ok": True, "msg": "บันทึกเวลาเปลี่ยนอุปกรณ์เรียบร้อย"})
+
+# ==============================================================
+# 🎨 หน้าเว็บ — แยกส่วน ใช้ได้กับทุกเครื่อง
+# ==============================================================
+
+LOGIN_PAGE = """
+<!DOCTYPE html>
+<html lang="th">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เข้าสู่ระบบ — SAFE-ELEC</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif}
-body{background:#0f1629;color:#fff;padding:16px}
-h1{text-align:center;color:#6cf;margin-bottom:4px}
-.ver{text-align:center;color:#8ac;margin-bottom:12px}
-.user-bar{text-align:right;margin-bottom:12px;padding:8px 12px;background:#1a2342;border-radius:8px;font-size:14px}
-.user-bar a{color:#f66;text-decoration:none;margin-left:12px}
-.card{background:#1a2342;border-radius:16px;padding:16px;margin-bottom:16px;border:1px solid #2a3b63}
-.card.online{border-left:4px solid #4f9}
-.card.warning{border-left:4px solid #fa4;background:#2a2618}
-.card.critical{border-left:4px solid #f44;background:#2e1515}
-.card.offline{border-left:4px solid #666;opacity:0.85}
-.name{font-size:17px;font-weight:bold;color:#c9f;margin-bottom:8px}
-.meta{font-size:13px;color:#aaa;margin-bottom:10px}
-.section{margin:12px 0;padding:12px;border-radius:10px;background:#0f1f3f}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:10px}
-.item{padding:8px 10px;border-radius:6px;background:#1e2b4d;font-size:13px}
-.ok{color:#4f9}
-.warn{color:#fa4}
-.dang{color:#f44}
-.fbox{border:1px solid #f44;background:#2e1515;padding:12px;border-radius:8px;margin:10px 0}
-.backup-banner{background:#3a2a00;border:1px solid #fc3;border-radius:8px;padding:10px;margin:10px 0;text-align:center;font-weight:bold;color:#ffc}
-.replace-btn{background:#2f9;color:#032;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:bold;margin-top:8px}
+*{box-sizing:border-box;font-family:Sarabun,system-ui}
+body{background:#0f1629;color:#fff;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0}
+.box{background:#1a233f;padding:2rem;border-radius:16px;width:90%;max-width:400px;box-shadow:0 8px 32px #0003}
+h1{text-align:center;margin-bottom:1.5rem;font-size:1.4rem}
+input{width:100%;padding:.9rem;margin:.5rem 0;border:none;border-radius:8px;background:#273354;color:#fff;font-size:1rem}
+button{width:100%;padding:.9rem;border:none;border-radius:8px;background:#2f9f62;color:#fff;font-weight:bold;font-size:1rem;cursor:pointer;margin-top:.5rem}
+.err{color:#ff6b6b;text-align:center;margin-top:1rem}
 </style>
-</head><body>
-<h1>⚡ SAFE-ELEC PLATFORM</h1>
-<div class="ver">ระบบตรวจสอบ + ESP สำรองอัตโนมัติ</div>
-<div class="user-bar">👤 {{session['name']}} <a href="/logout">ออกจากระบบ</a></div>
-<div id="list"></div>
+</head>
+<body>
+<div class="box">
+<h1>🔐 เข้าสู่ระบบ</h1>
+<form method="post">
+<input name="username" placeholder="ชื่อผู้ใช้" required>
+<input name="password" type="password" placeholder="รหัสผ่าน" required>
+<button type="submit">เข้าสู่ระบบ</button>
+{% if error %}<div class="err">{{ error }}</div>{% endif %}
+</form>
+</div>
+</body>
+</html>
+"""
+
+DASHBOARD_PAGE = """
+<!DOCTYPE html>
+<html lang="th">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAFE-ELEC — แดชบอร์ด</title>
+<style>
+*{box-sizing:border-box;font-family:Sarabun,system-ui}
+body{background:#0f1629;color:#fff;margin:0;padding:1rem}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+.top h1{margin:0;font-size:1.3rem}
+.top a{color:#ff6b6b;text-decoration:none}
+.status-dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px}
+.online{background:#2f9f62}
+.offline{background:#666}
+.warning{background:#f9a825}
+.critical{background:#ff5252}
+.dev-card{background:#1a233f;border-radius:12px;padding:1rem;margin-bottom:1rem}
+.dev-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.75rem}
+.item{border-left:3px solid #555;background:#242f50;border-radius:6px;padding:.75rem}
+.item.ok{border-color:#2f9f62;background:#1a3a30}
+.item.warn{border-color:#666;background:#2a2f45}
+.item.bad{border-color:#ff5252;background:#382029}
+.name{font-size:.8rem;color:#aaa;margin-bottom:.25rem}
+.val{font-size:1.1rem;font-weight:bold}
+.faults{margin-top:.8rem;padding:.7rem;background:#2e2020;border-radius:6px;color:#ffb3b3;font-size:.9rem}
+.badge{display:inline-block;padding:.2rem .5rem;border-radius:4px;font-size:.75rem;font-weight:bold}
+.badge.ok{background:#2f9f6222;color:#6fdf9c}
+.badge.warn{background:#f9a82522;color:#ffd97c}
+.badge.critical{background:#ff525222;color:#ff9e9e}
+.badge.offline{background:#444;color:#aaa}
+</style>
+</head>
+<body>
+<div class="top">
+<h1>⚡ SAFE-ELEC — ระบบเฝ้าดูสถานะ</h1>
+<div>{{ user }} <a href="/logout">ออกจากระบบ</a></div>
+</div>
+
+{% for dev in devices %}
+<div class="dev-card">
+<div class="dev-head">
+<div><strong>{{ dev.device_id }}</strong> — {{ dev.site_name }} <small>({{ dev.province }})</small></div>
+<div>
+{% if dev.status_summary == 'online' %}
+<span class="badge ok">✅ ปกติ</span>
+{% elif dev.status_summary == 'warning' %}
+<span class="badge warn">⚠️ แจ้งเตือน</span>
+{% elif dev.status_summary == 'offline' %}
+<span class="badge offline">❌ ไม่ออนไลน์</span>
+{% else %}
+<span class="badge critical">🔴 ผิดปกติ</span>
+{% endif %}
+<small>อัปเดต: {{ dev.last_updated }}</small>
+</div>
+</div>
+
+<div class="grid">
+{% for key, s in dev.sensors.items() %}
+<div class="item {% if s.ok == true %}ok{% elif s.ok == false %}bad{% else %}warn{% endif %}">
+<div class="name">{{ s.name }}</div>
+<div class="val">
+{% if s.value is number %}{{ "%.1f"|format(s.value) }}{% else %}{{ s.value }}{% endif %}
+{% if s.unit %}{{ s.unit }}{% endif %}
+{% if s.ok == true %}✅{% elif s.ok == false %}❌{% else %}⏳{% endif %}
+</div>
+</div>
+{% endfor %}
+</div>
+
+{% if dev.fault_list %}
+<div class="faults">
+<strong>รายการแจ้งเตือน:</strong><br>
+{% for f in dev.fault_list %}{{ f }}<br>{% endfor %}
+</div>
+{% endif %}
+</div>
+{% else %}
+<p style="text-align:center;color:#888;padding:2rem">ไม่พบอุปกรณ์ที่เกี่ยวข้อง</p>
+{% endfor %}
+
 <script>
-let all = [];
-
-function getIcon(d){
-  const m={online:'🟢',warning:'🟡',critical:'🔴',offline:'⚫'};
-  return m[d.status_summary]||'❓';
-}
-function getSensorIcon(s){
-  if(s.ok===true) return '✅';
-  if(s.ok===false) return '❌';
-  return '⏳';
-}
-async function load(){
-  const res = await fetch('/api/devices');
-  all = await res.json();
-  render();
-}
-function render(){
-  document.getElementById('list').innerHTML = all.map(d=>`
-    <div class="card ${d.status_summary}">
-      <div class="name">${getIcon(d)} ${d.device_id} — ${d.site_name}</div>
-      <div class="meta">📍 ${d.province} | ⏰ อัปเดตล่าสุด: ${d.last_updated}</div>
-      
-      ${d.esp_backup_active ? `
-      <div class="backup-banner">
-        ⚠️ กำลังใช้ ESP สำรอง — กรุณาเปลี่ยนอุปกรณ์หลัก<br>
-        <button class="replace-btn" onclick="reportReplace('${d.device_id}')">✅ เปลี่ยน ESP ใหม่แล้ว</button>
-      </div>` : ''}
-      
-      ${d.fault_list.length>0 ? `
-      <div class="fbox"><b>📋 รายการแจ้งเตือน</b>
-        ${d.fault_list.map(f=>`<div>${f}</div>`).join('')}
-      </div>` : ''}
-      
-      <div class="section">
-        <b>📋 ทุกเซนเซอร์</b>
-        <div class="grid">
-          ${Object.entries(d.sensors).map(([k,s])=>`
-            <div class="item ${s.ok===true?'ok':s.ok===false?'dang':'warn'}">
-              ${getSensorIcon(s)} ${s.name}<br><b>${s.value}${s.unit||''}</b>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    </div>
-  `).join('');
-}
-async function reportReplace(devId){
-  if(!confirm('ยืนยันเปลี่ยน ESP ใหม่?')) return;
-  await fetch('/api/replace-esp', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({device_id: devId})
-  });
-  alert('บันทึกแล้ว! รอสัญญาณจากอุปกรณ์จะกลับเป็นปกติ');
-  load();
-}
-load();
-setInterval(load, 5000);
+setInterval(()=>location.reload(), 5000);
 </script>
-</body></html>
-""")
+</body>
+</html>
+"""
 
-# ==============================================================
-# 🚀 รัน
-# ==============================================================
 if __name__ == "__main__":
     print(f"\n{'='*60}")
-    print(f"  {CONFIG['SYSTEM_NAME']} — {CONFIG['VERSION']}")
-    print(f"  ✅ เซนเซอร์มีค่าแล้วแสดงทันที ไม่ต้องรอ")
-    print(f"  ✅ ESP หลักเสีย → แสดง: ⚠️ ใช้โหมด ESP สำรอง – รอเปลี่ยน")
-    print(f"  ✅ กดปุ่ม/ส่งสัญญาณเปลี่ยน → รับข้อมูลครั้งถัดไปแสดง ✅ ปกติ")
-    print(f"  ⏳ หากยังไม่มีข้อมูลจริง → แสดงนาฬิกาทราย ไม่แจ้งผิด")
+    print(f"✅ ระบบเริ่มทำงาน — รองรับอุปกรณ์จำนวนมาก")
+    print(f"📊 จำนวนอุปกรณ์: {len(devices)} เครื่อง")
+    print(f"📍 เพิ่ม/แก้ไขอุปกรณ์ที่: DEVICES_CONFIG")
+    print(f"🔑 บัญชีตัวอย่าง: {list(ACCOUNTS.keys())}")
+    print(f"🌐 เข้าใช้งาน: http://0.0.0.0:5000")
     print(f"{'='*60}\n")
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000, debug=True)
