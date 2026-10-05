@@ -1,53 +1,105 @@
 from flask import Flask, request, jsonify, render_template_string
 from flask_cors import CORS
+from datetime import datetime
 
 app = Flask(__name__)
-CORS(app)  # เปิดให้เรียกได้จากทุกที่
+CORS(app)
 
-# ตัวแปรเก็บค่าล่าสุด
-latest_data = {
-    "device_id": "SAFE-00001",
-    "current_temp": 0.0,
-    "humidity": 0.0,
-    "power_status": "MAIN AC",
-    "wiring_fault": False
-}
+devices = [
+    {
+        "device_id": "SAFE-TH001",
+        "site": "CP_ALL_WOKWI_TEST",
+        "current_temp": 0.0,
+        "humidity": 0.0,
+        "power_status": "ไฟหลัก AC",
+        "last_updated": "-"
+    },
+    {
+        "device_id": "SAFE-TH002",
+        "site": "CP_ALL_KHONKAEN_MAIN",
+        "current_temp": 0.0,
+        "humidity": 0.0,
+        "power_status": "ไฟหลัก AC",
+        "last_updated": "-"
+    },
+    {
+        "device_id": "SAFE-TH003",
+        "site": "CPF_TEST_NODE",
+        "current_temp": 0.0,
+        "humidity": 0.0,
+        "power_status": "ไฟหลัก AC",
+        "last_updated": "-"
+    }
+]
 
-# ✅ รับข้อมูลจาก ESP32 (POST)
 @app.route("/api/data", methods=["POST"])
 def receive_data():
-    global latest_data
     data = request.get_json(force=True)
-    print("📥 รับข้อมูลจาก ESP32:", data)
-    
-    # อัปเดตค่าล่าสุด
-    latest_data.update(data)
-    return jsonify({"status": "success", "received": data}), 200
+    dev_id = data.get("device_id")
+    for d in devices:
+        if d["device_id"] == dev_id:
+            d.update(data)
+            d["last_updated"] = datetime.now().strftime("%H:%M:%S")
+            break
+    return jsonify({"status": "success"}), 200
 
-# ✅ ให้หน้าเว็บดึงข้อมูล (GET)
-@app.route("/api/data", methods=["GET"])
-def get_data():
-    return jsonify(latest_data), 200
+@app.route("/api/devices", methods=["GET"])
+def get_devices():
+    return jsonify(devices), 200
 
-# ✅ หน้าแดชบอร์ด
 @app.route("/")
 def dashboard():
-    return f"""
-    <html>
-        <body style="font-family:sans-serif; padding:20px; background:#f5f5f5;">
-            <h1>SAFE-ELEC Dashboard</h1>
-            <div style="background:white; padding:20px; border-radius:10px;">
-                <h3>อุณหภูมิ: {latest_data['current_temp']} °C</h3>
-                <h3>ความชื้น: {latest_data['humidity']} %</h3>
-                <h3>สถานะไฟ: {latest_data['power_status']}</h3>
-                <h3>สถานะสาย: {'ปกติ' if not latest_data['wiring_fault'] else 'ผิดปกติ'}</h3>
-            </div>
-            <p>อัปเดตล่าสุด: {latest_data}</p>
-        </body>
-    </html>
-    """
+    return render_template_string("""
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>บอร์ดระบบคลาวด์ฟรี</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif}
+body{background:#0f1629;color:#fff;padding:20px}
+h1{text-align:center;color:#6cf;margin-bottom:30px}
+.card{background:#1a2342;border-radius:16px;padding:24px;margin-bottom:20px;border:1px solid #2a3563}
+.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.name{font-size:22px;font-weight:bold;color:#c9f}
+.status{display:flex;align-items:center;gap:6px;color:#6f9;font-weight:bold}
+.dot{width:10px;height:10px;border-radius:50%;background:#6f9}
+.row{margin:12px 0;font-size:18px;display:flex;align-items:center;gap:10px}
+</style>
+</head>
+<body>
+<h1>บอร์ดระบบคลาวด์ฟรี</h1>
+<div id="list"></div>
+<script>
+async function load(){
+  const res=await fetch('/api/devices');
+  const d=await res.json();
+  const list=document.getElementById('list');
+  list.innerHTML='';
+  d.forEach(x=>{
+    const t=x.current_temp>0?x.current_temp+' °C':'- °C';
+    list.innerHTML+=`
+      <div class="card">
+        <div class="head">
+          <div class="name">${x.device_id}</div>
+          <div class="status"><span class="dot"></span> ACTIVE</div>
+        </div>
+        <div class="row">📍 Site: ${x.site}</div>
+        <div class="row">🌡️ Temp: ${t}</div>
+        <div class="row">⚡ Power: ${x.power_status}</div>
+        <div class="row">⏰ อัปเดต: ${x.last_updated}</div>
+      </div>
+    `
+  })
+}
+load();
+setInterval(load, 10000);
+</script>
+</body>
+</html>
+    """)
 
 if __name__ == "__main__":
     import os
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
