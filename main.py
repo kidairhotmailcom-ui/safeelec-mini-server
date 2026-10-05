@@ -6,9 +6,15 @@ app = Flask(__name__)
 CORS(app)
 
 devices = [
-    {"device_id":"SAFE-TH001","site":"CP_ALL_WOKWI_TEST","current_temp":0.0,"humidity":0.0,"power_status":"ไฟหลัก AC","last_updated":"-"},
-    {"device_id":"SAFE-TH002","site":"CP_ALL_KHONKAEN_MAIN","current_temp":0.0,"humidity":0.0,"power_status":"ไฟหลัก AC","last_updated":"-"},
-    {"device_id":"SAFE-TH003","site":"CPF_TEST_NODE","current_temp":0.0,"humidity":0.0,"power_status":"ไฟหลัก AC","last_updated":"-"}
+    {"device_id":"SAFE-TH001","site":"CP_ALL_WOKWI_TEST","current_temp":0.0,"humidity":0.0,"power_status":"ไฟหลัก AC","last_updated":"-",
+     "customer_id":"CUST-0891","branch_id":"BR-KKN-01","device_pass":"A2K9M4P7",
+     "wiring_fault":False,"hardware_gen_old":1,"hardware_gen_new":1,"critical_shutdown":False},
+    {"device_id":"SAFE-TH002","site":"CP_ALL_KHONKAEN_MAIN","current_temp":0.0,"humidity":0.0,"power_status":"ไฟหลัก AC","last_updated":"-",
+     "customer_id":"CUST-0891","branch_id":"BR-KKN-01","device_pass":"A2K9M4P7",
+     "wiring_fault":False,"hardware_gen_old":1,"hardware_gen_new":1,"critical_shutdown":False},
+    {"device_id":"SAFE-TH003","site":"CPF_TEST_NODE","current_temp":0.0,"humidity":0.0,"power_status":"ไฟหลัก AC","last_updated":"-",
+     "customer_id":"CUST-0891","branch_id":"BR-KKN-01","device_pass":"A2K9M4P7",
+     "wiring_fault":False,"hardware_gen_old":1,"hardware_gen_new":1,"critical_shutdown":False}
 ]
 
 @app.route("/api/data", methods=["POST"])
@@ -16,7 +22,9 @@ def receive_data():
     d = request.get_json(force=True)
     for x in devices:
         if x["device_id"] == d.get("device_id"):
-            x.update(d)
+            # อัปเดตทุกค่าที่ส่งมา
+            for k, v in d.items():
+                x[k] = v
             x["last_updated"] = datetime.now().strftime("%H:%M:%S")
             break
     return jsonify({"ok":True})
@@ -40,7 +48,9 @@ body{background:#0f1629;color:#fff;padding:20px}
 h1{text-align:center;color:#6cf;margin-bottom:30px}
 .card{background:#1a2342;border-radius:16px;padding:24px;margin-bottom:16px;border:1px solid #2a3b63}
 .name{font-size:20px;font-weight:bold;color:#c9f;margin-bottom:10px}
-.row{margin:8px 0;font-size:16px}
+.row{margin:8px 0;font-size:15px}
+.ok{color:#4f9}
+.warn{color:#f84}
 </style>
 </head>
 <body>
@@ -56,10 +66,14 @@ async function load(){
     list.innerHTML+=`
     <div class="card">
       <div class="name">${x.device_id}</div>
-      <div class="row">📍 สถานที่: ${x.site}</div>
+      <div class="row">🏢 ลูกค้า: ${x.customer_id || '-'} | สาขา: ${x.branch_id || '-'}</div>
+      <div class="row">📍 สถานที่: ${x.site || '-'}</div>
       <div class="row">🌡️ อุณหภูมิ: ${x.current_temp} °C</div>
       <div class="row">💧 ความชื้น: ${x.humidity} %</div>
       <div class="row">⚡ สถานะไฟ: ${x.power_status}</div>
+      <div class="row ${x.wiring_fault ? 'warn' : 'ok'}">🔧 สายไฟผิด: ${x.wiring_fault ? '⚠️ ตรวจสอบ' : '✅ ปกติ'}</div>
+      <div class="row">🔄 รุ่นฮาร์ดแวร์: ${x.hardware_gen_old} → ${x.hardware_gen_new}</div>
+      <div class="row ${x.critical_shutdown ? 'warn' : 'ok'}">🛑 ตัดระบบ: ${x.critical_shutdown ? '⚠️ เกิดขึ้น' : '✅ ปกติ'}</div>
       <div class="row">⏰ อัปเดตล่าสุด: ${x.last_updated}</div>
     </div>`
   })
