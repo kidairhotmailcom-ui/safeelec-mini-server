@@ -5,6 +5,7 @@ from datetime import datetime
 app = Flask(__name__)
 CORS(app)
 
+# ข้อมูล 3 อุปกรณ์
 devices = [
     {
         "device_id": "SAFE-TH001",
