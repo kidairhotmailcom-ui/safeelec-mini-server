@@ -3,22 +3,22 @@ from flask_cors import CORS
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = "SAFE-ELEC-2026-SECRET-KEY-CHANGE-ME-PLEASE"  # ⚠️ เปลี่ยนเป็นข้อความสุ่มเองนะครับ
+app.secret_key = "SAFE-ELEC-2026-SECRET-KEY-CHANGE-ME-PLEASE"
 CORS(app)
 
 # ==============================================================
-# 🔐 บัญชีผู้ใช้ — เพิ่ม/แก้ไข ตรงนี้
+# 🔐 บัญชีผู้ใช้
 # ==============================================================
 USER_DB = {
     "admin": {
         "password": "123456",
         "name": "ผู้ดูแลระบบ",
-        "customer_id": "ALL"       # เห็นทุกเครื่อง
+        "customer_id": "ALL"
     },
     "cust0891": {
         "password": "123456",
         "name": "อาคารหลัก ขอนแก่น",
-        "customer_id": "CUST-0891" # เห็นเฉพาะรหัสนี้
+        "customer_id": "CUST-0891"
     },
     "cust0002": {
         "password": "123456",
@@ -30,16 +30,14 @@ USER_DB = {
         "name": "โรงงานผลิต ระยอง",
         "customer_id": "CUST-0004"
     },
-    # เพิ่มลูกค้าตามรูปแบบข้างบนได้เลยครับ
 }
 
 # ==============================================================
-# ⚙️ ค่าคงที่ระบบ
+# ⚙️ ค่าคงที่
 # ==============================================================
 CONFIG = {
     "SYSTEM_NAME": "SAFE-ELEC",
-    "VERSION": "2.6.0-FULL-PACK",
-    
+    "VERSION": "2.7.0-FIX-NAMES",
     "STANDARD": {
         "V3_NOM": 380, "V3_MIN": 342, "V3_MAX": 418,
         "V1_NOM": 220, "V1_MIN": 198, "V1_MAX": 242,
@@ -50,7 +48,6 @@ CONFIG = {
         "GND_RES_OK": 10.0, "GND_RES_WARN": 30.0,
         "GND_V_OK": 2.0,
     },
-    
     "SITE_TYPES": {
         "convenience": "ร้านสะดวกซื้อ",
         "shop": "ร้านค้าทั่วไป",
@@ -61,10 +58,11 @@ CONFIG = {
 }
 
 # ==============================================================
-# 📋 รายการอุปกรณ์
+# 📋 รายการอุปกรณ์ — ตรงกับ DEVICE_ID ที่ส่งมา
 # ==============================================================
 DEVICE_LIST = [
     ("SAFE-001", "แผงหลัก+ย่อย อาคารหลัก", "CUST-0891", "ขอนแก่น", "office"),
+    ("SAFE-00001", "แผงหลัก+ย่อย อาคารหลัก", "CUST-0891", "ขอนแก่น", "office"), # รองรับทั้ง 2 แบบ
     ("SAFE-002", "สาขาเชียงใหม่", "CUST-0002", "เชียงใหม่", "convenience"),
     ("SAFE-003", "โรงงานผลิต", "CUST-0004", "ระยอง", "factory"),
 ]
@@ -116,7 +114,6 @@ TEMPLATE = {
     "fault_list": [], "alert_level": "normal",
 }
 
-# สร้างรายการอุปกรณ์
 devices = []
 for dev_id, site, cust, prov, stype in DEVICE_LIST:
     d = TEMPLATE.copy()
@@ -128,7 +125,7 @@ for dev_id, site, cust, prov, stype in DEVICE_LIST:
     devices.append(d)
 
 # ==============================================================
-# 🔍 ตรวจสอบระบบ
+# 🔍 ตรวจสอบ
 # ==============================================================
 def check_ground(dev):
     S = CONFIG["STANDARD"]
@@ -231,7 +228,7 @@ def check_all(dev):
     return dev
 
 # ==============================================================
-# 🛡️ ตรวจสอบการเข้าสู่ระบบ
+# 🛡️ ตรวจสอบล็อกอิน
 # ==============================================================
 @app.before_request
 def check_login():
@@ -240,8 +237,90 @@ def check_login():
     if "username" not in session:
         return redirect("/login")
 
+@app.before_request
+def update_online():
+    now = datetime.now()
+    for d in devices:
+        if d["last_seen"]:
+            sec = (now - d["last_seen"]).total_seconds()
+            d["is_online"] = sec < CONFIG["STANDARD"]["OFFLINE_SEC"]
+        else:
+            d["is_online"] = False
+
 # ==============================================================
-# 📲 หน้าล็อกอิน
+# 🌐 API รับข้อมูล — ✅ รองรับทุกชื่อที่ ESP32 ส่งมา
+# ==============================================================
+@app.route("/api/data", methods=["POST"])
+def receive():
+    data = request.get_json(force=True)
+    now = datetime.now()
+    
+    # หาอุปกรณ์ — รองรับ SAFE-001 และ SAFE-00001
+    dev_id = data.get("device_id", "")
+    d = None
+    for dev in devices:
+        if dev["device_id"] == dev_id:
+            d = dev
+            break
+    
+    if not d:
+        return jsonify({"ok": False, "error": "Device not found"}), 404
+    
+    # ✅ รองรับทั้ง 2 ชื่อ — ฝั่งไหนส่งมาก็ได้
+    d["current_temp"] = data.get("current_temp", d["current_temp"])
+    d["humidity"] = data.get("humidity", d["humidity"])
+    d["wiring_fault"] = data.get("wiring_fault", d["wiring_fault"])
+    d["critical_shutdown"] = data.get("critical_shutdown", d["critical_shutdown"])
+    
+    d["v_l1_l2"] = data.get("v_l1_l2", d["v_l1_l2"])
+    d["v_l2_l3"] = data.get("v_l2_l3", d["v_l2_l3"])
+    d["v_l3_l1"] = data.get("v_l3_l1", d["v_l3_l1"])
+    d["a_l1"] = data.get("a_l1", d["a_l1"])
+    d["a_l2"] = data.get("a_l2", d["a_l2"])
+    d["a_l3"] = data.get("a_l3", d["a_l3"])
+    d["a_n"] = data.get("a_n", d["a_n"])
+    
+    # กำลัง — รองรับ 2 ชื่อ
+    d["power_kw"] = data.get("power_kw", data.get("power_3phase_kw", d["power_kw"]))
+    d["balance_3ph_ok"] = data.get("balance_3ph_ok", data.get("balance_ok", d["balance_3ph_ok"]))
+    
+    # โซน 1-3 — ✅ รองรับทั้ง z1_* และ sub1_*
+    d["z1_v"] = data.get("z1_v", data.get("sub1_v", d["z1_v"]))
+    d["z1_a"] = data.get("z1_a", data.get("sub1_a", d["z1_a"]))
+    d["z1_w"] = data.get("z1_w", data.get("sub1_w", d["z1_w"]))
+    
+    d["z2_v"] = data.get("z2_v", data.get("sub2_v", d["z2_v"]))
+    d["z2_a"] = data.get("z2_a", data.get("sub2_a", d["z2_a"]))
+    d["z2_w"] = data.get("z2_w", data.get("sub2_w", d["z2_w"]))
+    
+    d["z3_v"] = data.get("z3_v", data.get("sub3_v", d["z3_v"]))
+    d["z3_a"] = data.get("z3_a", data.get("sub3_a", d["z3_a"]))
+    d["z3_w"] = data.get("z3_w", data.get("sub3_w", d["z3_w"]))
+    
+    # กราวด์ — ✅ เพิ่มรองรับ
+    d["gnd_resistance_ohm"] = data.get("gnd_resistance_ohm", d["gnd_resistance_ohm"])
+    d["gnd_voltage_v"] = data.get("gnd_voltage_v", d["gnd_voltage_v"])
+    
+    # อัปเดตเวลา
+    d["last_updated"] = now.strftime("%H:%M:%S")
+    d["last_seen"] = now
+    d["is_online"] = True
+    
+    # ตรวจสอบทั้งระบบ
+    d = check_all(d)
+    
+    return jsonify({"ok": True, "alert_level": d["alert_level"]})
+
+@app.route("/api/devices")
+def get_devices():
+    my_cust = session.get("cust_id", "")
+    if my_cust == "ALL":
+        return jsonify(devices)
+    my_list = [d for d in devices if d["customer_id"] == my_cust]
+    return jsonify(my_list)
+
+# ==============================================================
+# 📲 ล็อกอิน
 # ==============================================================
 @app.route("/login")
 def login():
@@ -293,44 +372,7 @@ def logout():
     return redirect("/login")
 
 # ==============================================================
-# 🌐 API
-# ==============================================================
-@app.before_request
-def update_online():
-    now = datetime.now()
-    for d in devices:
-        if d["last_seen"]:
-            sec = (now - d["last_seen"]).total_seconds()
-            d["is_online"] = sec < CONFIG["STANDARD"]["OFFLINE_SEC"]
-        else:
-            d["is_online"] = False
-
-@app.route("/api/data", methods=["POST"])
-def receive():
-    data = request.get_json(force=True)
-    now = datetime.now()
-    for d in devices:
-        if d["device_id"] == data.get("device_id"):
-            for k, v in data.items():
-                if k not in ["fault_list", "alert_level"]:
-                    d[k] = v
-            d["last_updated"] = now.strftime("%H:%M:%S")
-            d["last_seen"] = now
-            d["is_online"] = True
-            d = check_all(d)
-            break
-    return jsonify({"ok": True, "alert_level": d["alert_level"]})
-
-@app.route("/api/devices")
-def get_devices():
-    my_cust = session.get("cust_id", "")
-    if my_cust == "ALL":
-        return jsonify(devices)
-    my_list = [d for d in devices if d["customer_id"] == my_cust]
-    return jsonify(my_list)
-
-# ==============================================================
-# 📊 หน้าจอหลัก — ครบทุกฟีเจอร์
+# 📊 หน้าจอหลัก
 # ==============================================================
 @app.route("/")
 def dashboard():
@@ -582,14 +624,14 @@ setInterval(load, 5000);
 """, CONFIG_SITE_TYPES=CONFIG["SITE_TYPES"])
 
 # ==============================================================
-# 🚀 รันระบบ
+# 🚀 รัน
 # ==============================================================
 if __name__ == "__main__":
     print(f"\n{'='*60}")
     print(f"  {CONFIG['SYSTEM_NAME']} — {CONFIG['VERSION']}")
-    print(f"  🔐 มีระบบล็อกอิน + แยกสิทธิ์ตามลูกค้า")
-    print(f"  🟢 มินิ / 🔵 เต็มระบบ — ค้นหาได้รวดเร็ว")
+    print(f"  ✅ รองรับทั้ง sub1_* และ z1_* แล้ว")
+    print(f"  ✅ รองรับ power_3phase_kw / balance_ok")
+    print(f"  ✅ รองรับ SAFE-001 / SAFE-00001")
     print(f"  📋 อุปกรณ์: {len(devices)} ชุด")
-    print(f"  👤 ผู้ใช้ทั้งหมด: {len(USER_DB)} บัญชี")
     print(f"{'='*60}\n")
     app.run(host="0.0.0.0", port=5000)
