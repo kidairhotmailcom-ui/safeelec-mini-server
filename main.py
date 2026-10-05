@@ -1,24 +1,44 @@
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template_string, session, redirect, url_for
 from flask_cors import CORS
 from datetime import datetime
 
 app = Flask(__name__)
+app.secret_key = "SAFE-ELEC-2026-SECRET-KEY-CHANGE-ME-PLEASE"  # ⚠️ เปลี่ยนเป็นข้อความสุ่มเองนะครับ
 CORS(app)
 
 # ==============================================================
-# 🎯 ระบบเดียว — เลือกมุมมองได้ 2 แบบ + สถานะเซนเซอร์ครบ
+# 🔐 บัญชีผู้ใช้ — เพิ่ม/แก้ไข ตรงนี้
+# ==============================================================
+USER_DB = {
+    "admin": {
+        "password": "123456",
+        "name": "ผู้ดูแลระบบ",
+        "customer_id": "ALL"       # เห็นทุกเครื่อง
+    },
+    "cust0891": {
+        "password": "123456",
+        "name": "อาคารหลัก ขอนแก่น",
+        "customer_id": "CUST-0891" # เห็นเฉพาะรหัสนี้
+    },
+    "cust0002": {
+        "password": "123456",
+        "name": "สาขาเชียงใหม่",
+        "customer_id": "CUST-0002"
+    },
+    "cust0004": {
+        "password": "123456",
+        "name": "โรงงานผลิต ระยอง",
+        "customer_id": "CUST-0004"
+    },
+    # เพิ่มลูกค้าตามรูปแบบข้างบนได้เลยครับ
+}
+
+# ==============================================================
+# ⚙️ ค่าคงที่ระบบ
 # ==============================================================
 CONFIG = {
     "SYSTEM_NAME": "SAFE-ELEC",
-    "VERSION": "2.4.0-SENSORS",
-    
-    "FEATURES": {
-        "basic_monitor": True,
-        "ground_check": True,
-        "sensor_check": True,
-        "balance_check": True,
-        "offline_alert": True,
-    },
+    "VERSION": "2.6.0-FULL-PACK",
     
     "STANDARD": {
         "V3_NOM": 380, "V3_MIN": 342, "V3_MAX": 418,
@@ -30,8 +50,19 @@ CONFIG = {
         "GND_RES_OK": 10.0, "GND_RES_WARN": 30.0,
         "GND_V_OK": 2.0,
     },
+    
+    "SITE_TYPES": {
+        "convenience": "ร้านสะดวกซื้อ",
+        "shop": "ร้านค้าทั่วไป",
+        "factory": "โรงงาน",
+        "hotel": "โรงแรม",
+        "office": "สำนักงาน",
+    }
 }
 
+# ==============================================================
+# 📋 รายการอุปกรณ์
+# ==============================================================
 DEVICE_LIST = [
     ("SAFE-001", "แผงหลัก+ย่อย อาคารหลัก", "CUST-0891", "ขอนแก่น", "office"),
     ("SAFE-002", "สาขาเชียงใหม่", "CUST-0002", "เชียงใหม่", "convenience"),
@@ -39,7 +70,7 @@ DEVICE_LIST = [
 ]
 
 # ==============================================================
-# 🔧 ข้อมูล — มีสถานะเซนเซอร์ครบถ้วน
+# 📐 โครงสร้างข้อมูล
 # ==============================================================
 TEMPLATE = {
     "device_id": "", "site_name": "", "customer_id": "",
@@ -85,6 +116,7 @@ TEMPLATE = {
     "fault_list": [], "alert_level": "normal",
 }
 
+# สร้างรายการอุปกรณ์
 devices = []
 for dev_id, site, cust, prov, stype in DEVICE_LIST:
     d = TEMPLATE.copy()
@@ -96,7 +128,7 @@ for dev_id, site, cust, prov, stype in DEVICE_LIST:
     devices.append(d)
 
 # ==============================================================
-# 🔍 ตรวจสอบ + อัปเดตสถานะเซนเซอร์
+# 🔍 ตรวจสอบระบบ
 # ==============================================================
 def check_ground(dev):
     S = CONFIG["STANDARD"]
@@ -199,6 +231,68 @@ def check_all(dev):
     return dev
 
 # ==============================================================
+# 🛡️ ตรวจสอบการเข้าสู่ระบบ
+# ==============================================================
+@app.before_request
+def check_login():
+    if request.path in ["/login", "/do_login", "/logout"]:
+        return
+    if "username" not in session:
+        return redirect("/login")
+
+# ==============================================================
+# 📲 หน้าล็อกอิน
+# ==============================================================
+@app.route("/login")
+def login():
+    err = request.args.get("err", "")
+    return render_template_string("""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เข้าสู่ระบบ — SAFE-ELEC</title>
+<style>
+body{background:#0f1629;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px}
+.box{background:#1a2342;padding:30px;border-radius:16px;width:100%;max-width:400px;border:1px solid #2a3b63}
+h2{text-align:center;color:#6cf;margin-bottom:25px}
+input{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:none;background:#0f1f3f;color:#fff;font-size:16px}
+button{width:100%;padding:12px;background:#2f9;border:none;border-radius:8px;color:#032;font-weight:bold;font-size:16px;margin-top:10px;cursor:pointer}
+.err{color:#f44;text-align:center;margin-top:15px}
+</style>
+</head>
+<body>
+<div class="box">
+<h2>🔐 เข้าสู่ระบบ SAFE-ELEC</h2>
+<form method="post" action="/do_login">
+<input type="text" name="user" placeholder="ชื่อผู้ใช้" required>
+<input type="password" name="pwd" placeholder="รหัสผ่าน" required>
+<button type="submit">เข้าสู่ระบบ</button>
+<div class="err">{{err}}</div>
+</form>
+</div>
+</body>
+</html>
+""", err=err)
+
+@app.route("/do_login", methods=["POST"])
+def do_login():
+    user = request.form.get("user", "").strip()
+    pwd = request.form.get("pwd", "")
+    if user in USER_DB and USER_DB[user]["password"] == pwd:
+        session["username"] = user
+        session["cust_id"] = USER_DB[user]["customer_id"]
+        session["name"] = USER_DB[user]["name"]
+        return redirect("/")
+    return redirect("/login?err=ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/login")
+
+# ==============================================================
 # 🌐 API
 # ==============================================================
 @app.before_request
@@ -229,10 +323,14 @@ def receive():
 
 @app.route("/api/devices")
 def get_devices():
-    return jsonify(devices)
+    my_cust = session.get("cust_id", "")
+    if my_cust == "ALL":
+        return jsonify(devices)
+    my_list = [d for d in devices if d["customer_id"] == my_cust]
+    return jsonify(my_list)
 
 # ==============================================================
-# 📊 หน้าจอ — มีสถานะเซนเซอร์ทั้ง 2 มุมมอง
+# 📊 หน้าจอหลัก — ครบทุกฟีเจอร์
 # ==============================================================
 @app.route("/")
 def dashboard():
@@ -246,17 +344,23 @@ def dashboard():
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif}
 body{background:#0f1629;color:#fff;padding:16px}
-h1{text-align:center;color:#6cf;margin-bottom:8px}
-.ver{text-align:center;color:#8ac;margin-bottom:16px}
+h1{text-align:center;color:#6cf;margin-bottom:4px}
+.ver{text-align:center;color:#8ac;margin-bottom:8px}
+.user-bar{text-align:right;margin-bottom:12px;padding:8px 12px;background:#1a2342;border-radius:8px;font-size:14px}
+.user-bar a{color:#f66;text-decoration:none;margin-left:12px}
 
-.tabs{display:flex;max-width:450px;margin:0 auto 20px;border-radius:10px;background:#1a2342;padding:4px}
+.tabs{display:flex;max-width:450px;margin:0 auto 12px;border-radius:10px;background:#1a2342;padding:4px}
 .tab{flex:1;padding:10px 0;text-align:center;border-radius:8px;cursor:pointer;font-weight:bold;transition:all .2s}
 .tab.inactive{background:transparent;color:#8ac}
 .tab.active.mini{background:#2f9;color:#032}
 .tab.active.full{background:#48f;color:#fff}
 
-.search{max-width:450px;margin:0 auto 20px}
-.search input{width:100%;padding:11px;border-radius:8px;border:none;background:#1a2342;color:#fff;font-size:15px}
+.search-box{max-width:520px;margin:0 auto 12px}
+.search-input-wrap{position:relative}
+.search-input-wrap input{width:100%;padding:12px 12px 12px 40px;border-radius:10px;border:none;background:#1a2342;color:#fff;font-size:15px}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#8ac}
+.result-info{margin:8px 4px;color:#8ac;font-size:13px}
+.result-info b{color:#fff}
 
 .card{background:#1a2342;border-radius:16px;padding:16px;margin-bottom:16px;border:1px solid #2a3b63}
 .card.online{border-left:4px solid #4f9}
@@ -277,19 +381,29 @@ h1{text-align:center;color:#6cf;margin-bottom:8px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:10px}
 .item{padding:8px 10px;border-radius:6px;background:#1e2b4d;font-size:13px}
 .hidden{display:none !important}
+.no-result{text-align:center;padding:40px 20px;color:#8ac}
 </style>
 </head>
 <body>
 <h1>⚡ SAFE-ELEC PLATFORM</h1>
 <div class="ver">ตรวจสอบระบบไฟฟ้า — เลือกมุมมองได้ตามต้องการ</div>
 
+<div class="user-bar">
+  👤 {{session['name']}}
+  <a href="/logout">ออกจากระบบ</a>
+</div>
+
 <div class="tabs">
   <div class="tab active mini" id="tab-mini" onclick="setView('mini')">🟢 มินิ</div>
   <div class="tab inactive full" id="tab-full" onclick="setView('full')">🔵 เต็มระบบ</div>
 </div>
 
-<div class="search">
-  <input id="q" placeholder="🔍 ค้นหารหัส / สถานที่ / กราวด์เสีย...">
+<div class="search-box">
+  <div class="search-input-wrap">
+    <span class="search-icon">🔍</span>
+    <input id="q" placeholder="ค้นหา: รหัส / ชื่อ / ลูกค้า / จังหวัด / สถานะ...">
+  </div>
+  <div id="result-info" class="result-info"></div>
 </div>
 
 <div id="list"></div>
@@ -297,18 +411,19 @@ h1{text-align:center;color:#6cf;margin-bottom:8px}
 <script>
 let all = [];
 let currentView = 'mini';
+const CONFIG_SITE_TYPES = {{CONFIG_SITE_TYPES|tojson}};
 
 async function load(){
   const res = await fetch('/api/devices');
   all = await res.json();
-  render(all);
+  applyFilterAndRender();
 }
 
 function setView(view){
   currentView = view;
   document.getElementById('tab-mini').className = view==='mini'?'tab active mini':'tab inactive';
   document.getElementById('tab-full').className = view==='full'?'tab active full':'tab inactive';
-  render(all);
+  applyFilterAndRender();
 }
 
 function getIcon(d){
@@ -329,7 +444,32 @@ function getSensorIcon(s){
   return '⏳';
 }
 
+function matchDevice(d, kw){
+  if(!kw) return true;
+  const typeLabel = CONFIG_SITE_TYPES[d.site_type] || d.site_type;
+  const searchText = [
+    d.device_id, d.site_name, d.customer_id, d.province, typeLabel,
+    d.status_summary, d.is_online ? 'ออนไลน์' : 'ออฟไลน์',
+    d.gnd_system_ok ? 'กราวด์ปกติ' : 'กราวด์เสีย',
+  ].join(' ').toLowerCase();
+  return searchText.includes(kw);
+}
+
+function applyFilterAndRender(){
+  const kw = document.getElementById('q').value.trim().toLowerCase();
+  const filtered = all.filter(d => matchDevice(d, kw));
+  document.getElementById('result-info').innerHTML = 
+    kw ? `พบ <b>${filtered.length}</b> จากทั้งหมด <b>${all.length}</b> รายการ` 
+       : `ทั้งหมด <b>${all.length}</b> รายการ`;
+  render(filtered);
+}
+
 function render(list){
+  if(list.length === 0){
+    document.getElementById('list').innerHTML = `<div class="no-result">ไม่พบข้อมูลที่ตรงกับคำค้นหา 😔</div>`;
+    return;
+  }
+  
   document.getElementById('list').innerHTML = list.map(d=>`
     <div class="card ${d.status_summary}">
       <div class="name">${getIcon(d)} ${d.device_id} — ${d.site_name}</div>
@@ -432,29 +572,24 @@ function render(list){
   `).join('');
 }
 
-document.getElementById('q').oninput = e => {
-  const kw = e.target.value.toLowerCase();
-  render(all.filter(d => 
-    d.device_id.toLowerCase().includes(kw) ||
-    d.site_name.toLowerCase().includes(kw) ||
-    d.customer_id.toLowerCase().includes(kw) ||
-    d.province.toLowerCase().includes(kw) ||
-    (kw.includes('กราวด์') && !d.gnd_system_ok)
-  ));
-};
+document.getElementById('q').oninput = applyFilterAndRender;
 
 load();
 setInterval(load, 5000);
 </script>
 </body>
 </html>
-""")
+""", CONFIG_SITE_TYPES=CONFIG["SITE_TYPES"])
 
+# ==============================================================
+# 🚀 รันระบบ
+# ==============================================================
 if __name__ == "__main__":
     print(f"\n{'='*60}")
     print(f"  {CONFIG['SYSTEM_NAME']} — {CONFIG['VERSION']}")
-    print(f"  🟢 มินิ = เฉพาะสิ่งจำเป็น + สถานะหลัก")
-    print(f"  🔵 เต็มระบบ = ครบทุกส่วน + เซนเซอร์ทั้งหมด")
+    print(f"  🔐 มีระบบล็อกอิน + แยกสิทธิ์ตามลูกค้า")
+    print(f"  🟢 มินิ / 🔵 เต็มระบบ — ค้นหาได้รวดเร็ว")
     print(f"  📋 อุปกรณ์: {len(devices)} ชุด")
+    print(f"  👤 ผู้ใช้ทั้งหมด: {len(USER_DB)} บัญชี")
     print(f"{'='*60}\n")
     app.run(host="0.0.0.0", port=5000)
