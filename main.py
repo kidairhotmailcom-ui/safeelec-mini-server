@@ -21,7 +21,7 @@ USER_DB = {
 # ==============================================================
 CONFIG = {
     "SYSTEM_NAME": "SAFE-ELEC",
-    "VERSION": "2.9.1-RESTORE-ALL-SENSORS",
+    "VERSION": "2.9.2-MULTI-ESP-SUPPORT",
     "STANDARD": {
         "V3_NOM": 380, "V3_MIN": 342, "V3_MAX": 418,
         "V1_NOM": 220, "V1_MIN": 198, "V1_MAX": 242,
@@ -36,6 +36,107 @@ CONFIG = {
         "convenience": "ร้านสะดวกซื้อ", "shop": "ร้านค้าทั่วไป",
         "factory": "โรงงาน", "hotel": "โรงแรม", "office": "สำนักงาน",
     }
+}
+
+# ==============================================================
+# 🔄 แปลงชื่อฟิลด์ — รองรับทุกรุ่น ESP
+# ==============================================================
+FIELD_MAP = {
+    # --- ID อุปกรณ์ ---
+    "id":               "device_id",
+    "esp_id":           "device_id",
+    "esp":              "device_id",
+    
+    # --- อุณหภูมิ & ความชื้น ---
+    "t":                "current_temp",
+    "temp":             "current_temp",
+    "temperature":      "current_temp",
+    "humi":             "humidity",
+    "rh":               "humidity",
+    
+    # --- แรงดัน 3 เฟส ---
+    "v12":              "v_l1_l2",
+    "v23":              "v_l2_l3",
+    "v31":              "v_l3_l1",
+    "vl1l2":            "v_l1_l2",
+    "vl2l3":            "v_l2_l3",
+    "vl3l1":            "v_l3_l1",
+    "v_ab":             "v_l1_l2",
+    "v_bc":             "v_l2_l3",
+    "v_ca":             "v_l3_l1",
+    
+    # --- กระแส 3 เฟส ---
+    "i1":               "a_l1",
+    "i2":               "a_l2",
+    "i3":               "a_l3",
+    "il1":              "a_l1",
+    "il2":              "a_l2",
+    "il3":              "a_l3",
+    "ia":               "a_l1",
+    "ib":               "a_l2",
+    "ic":               "a_l3",
+    "in":               "a_n",
+    
+    # --- กำลังไฟ ---
+    "power":            "power_kw",
+    "kw":               "power_kw",
+    "p_total":          "power_kw",
+    
+    # --- โซน 1 ---
+    "vz1":              "z1_v",
+    "v_z1":             "z1_v",
+    "vzone1":           "z1_v",
+    "sub1_v":           "z1_v",
+    "az1":              "z1_a",
+    "a_z1":             "z1_a",
+    "azone1":           "z1_a",
+    "sub1_a":           "z1_a",
+    "wz1":              "z1_w",
+    "w_z1":             "z1_w",
+    "sub1_w":           "z1_w",
+    
+    # --- โซน 2 ---
+    "vz2":              "z2_v",
+    "v_z2":             "z2_v",
+    "vzone2":           "z2_v",
+    "sub2_v":           "z2_v",
+    "az2":              "z2_a",
+    "a_z2":             "z2_a",
+    "azone2":           "z2_a",
+    "sub2_a":           "z2_a",
+    "wz2":              "z2_w",
+    "w_z2":             "z2_w",
+    "sub2_w":           "z2_w",
+    
+    # --- โซน 3 ---
+    "vz3":              "z3_v",
+    "v_z3":             "z3_v",
+    "vzone3":           "z3_v",
+    "sub3_v":           "z3_v",
+    "az3":              "z3_a",
+    "a_z3":             "z3_a",
+    "azone3":           "z3_a",
+    "sub3_a":           "z3_a",
+    "wz3":              "z3_w",
+    "w_z3":             "z3_w",
+    "sub3_w":           "z3_w",
+    
+    # --- กราวด์ ---
+    "gnd_r":            "gnd_resistance_ohm",
+    "ground_res":       "gnd_resistance_ohm",
+    "res_gnd":          "gnd_resistance_ohm",
+    "r_gnd":            "gnd_resistance_ohm",
+    "gnd_ohm":          "gnd_resistance_ohm",
+    "gnd_v":            "gnd_voltage_v",
+    "ground_v":         "gnd_voltage_v",
+    "v_leak":           "gnd_voltage_v",
+    "v_gnd":            "gnd_voltage_v",
+    "leak_volt":        "gnd_voltage_v",
+    
+    # --- สถานะเพิ่มเติม ---
+    "wiring":           "wiring_fault",
+    "shutdown":         "critical_shutdown",
+    "psu_status":       "power_status",
 }
 
 # ==============================================================
@@ -273,7 +374,7 @@ def update_online():
         check_all(d)
 
 # ==============================================================
-# 🌐 API รับข้อมูล
+# 🌐 API รับข้อมูล — ✅ รองรับทุกรุ่น ESP
 # ==============================================================
 @app.route("/api/data", methods=["GET"])
 def get_data():
@@ -291,54 +392,46 @@ def get_data():
 
 @app.route("/api/data", methods=["POST"])
 def receive():
-    data = request.get_json(force=True)
+    data = request.get_json(force=True) or {}
     now = datetime.now()
     
-    dev_id = data.get("device_id", "")
-    d = None
-    for dev in devices:
-        if dev["device_id"] == dev_id:
-            d = dev
-            break
+    # --- แปลงชื่อฟิลด์ทุกรุ่นให้เป็นมาตรฐาน ---
+    normalized = {}
+    for key, value in data.items():
+        key_low = key.lower().strip()
+        std_key = FIELD_MAP.get(key_low, key_low)
+        normalized[std_key] = value
     
+    # --- ดึง ID อุปกรณ์ ---
+    dev_id = normalized.get("device_id", "")
+    if not dev_id:
+        return jsonify({"ok": False, "error": "ต้องระบุ device_id (หรือ id / esp_id)"}), 400
+    
+    # --- ค้นหาอุปกรณ์ ---
+    d = next((dev for dev in devices if dev["device_id"] == dev_id), None)
     if not d:
-        return jsonify({"ok": False, "error": f"Device not found: {dev_id}"}), 404
+        return jsonify({"ok": False, "error": f"ไม่พบอุปกรณ์: {dev_id}"}), 404
     
-    d["current_temp"] = data.get("current_temp", data.get("temperature", data.get("temp", d["current_temp"])))
-    d["humidity"] = data.get("humidity", data.get("humi", d["humidity"]))
-    d["power_status"] = data.get("power_status", d["power_status"])
-    d["wiring_fault"] = data.get("wiring_fault", d["wiring_fault"])
-    d["critical_shutdown"] = data.get("critical_shutdown", d["critical_shutdown"])
+    # --- อัปเดตค่าทุกฟิลด์ที่มีข้อมูล ---
+    for k, v in normalized.items():
+        if k in d and k not in ["sensors", "fault_list"]:
+            d[k] = v
     
-    d["v_l1_l2"] = data.get("v_l1_l2", d["v_l1_l2"])
-    d["v_l2_l3"] = data.get("v_l2_l3", d["v_l2_l3"])
-    d["v_l3_l1"] = data.get("v_l3_l1", d["v_l3_l1"])
-    d["a_l1"] = data.get("a_l1", d["a_l1"])
-    d["a_l2"] = data.get("a_l2", d["a_l2"])
-    d["a_l3"] = data.get("a_l3", d["a_l3"])
-    d["a_n"] = data.get("a_n", d["a_n"])
-    d["power_kw"] = data.get("power_kw", data.get("power_3phase_kw", d["power_kw"]))
-    
-    d["z1_v"] = data.get("z1_v", data.get("sub1_v", d["z1_v"]))
-    d["z1_a"] = data.get("z1_a", data.get("sub1_a", d["z1_a"]))
-    d["z1_w"] = data.get("z1_w", data.get("sub1_w", d["z1_w"]))
-    d["z2_v"] = data.get("z2_v", data.get("sub2_v", d["z2_v"]))
-    d["z2_a"] = data.get("z2_a", data.get("sub2_a", d["z2_a"]))
-    d["z2_w"] = data.get("z2_w", data.get("sub2_w", d["z2_w"]))
-    d["z3_v"] = data.get("z3_v", data.get("sub3_v", d["z3_v"]))
-    d["z3_a"] = data.get("z3_a", data.get("sub3_a", d["z3_a"]))
-    d["z3_w"] = data.get("z3_w", data.get("sub3_w", d["z3_w"]))
-    
-    d["gnd_resistance_ohm"] = data.get("gnd_resistance_ohm", d["gnd_resistance_ohm"])
-    d["gnd_voltage_v"] = data.get("gnd_voltage_v", d["gnd_voltage_v"])
-    
+    # --- อัปเดตเวลาและสถานะ ---
     d["last_updated"] = now.strftime("%H:%M:%S")
     d["last_seen"] = now
     d["is_online"] = True
     
+    # --- ตรวจสอบและคำนวณทั้งระบบ ---
     d = check_all(d)
     
-    return jsonify({"ok": True, "device_id": dev_id, "current_temp": d["current_temp"]}), 200
+    return jsonify({
+        "ok": True,
+        "device_id": dev_id,
+        "received_fields": len(data),
+        "mapped_fields": len(normalized),
+        "status": d["status_summary"]
+    }), 200
 
 @app.route("/api/devices")
 def get_devices():
@@ -454,7 +547,7 @@ h1{text-align:center;color:#6cf;margin-bottom:4px}
 </head>
 <body>
 <h1>⚡ SAFE-ELEC PLATFORM</h1>
-<div class="ver">ตรวจสอบระบบไฟฟ้า — แสดงครบทุกเซนเซอร์ ✅</div>
+<div class="ver">รองรับทุกรุ่น ESP — แปลงชื่อฟิลด์อัตโนมัติ ✅</div>
 <div class="user-bar">👤 {{session['name']}} <a href="/logout">ออกจากระบบ</a></div>
 <div class="tabs">
   <div class="tab active mini" id="tab-mini" onclick="setView('mini')">🟢 มินิ</div>
@@ -625,10 +718,9 @@ setInterval(load, 5000);
 if __name__ == "__main__":
     print(f"\n{'='*60}")
     print(f"  {CONFIG['SYSTEM_NAME']} — {CONFIG['VERSION']}")
-    print(f"  ✅ เพิ่มสถานะ ESP ครบถ้วน")
+    print(f"  ✅ รองรับทุกรุ่น ESP — แปลงชื่อฟิลด์อัตโนมัติ")
+    print(f"  ✅ ไม่ต้องแก้โค้ดที่ ESP เลย!")
     print(f"  ✅ แสดงค่ากราวด์ + ตรวจสอบครบ")
-    print(f"  ✅ แสดงทุกเซนเซอร์ที่ขาดหายไป")
-    print(f"  ✅ มินิมุมมองแสดง ESP + กราวด์โดยตรง")
-    print(f"  ✅ เต็มระบบแสดงทุกค่าครบถ้วน")
+    print(f"  ✅ มินิ/เต็มระบบ — ครบทุกฟังก์ชัน")
     print(f"{'='*60}\n")
     app.run(host="0.0.0.0", port=5000)
