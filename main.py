@@ -6,11 +6,11 @@ app = Flask(__name__)
 CORS(app)
 
 # ==============================================================
-# 🎯 ระบบเดียว — เลือกมุมมองได้ 2 แบบจากหน้าจอ
+# 🎯 ระบบเดียว — เลือกมุมมองได้ 2 แบบ + สถานะเซนเซอร์ครบ
 # ==============================================================
 CONFIG = {
     "SYSTEM_NAME": "SAFE-ELEC",
-    "VERSION": "2.3.0-VIEW",
+    "VERSION": "2.4.0-SENSORS",
     
     "FEATURES": {
         "basic_monitor": True,
@@ -18,11 +18,6 @@ CONFIG = {
         "sensor_check": True,
         "balance_check": True,
         "offline_alert": True,
-        "data_log": False,
-        "alert_notify": False,
-        "user_permission": False,
-        "energy_analysis": False,
-        "predict_fault": False,
     },
     
     "STANDARD": {
@@ -35,14 +30,6 @@ CONFIG = {
         "GND_RES_OK": 10.0, "GND_RES_WARN": 30.0,
         "GND_V_OK": 2.0,
     },
-    
-    "SITE_TYPES": {
-        "convenience": "ร้านสะดวกซื้อ",
-        "shop": "ร้านค้าทั่วไป",
-        "factory": "โรงงาน",
-        "hotel": "โรงแรม",
-        "office": "สำนักงาน",
-    }
 }
 
 DEVICE_LIST = [
@@ -52,7 +39,7 @@ DEVICE_LIST = [
 ]
 
 # ==============================================================
-# 🔧 ข้อมูล — เหมือนกันทั้ง 2 มุมมอง
+# 🔧 ข้อมูล — มีสถานะเซนเซอร์ครบถ้วน
 # ==============================================================
 TEMPLATE = {
     "device_id": "", "site_name": "", "customer_id": "",
@@ -67,14 +54,35 @@ TEMPLATE = {
     "a_l1": 0.0, "a_l2": 0.0, "a_l3": 0.0, "a_n": 0.0,
     "power_kw": 0.0, "balance_3ph_ok": True,
     
-    "z1_phase": 1, "z1_v": 220.0, "z1_a": 0.0, "z1_w": 0.0,
-    "z2_phase": 2, "z2_v": 220.0, "z2_a": 0.0, "z2_w": 0.0,
-    "z3_phase": 3, "z3_v": 220.0, "z3_a": 0.0, "z3_w": 0.0,
+    "z1_v": 220.0, "z1_a": 0.0, "z1_w": 0.0,
+    "z2_v": 220.0, "z2_a": 0.0, "z2_w": 0.0,
+    "z3_v": 220.0, "z3_a": 0.0, "z3_w": 0.0,
     "z_total_a": 0.0, "z_balance_ok": True,
     
     "gnd_resistance_ohm": 0.0, "gnd_voltage_v": 0.0, "gnd_system_ok": True,
     
-    "sensors": {}, "fault_list": [], "alert_level": "normal",
+    "sensors": {
+        "temp":      {"name": "อุณหภูมิตู้", "value": 0.0, "ok": True},
+        "humidity":  {"name": "ความชื้น", "value": 0.0, "ok": True},
+        "v_l1_l2":  {"name": "แรงดัน L1-L2", "value": 0.0, "ok": True},
+        "v_l2_l3":  {"name": "แรงดัน L2-L3", "value": 0.0, "ok": True},
+        "v_l3_l1":  {"name": "แรงดัน L3-L1", "value": 0.0, "ok": True},
+        "a_l1":     {"name": "กระแสเฟส 1", "value": 0.0, "ok": True},
+        "a_l2":     {"name": "กระแสเฟส 2", "value": 0.0, "ok": True},
+        "a_l3":     {"name": "กระแสเฟส 3", "value": 0.0, "ok": True},
+        "z1_v":     {"name": "โซน1 แรงดัน", "value": 0.0, "ok": True},
+        "z1_a":     {"name": "โซน1 กระแส", "value": 0.0, "ok": True},
+        "z2_v":     {"name": "โซน2 แรงดัน", "value": 0.0, "ok": True},
+        "z2_a":     {"name": "โซน2 กระแส", "value": 0.0, "ok": True},
+        "z3_v":     {"name": "โซน3 แรงดัน", "value": 0.0, "ok": True},
+        "z3_a":     {"name": "โซน3 กระแส", "value": 0.0, "ok": True},
+        "gnd_resist":{"name": "กราวด์-ความต้านทาน", "value": 0.0, "unit": "Ω", "ok": True},
+        "gnd_volt": {"name": "กราวด์-แรงดันรั่ว", "value": 0.0, "unit": "V", "ok": True},
+        "comm":     {"name": "สื่อสาร", "value": "ปกติ", "ok": True},
+        "psu":      {"name": "แหล่งจ่ายภายใน", "value": "ปกติ", "ok": True},
+    },
+    
+    "fault_list": [], "alert_level": "normal",
 }
 
 devices = []
@@ -88,21 +96,35 @@ for dev_id, site, cust, prov, stype in DEVICE_LIST:
     devices.append(d)
 
 # ==============================================================
-# 🔍 ตรวจสอบ — ทำงานเต็มเสมอ
+# 🔍 ตรวจสอบ + อัปเดตสถานะเซนเซอร์
 # ==============================================================
 def check_ground(dev):
     S = CONFIG["STANDARD"]
     faults = []
     gr = dev["gnd_resistance_ohm"]
-    if gr > S["GND_RES_WARN"]:
-        faults.append(f"🔴 กราวด์ไม่ดี! ความต้านทานสูง {gr}Ω (มาตรฐาน ≤ {S['GND_RES_OK']}Ω)")
+    dev["sensors"]["gnd_resist"]["value"] = gr
+    if gr <= 0:
+        dev["sensors"]["gnd_resist"]["ok"] = None
+    elif gr > S["GND_RES_WARN"]:
+        dev["sensors"]["gnd_resist"]["ok"] = False
+        faults.append(f"🔴 กราวด์ไม่ดี! {gr}Ω (มาตรฐาน ≤ {S['GND_RES_OK']}Ω)")
         dev["gnd_system_ok"] = False
     elif gr > S["GND_RES_OK"]:
+        dev["sensors"]["gnd_resist"]["ok"] = False
         faults.append(f"⚠️ กราวด์ควรปรับปรุง: {gr}Ω")
+    else:
+        dev["sensors"]["gnd_resist"]["ok"] = True
+
     gv = dev["gnd_voltage_v"]
-    if gv > S["GND_V_OK"]:
+    dev["sensors"]["gnd_volt"]["value"] = gv
+    if gv < 0:
+        pass
+    elif gv > S["GND_V_OK"]:
+        dev["sensors"]["gnd_volt"]["ok"] = False
         faults.append(f"🔴 แรงดันรั่วสูง: {gv}V (ปกติ ≤ {S['GND_V_OK']}V)")
         dev["gnd_system_ok"] = False
+    else:
+        dev["sensors"]["gnd_volt"]["ok"] = True
     return faults
 
 def check_balance(i1, i2, i3):
@@ -117,34 +139,47 @@ def check_balance(i1, i2, i3):
 def check_all(dev):
     S = CONFIG["STANDARD"]
     faults = check_ground(dev)
-    
+
     t = dev["current_temp"]
+    dev["sensors"]["temp"]["value"] = t
     if t < S["TEMP_MIN"] or t > S["TEMP_MAX"]:
+        dev["sensors"]["temp"]["ok"] = False
         faults.append(f"❌ อุณหภูมิผิดปกติ: {t}°C")
     elif t >= S["TEMP_ALERT"]:
+        dev["sensors"]["temp"]["ok"] = False
         faults.append(f"⚠️ อุณหภูมิสูง: {t}°C")
-    
+    else:
+        dev["sensors"]["temp"]["ok"] = True
+
     h = dev["humidity"]
-    if h < S["HUMI_MIN"] or h > S["HUMI_MAX"]:
-        faults.append(f"❌ ความชื้นผิดปกติ: {h}%")
-    
-    for name, val in [("L1-L2", dev["v_l1_l2"]), ("L2-L3", dev["v_l2_l3"]), ("L3-L1", dev["v_l3_l1"])]:
-        if val < S["V3_MIN"] or val > S["V3_MAX"]:
-            faults.append(f"❌ แรงดัน {name} ผิดปกติ: {val}V")
-    
-    for z, val in [("โซน1", dev["z1_v"]), ("โซน2", dev["z2_v"]), ("โซน3", dev["z3_v"])]:
-        if val < S["V1_MIN"] or val > S["V1_MAX"]:
-            faults.append(f"❌ {z} แรงดันผิดปกติ: {val}V")
-    
+    dev["sensors"]["humidity"]["value"] = h
+    dev["sensors"]["humidity"]["ok"] = S["HUMI_MIN"] <= h <= S["HUMI_MAX"]
+
+    for k, v in [("v_l1_l2", dev["v_l1_l2"]), ("v_l2_l3", dev["v_l2_l3"]), ("v_l3_l1", dev["v_l3_l1"])]:
+        dev["sensors"][k]["value"] = v
+        dev["sensors"][k]["ok"] = S["V3_MIN"] <= v <= S["V3_MAX"]
+
+    for k, v in [("a_l1", dev["a_l1"]), ("a_l2", dev["a_l2"]), ("a_l3", dev["a_l3"])]:
+        dev["sensors"][k]["value"] = v
+        dev["sensors"][k]["ok"] = True
+
+    for k, v in [("z1_v", dev["z1_v"]), ("z2_v", dev["z2_v"]), ("z3_v", dev["z3_v"])]:
+        dev["sensors"][k]["value"] = v
+        dev["sensors"][k]["ok"] = S["V1_MIN"] <= v <= S["V1_MAX"]
+
+    for k, v in [("z1_a", dev["z1_a"]), ("z2_a", dev["z2_a"]), ("z3_a", dev["z3_a"])]:
+        dev["sensors"][k]["value"] = v
+        dev["sensors"][k]["ok"] = True
+
     dev["balance_3ph_ok"] = check_balance(dev["a_l1"], dev["a_l2"], dev["a_l3"])
     dev["z_total_a"] = round(dev["z1_a"] + dev["z2_a"] + dev["z3_a"], 2)
     dev["z_balance_ok"] = check_balance(dev["z1_a"], dev["z2_a"], dev["z3_a"])
-    
+
     if not dev["balance_3ph_ok"]:
         faults.append("⚠️ ระบบ 380V ไม่สมดุล")
     if not dev["z_balance_ok"] and dev["z_total_a"] > 0:
         faults.append("⚠️ ระบบ 220V ไม่สมดุล")
-    
+
     critical = any("🔴" in f for f in faults)
     warning = any("⚠️" in f for f in faults)
     if not dev["is_online"]:
@@ -159,7 +194,7 @@ def check_all(dev):
     else:
         dev["status_summary"] = "online"
         dev["alert_level"] = "normal"
-    
+
     dev["fault_list"] = faults
     return dev
 
@@ -197,7 +232,7 @@ def get_devices():
     return jsonify(devices)
 
 # ==============================================================
-# 📊 หน้าจอ — มีแท็บเลือก มินิ / เต็มระบบ
+# 📊 หน้าจอ — มีสถานะเซนเซอร์ทั้ง 2 มุมมอง
 # ==============================================================
 @app.route("/")
 def dashboard():
@@ -214,7 +249,6 @@ body{background:#0f1629;color:#fff;padding:16px}
 h1{text-align:center;color:#6cf;margin-bottom:8px}
 .ver{text-align:center;color:#8ac;margin-bottom:16px}
 
-/* 🔘 แท็บเลือกโหมด */
 .tabs{display:flex;max-width:450px;margin:0 auto 20px;border-radius:10px;background:#1a2342;padding:4px}
 .tab{flex:1;padding:10px 0;text-align:center;border-radius:8px;cursor:pointer;font-weight:bold;transition:all .2s}
 .tab.inactive{background:transparent;color:#8ac}
@@ -240,6 +274,8 @@ h1{text-align:center;color:#6cf;margin-bottom:8px}
 .gnd-ok{border-left:3px solid #4f9;padding-left:10px}
 .gnd-warn{border-left:3px solid #fa4;padding-left:10px}
 .gnd-fail{border-left:3px solid #f44;padding-left:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:10px}
+.item{padding:8px 10px;border-radius:6px;background:#1e2b4d;font-size:13px}
 .hidden{display:none !important}
 </style>
 </head>
@@ -247,7 +283,6 @@ h1{text-align:center;color:#6cf;margin-bottom:8px}
 <h1>⚡ SAFE-ELEC PLATFORM</h1>
 <div class="ver">ตรวจสอบระบบไฟฟ้า — เลือกมุมมองได้ตามต้องการ</div>
 
-<!-- 🔘 แท็บเลือกมุมมอง -->
 <div class="tabs">
   <div class="tab active mini" id="tab-mini" onclick="setView('mini')">🟢 มินิ</div>
   <div class="tab inactive full" id="tab-full" onclick="setView('full')">🔵 เต็มระบบ</div>
@@ -261,7 +296,7 @@ h1{text-align:center;color:#6cf;margin-bottom:8px}
 
 <script>
 let all = [];
-let currentView = 'mini'; // เริ่มต้นที่มินิ
+let currentView = 'mini';
 
 async function load(){
   const res = await fetch('/api/devices');
@@ -271,7 +306,6 @@ async function load(){
 
 function setView(view){
   currentView = view;
-  // อัปเดตสถานะแท็บ
   document.getElementById('tab-mini').className = view==='mini'?'tab active mini':'tab inactive';
   document.getElementById('tab-full').className = view==='full'?'tab active full':'tab inactive';
   render(all);
@@ -289,6 +323,12 @@ function getGndClass(val){
   return 'gnd-ok';
 }
 
+function getSensorIcon(s){
+  if(s.ok===true) return '✅';
+  if(s.ok===false) return '❌';
+  return '⏳';
+}
+
 function render(list){
   document.getElementById('list').innerHTML = list.map(d=>`
     <div class="card ${d.status_summary}">
@@ -301,7 +341,7 @@ function render(list){
         ${d.fault_list.map(f=>`<div class="row">${f}</div>`).join('')}
       </div>`:''}
 
-      <!-- 🟢 มินิ — เฉพาะสิ่งจำเป็น -->
+      <!-- 🟢 มินิ -->
       <div class="${currentView!=='mini'?'hidden':''}">
         <div class="section">
           <b>🔌 ระบบ 220V</b>
@@ -325,11 +365,23 @@ function render(list){
           <div class="row">สถานะ: ${d.gnd_system_ok?'<b class="ok">✅ ปกติ</b>':'<b class="dang">❌ ตรวจสอบทันที</b>'}</div>
         </div>
         
+        <div class="section">
+          <b>📋 สถานะอุปกรณ์หลัก</b>
+          <div class="grid">
+            ${['temp','humidity','gnd_resist','gnd_volt','comm','psu'].map(k=>{
+              const s=d.sensors[k];
+              return `<div class="item ${s.ok===true?'ok':s.ok===false?'dang':'warn'}">
+                ${getSensorIcon(s)} ${s.name}<br><b>${s.value}${s.unit||''}</b>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+        
         <div class="row">🌡️ อุณหภูมิ: ${d.current_temp}°C | 💧 ความชื้น: ${d.humidity}%</div>
         <div class="row ${d.wiring_fault?'dang':'ok'}">สายไฟ: ${d.wiring_fault?'⚠️ ผิดปกติ':'✅ ปกติ'}</div>
       </div>
 
-      <!-- 🔵 เต็มระบบ — ทุกส่วน -->
+      <!-- 🔵 เต็มระบบ -->
       <div class="${currentView!=='full'?'hidden':''}">
         <div class="section">
           <b>⚡ ตู้หลัก 380V</b>
@@ -361,6 +413,17 @@ function render(list){
           <div class="row">สถานะระบบกราวด์: ${d.gnd_system_ok?'<b class="ok">✅ ปกติ</b>':'<b class="dang">❌ ตรวจสอบทันที</b>'}</div>
         </div>
         
+        <div class="section">
+          <b>📋 สถานะเซนเซอร์ทั้งหมด</b>
+          <div class="grid">
+            ${Object.entries(d.sensors).map(([k,s])=>`
+              <div class="item ${s.ok===true?'ok':s.ok===false?'dang':'warn'}">
+                ${getSensorIcon(s)} ${s.name}<br><b>${s.value}${s.unit||''}</b>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        
         <div class="row">🌡️ อุณหภูมิ: ${d.current_temp}°C | 💧 ความชื้น: ${d.humidity}%</div>
         <div class="row ${d.wiring_fault?'dang':'ok'}">สายไฟ: ${d.wiring_fault?'⚠️ ผิดปกติ':'✅ ปกติ'}</div>
         <div class="row ${d.critical_shutdown?'dang':'ok'}">ระบบตัดอัตโนมัติ: ${d.critical_shutdown?'⚠️ ทำงานแล้ว':'✅ ปกติ'}</div>
@@ -390,7 +453,8 @@ setInterval(load, 5000);
 if __name__ == "__main__":
     print(f"\n{'='*60}")
     print(f"  {CONFIG['SYSTEM_NAME']} — {CONFIG['VERSION']}")
-    print(f"  🟢 มุมมองมินิ / 🔵 เต็มระบบ — เลือกได้จากหน้าจอ")
+    print(f"  🟢 มินิ = เฉพาะสิ่งจำเป็น + สถานะหลัก")
+    print(f"  🔵 เต็มระบบ = ครบทุกส่วน + เซนเซอร์ทั้งหมด")
     print(f"  📋 อุปกรณ์: {len(devices)} ชุด")
     print(f"{'='*60}\n")
     app.run(host="0.0.0.0", port=5000)
