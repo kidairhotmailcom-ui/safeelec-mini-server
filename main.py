@@ -7,7 +7,6 @@ CORS(app)
 
 # ==============================================================
 # 📋 รายการอุปกรณ์ — เพิ่มได้เรื่อยๆ
-# รูปแบบ: (รหัส, สถานที่, ลูกค้า, จังหวัด)
 # ==============================================================
 DEVICE_LIST = [
     ("SAFE-001", "แผงหลัก+ย่อย อาคารหลัก", "CUST-0891", "ขอนแก่น"),
@@ -16,7 +15,7 @@ DEVICE_LIST = [
 ]
 
 # ==============================================================
-# 🔧 โครงสร้างมาตรฐาน — ครบทั้ง 2 ระบบในชุดเดียว
+# 🔧 โครงสร้างมาตรฐาน — เพิ่มส่วนสมดุล 220V
 # ==============================================================
 TEMPLATE = {
     "last_updated": "-",
@@ -41,7 +40,7 @@ TEMPLATE = {
     "power_3phase_kw": 0.0,
     "balance_ok": True,
     
-    # 🔌 ระบบตู้ย่อย 220V (แยก 3 โซน/เฟส)
+    # 🔌 ระบบตู้ย่อย 220V (3 โซน) — เพิ่มฟิลด์ใหม่
     "sub1_phase": 1,
     "sub1_v": 220.0,
     "sub1_a": 0.0,
@@ -56,6 +55,10 @@ TEMPLATE = {
     "sub3_v": 220.0,
     "sub3_a": 0.0,
     "sub3_w": 0.0,
+    
+    # ✅ เพิ่มส่วนสมดุล 220V
+    "sub_total_a": 0.0,
+    "sub_balance_ok": True,
 }
 
 # สร้างรายการอัตโนมัติ
@@ -69,16 +72,38 @@ for dev_id, site, cust, prov in DEVICE_LIST:
     devices.append(d)
 
 # ==============================================================
-# 🌐 API
+# 🌐 API — เพิ่มตรรกะคำนวณสมดุล 220V
 # ==============================================================
 @app.route("/api/data", methods=["POST"])
 def receive_data():
     d = request.get_json(force=True)
     for x in devices:
         if x["device_id"] == d.get("device_id"):
+            # อัปเดตค่าที่ส่งมา
             for k, v in d.items():
                 x[k] = v
             x["last_updated"] = datetime.now().strftime("%H:%M:%S")
+            
+            # ✅ คำนวณกระแสรวม + เช็คสมดุล 220V
+            a1 = x["sub1_a"]
+            a2 = x["sub2_a"]
+            a3 = x["sub3_a"]
+            
+            x["sub_total_a"] = round(a1 + a2 + a3, 2)
+            
+            # เช็คสมดุล: ค่าแต่ละเฟสห่างจากค่าเฉลี่ยไม่เกิน 0.5A
+            total = a1 + a2 + a3
+            if total > 0:
+                avg = total / 3
+                threshold = 0.5  # เกณฑ์ความคลาดเคลื่อนที่ยอมรับได้ (A)
+                x["sub_balance_ok"] = (
+                    abs(a1 - avg) <= threshold and
+                    abs(a2 - avg) <= threshold and
+                    abs(a3 - avg) <= threshold
+                )
+            else:
+                x["sub_balance_ok"] = True  # ไม่มีโหลด = ถือว่าสมดุล
+            
             break
     return jsonify({"ok": True})
 
@@ -87,7 +112,7 @@ def get_devices():
     return jsonify(devices)
 
 # ==============================================================
-# 📊 หน้าแดชบอร์ด — แสดงครบทั้ง 2 ระบบ
+# 📊 หน้าแดชบอร์ด — แสดงสมดุล 220V
 # ==============================================================
 @app.route("/")
 def dashboard():
@@ -142,6 +167,8 @@ function render(list){
         <div class="row">โซน1 (เฟส${x.sub1_phase}): ${x.sub1_v}V | ${x.sub1_a}A | ${x.sub1_w}W</div>
         <div class="row">โซน2 (เฟส${x.sub2_phase}): ${x.sub2_v}V | ${x.sub2_a}A | ${x.sub2_w}W</div>
         <div class="row">โซน3 (เฟส${x.sub3_phase}): ${x.sub3_v}V | ${x.sub3_a}A | ${x.sub3_w}W</div>
+        <!-- ✅ เพิ่มบรรทัดแสดงสมดุล 220V -->
+        <div class="row">กระแสรวม: ${x.sub_total_a} A | สมดุล: ${x.sub_balance_ok ? '✅ ปกติ' : '⚠️ ไม่สมดุล'}</div>
       </div>
       
       <div class="row">🌡️ อุณหภูมิ: ${x.current_temp}°C | 💧 ความชื้น: ${x.humidity}%</div>
