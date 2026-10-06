@@ -28,7 +28,7 @@ USER_DB = {
 # ==============================================================
 CONFIG = {
     "SYSTEM_NAME": "SAFE-ELEC",
-    "VERSION": "3.0.0-ULTIMATE-DUAL-BACKUP",
+    "VERSION": "3.0.0-FULL-DEPLOY",
     "STANDARD": {
         "V3_NOM": 380, "V3_MIN": 342, "V3_MAX": 418,
         "V1_NOM": 220, "V1_MIN": 198, "V1_MAX": 242,
@@ -836,4 +836,4 @@ function render(list){
         <div class="section ${currentView!=='full'?'hidden':''}">
           <b>🏘️ โซน 1-3</b>
           <div class="row">โซน1: ${d.z1_v}V / ${d.z1_a}A / ${d.z1_w}kW</div>
-          <div class="row">โซน2: ${d
+          <div class="
