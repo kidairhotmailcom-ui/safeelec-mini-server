@@ -13,9 +13,6 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "SAFE-ELEC-2026-SECRET-KEY-CHANGE-ME-PLEASE")
 CORS(app, supports_credentials=True)
 
-# ==============================================================
-# 🔐 บัญชีผู้ใช้
-# ==============================================================
 USER_DB = {
     "admin": {"password": "123456", "name": "ผู้ดูแลระบบ", "customer_id": "ALL"},
     "cust0891": {"password": "123456", "name": "อาคารหลัก ขอนแก่น", "customer_id": "CUST-0891"},
@@ -23,9 +20,6 @@ USER_DB = {
     "cust0004": {"password": "123456", "name": "โรงงานผลิต ระยอง", "customer_id": "CUST-0004"},
 }
 
-# ==============================================================
-# ⚙️ ค่าคงที่
-# ==============================================================
 CONFIG = {
     "SYSTEM_NAME": "SAFE-ELEC",
     "VERSION": "3.0.0-FULL-DEPLOY",
@@ -61,9 +55,6 @@ CONFIG = {
     }
 }
 
-# ==============================================================
-# 🔄 แปลงชื่อฟิลด์
-# ==============================================================
 FIELD_MAP = {
     "id": "device_id", "esp_id": "device_id", "esp": "device_id",
     "site": "site_name", "cust": "customer_id", "role": "role",
@@ -99,17 +90,11 @@ FIELD_MAP = {
     "safety_lock": "safety_lock",
 }
 
-# ==============================================================
-# 📋 รายการอุปกรณ์
-# ==============================================================
 DEVICE_LIST = [
     ("SAFE-001", "แผงหลัก+ย่อย อาคารหลัก", "CUST-0891", "ขอนแก่น", "office"),
     ("SAFE-001-BAK", "สำรอง — แผงหลัก อาคารหลัก", "CUST-0891", "ขอนแก่น", "office"),
 ]
 
-# ==============================================================
-# 📐 โครงสร้างข้อมูล
-# ==============================================================
 TEMPLATE = {
     "device_id": "", "site_name": "", "customer_id": "",
     "province": "", "site_type": "",
@@ -164,9 +149,6 @@ for dev_id, site, cust, prov, stype in DEVICE_LIST:
     d["site_type"] = stype
     devices.append(d)
 
-# ==============================================================
-# 🔔 ระบบแจ้งเตือน LINE — แก้ไขเพิ่ม timeout & debug
-# ==============================================================
 def send_line_alert(message):
     token = CONFIG["ALERT"]["LINE_TOKEN"]
     if not token or not CONFIG["ALERT"]["ENABLED"]:
@@ -183,9 +165,6 @@ def send_line_alert(message):
         else:
             print(f"[LINE] ส่งไม่สำเร็จ: รหัส {res.status_code} — {res.text}")
             return False
-    except requests.exceptions.Timeout:
-        print("[LINE] ผิดพลาด: เชื่อมต่อช้า/หมดเวลา")
-        return False
     except Exception as e:
         print(f"[LINE] ผิดพลาด: {type(e).__name__} — {e}")
         return False
@@ -230,13 +209,11 @@ def build_alert_message(dev):
         "warning": "⚠️ มีสิ่งต้องเฝ้าระวัง",
         "critical": "🔴 ปัญหาร้ายแรง"
     }.get(dev["alert_level"], "แจ้งเตือน")
-    
     backup_note = ""
     if dev.get("backup_active"):
         backup_note = "\n🛡️ ระบบสำรองกำลังทำงานแทน"
     if not dev.get("partner_online", True):
         backup_note = "\n⚠️ ไม่พบคู่ขนาน — ตรวจสอบการเชื่อมต่อ"
-    
     msg = f"""
 {'='*35}
 📢 {status_text}
@@ -267,23 +244,17 @@ def trigger_alert(dev):
         dev["last_alert_sent"] = datetime.now()
         print(f"✅ ส่งแจ้งเตือนสำเร็จ: {dev['device_id']}")
 
-# ==============================================================
-# 📊 รายงาน Excel
-# ==============================================================
 def generate_excel_report():
     output = io.BytesIO()
     workbook = xlsxwriter.Workbook(output)
     ws = workbook.add_worksheet("สรุปภาพรวม")
-    
     header = workbook.add_format({'bold': True, 'bg_color': '#2f9', 'color': '#032', 'align': 'center'})
     normal = workbook.add_format({'text_wrap': True})
     red = workbook.add_format({'font_color': '#f44', 'bold': True})
     green = workbook.add_format({'font_color': '#4f9'})
-    
     headers = ["รหัส", "สถานที่", "บทบาท", "ออนไลน์", "สถานะ", "อุณหภูมิ", "กราวด์ R(Ω)", "กราวด์ V(V)", "ปัญหา"]
     for col, h in enumerate(headers):
         ws.write(0, col, h, header)
-    
     for row, d in enumerate(devices, start=1):
         status_fmt = green if d["alert_level"]=="normal" else red
         role_label = d.get("role", "-")
@@ -298,7 +269,6 @@ def generate_excel_report():
         ws.write(row, 6, d["gnd_resistance_ohm"], normal)
         ws.write(row, 7, d["gnd_voltage_v"], normal)
         ws.write(row, 8, f"{len(d['fault_list'])} รายการ", normal)
-    
     ws.set_column(0, 8, 18)
     workbook.close()
     output.seek(0)
@@ -307,9 +277,6 @@ def generate_excel_report():
         "name": f"SAFE-ELEC-Report-{datetime.now().strftime('%Y%m%d-%H%M%S')}.xlsx"
     }
 
-# ==============================================================
-# 🔍 ตรวจสอบกราวด์
-# ==============================================================
 def check_ground(dev):
     S = CONFIG["STANDARD"]
     faults = []
@@ -326,7 +293,6 @@ def check_ground(dev):
         faults.append(f"⚠️ กราวด์ควรปรับปรุง: {gr}Ω")
     else:
         dev["sensors"]["gnd_resist"]["ok"] = True
-
     gv = dev["gnd_voltage_v"]
     dev["sensors"]["gnd_volt"]["value"] = gv
     if gv <= 0:
@@ -348,15 +314,11 @@ def check_balance(i1, i2, i3):
         if avg > 0 and abs(v - avg) / avg * 100 > CONFIG["STANDARD"]["BALANCE_MAX_PCT"]: return False
     return True
 
-# ==============================================================
-# ⚡ ตรวจสอบระบบสำรอง ESP
-# ==============================================================
 def check_dual_backup(dev):
     faults = []
     role = dev.get("role", "UNKNOWN")
     is_active = dev.get("backup_active", False)
     partner_online = dev.get("partner_online", True)
-    
     if role == "MASTER":
         dev["sensors"]["dualmode"]["value"] = "ตัวหลัก"
         dev["sensors"]["dualmode"]["ok"] = partner_online
@@ -375,14 +337,10 @@ def check_dual_backup(dev):
         dev["sensors"]["dualmode"]["ok"] = None
     return faults
 
-# ==============================================================
-# ✅ ตรวจสอบทุกอย่าง
-# ==============================================================
 def check_all(dev):
     S = CONFIG["STANDARD"]
     faults = check_ground(dev)
     faults += check_dual_backup(dev)
-
     if dev["is_online"]:
         dev["sensors"]["esp"]["value"] = "เชื่อมต่อปกติ"
         dev["sensors"]["esp"]["ok"] = True
@@ -397,7 +355,6 @@ def check_all(dev):
         dev["sensors"]["comm"]["ok"] = None
         dev["sensors"]["psu"]["value"] = "ตรวจสอบ"
         dev["sensors"]["psu"]["ok"] = None
-
     t = dev["current_temp"]
     dev["sensors"]["temp"]["value"] = t
     if not dev["is_online"]:
@@ -410,45 +367,37 @@ def check_all(dev):
         faults.append(f"⚠️ อุณหภูมิสูง: {t}°C")
     else:
         dev["sensors"]["temp"]["ok"] = True
-
     h = dev["humidity"]
     dev["sensors"]["humidity"]["value"] = h
     if not dev["is_online"] or h == 0:
         dev["sensors"]["humidity"]["ok"] = None
     else:
         dev["sensors"]["humidity"]["ok"] = S["HUMI_MIN"] <= h <= S["HUMI_MAX"]
-
     for k, v in [("v_l1_l2", dev["v_l1_l2"]), ("v_l2_l3", dev["v_l2_l3"]), ("v_l3_l1", dev["v_l3_l1"])]:
         dev["sensors"][k]["value"] = v
         if not dev["is_online"] or v == 0:
             dev["sensors"][k]["ok"] = None
         else:
             dev["sensors"][k]["ok"] = S["V3_MIN"] <= v <= S["V3_MAX"]
-
     for k, v in [("a_l1", dev["a_l1"]), ("a_l2", dev["a_l2"]), ("a_l3", dev["a_l3"])]:
         dev["sensors"][k]["value"] = v
         dev["sensors"][k]["ok"] = None if not dev["is_online"] or v == 0 else True
-
     for k, v in [("z1_v", dev["z1_v"]), ("z2_v", dev["z2_v"]), ("z3_v", dev["z3_v"])]:
         dev["sensors"][k]["value"] = v
         if not dev["is_online"] or v == 0:
             dev["sensors"][k]["ok"] = None
         else:
             dev["sensors"][k]["ok"] = S["V1_MIN"] <= v <= S["V1_MAX"]
-
     for k, v in [("z1_a", dev["z1_a"]), ("z2_a", dev["z2_a"]), ("z3_a", dev["z3_a"])]:
         dev["sensors"][k]["value"] = v
         dev["sensors"][k]["ok"] = None if not dev["is_online"] or v == 0 else True
-
     dev["balance_3ph_ok"] = check_balance(dev["a_l1"], dev["a_l2"], dev["a_l3"])
     dev["z_total_a"] = round(dev["z1_a"] + dev["z2_a"] + dev["z3_a"], 2)
     dev["z_balance_ok"] = check_balance(dev["z1_a"], dev["z2_a"], dev["z3_a"])
-
     if dev["is_online"] and not dev["balance_3ph_ok"]:
         faults.append("⚠️ ระบบ 380V ไม่สมดุล")
     if dev["is_online"] and not dev["z_balance_ok"] and dev["z_total_a"] > 0:
         faults.append("⚠️ ระบบ 220V ไม่สมดุล")
-
     critical = any("🔴" in f for f in faults)
     warning = any("⚠️" in f for f in faults)
     if not dev["is_online"]:
@@ -463,14 +412,10 @@ def check_all(dev):
     else:
         dev["status_summary"] = "online"
         dev["alert_level"] = "normal"
-
     dev["fault_list"] = faults
     trigger_alert(dev)
     return dev
 
-# ==============================================================
-# 🛡️ ตรวจสอบล็อกอิน
-# ==============================================================
 @app.before_request
 def check_login():
     if request.path in ["/login", "/do_login", "/logout", "/api/data", "/api/devices", "/api/report-excel"]:
@@ -489,9 +434,6 @@ def update_online():
             d["is_online"] = False
         check_all(d)
 
-# ==============================================================
-# 🌐 API รับข้อมูล
-# ==============================================================
 @app.route("/api/data", methods=["GET"])
 def get_data():
     dev_id = request.args.get("device_id", "SAFE-001")
@@ -514,30 +456,24 @@ def get_data():
 def receive():
     data = request.get_json(force=True) or {}
     now = datetime.now()
-    
     normalized = {}
     for key, value in data.items():
         key_low = key.lower().strip()
         std_key = FIELD_MAP.get(key_low, key_low)
         normalized[std_key] = value
-    
     dev_id = normalized.get("device_id", "")
     if not dev_id:
         return jsonify({"ok": False, "error": "ต้องระบุ device_id"}), 400
-    
     d = next((dev for dev in devices if dev["device_id"] == dev_id), None)
     if not d:
         return jsonify({"ok": False, "error": f"ไม่พบอุปกรณ์: {dev_id}"}), 404
-    
     for k, v in normalized.items():
         if k in d and k not in ["sensors", "fault_list"]:
             d[k] = v
-    
     d["last_updated"] = now.strftime("%H:%M:%S")
     d["last_seen"] = now
     d["is_online"] = True
     d = check_all(d)
-    
     return jsonify({
         "ok": True,
         "device_id": dev_id,
@@ -563,9 +499,6 @@ def download_report():
         as_attachment=True
     )
 
-# ==============================================================
-# 📲 ล็อกอิน
-# ==============================================================
 @app.route("/login")
 def login():
     err = request.args.get("err", "")
@@ -615,9 +548,6 @@ def logout():
     session.clear()
     return redirect("/login")
 
-# ==============================================================
-# 📊 หน้าจอหลัก — เต็มระบบ ✅
-# ==============================================================
 @app.route("/")
 def dashboard():
     return render_template_string("""
@@ -736,7 +666,6 @@ function matchDevice(d, kw){
 function applyFilterAndRender(){
   const kw = document.getElementById('q').value.trim().toLowerCase();
   let filtered = all.filter(d => matchDevice(d, kw));
-  
   if (!kw) {
     filtered = filtered.filter(d => d.is_online);
     document.getElementById('result-info').innerHTML = 
@@ -745,7 +674,6 @@ function applyFilterAndRender(){
     document.getElementById('result-info').innerHTML = 
       `พบ <b>${filtered.length}</b> จากทั้งหมด <b>${all.length}</b> รายการ`;
   }
-  
   render(filtered);
 }
 function render(list){
@@ -799,4 +727,19 @@ function render(list){
           <div class="row">โซน1: ${d.z1_v}V / ${d.z1_a}A / ${d.z1_w}kW</div>
           <div class="row">โซน2: ${d.z2_v}V / ${d.z2_a}A / ${d.z2_w}kW</div>
           <div class="row">โซน3: ${d.z3_v}V / ${d.z3_a}A / ${d.z3_w}kW</div>
-          <div class="row">กระแสรวม: ${d.z_total_a}A | สมดุล: ${d.z_balance_ok?'✅ ปกติ':'⚠️ ไม่สมดุล
+          <div class="row">กระแสรวม: ${d.z_total_a}A | สมดุล: ${d.z_balance_ok?'✅ ปกติ':'⚠️ ไม่สมดุล'}</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+load();
+document.getElementById('q').addEventListener('input', applyFilterAndRender);
+</script>
+</body>
+</html>
+""")
+
+if __name__ == "__main__":
+    import os
+    port = int
