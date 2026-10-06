@@ -836,4 +836,5 @@ function render(list){
         <div class="section ${currentView!=='full'?'hidden':''}">
           <b>🏘️ โซน 1-3</b>
           <div class="row">โซน1: ${d.z1_v}V / ${d.z1_a}A / ${d.z1_w}kW</div>
-          <div class="
+          <div class="row">โซน2: ${d.z2_v}V / ${d.z2_a}A / ${d.z2_w}kW</div>
+          <div class="row">โซน3: ${d.z3_v}
