@@ -10,8 +10,8 @@ import io
 import os
 
 app = Flask(__name__)
-app.secret_key = "SAFE-ELEC-2026-SECRET-KEY-CHANGE-ME-PLEASE"
-CORS(app)
+app.secret_key = os.environ.get("SECRET_KEY", "SAFE-ELEC-2026-SECRET-KEY-CHANGE-ME-PLEASE")
+CORS(app, supports_credentials=True)
 
 # ==============================================================
 # 🔐 บัญชีผู้ใช้
@@ -47,11 +47,11 @@ CONFIG = {
     "ALERT": {
         "ENABLED": True,
         "LINE_TOKEN": os.environ.get("LINE_TOKEN", ""),
-        "EMAIL_TO": "",
-        "EMAIL_FROM": "",
+        "EMAIL_TO": os.environ.get("EMAIL_TO", ""),
+        "EMAIL_FROM": os.environ.get("EMAIL_FROM", ""),
         "SMTP_SERVER": "smtp.gmail.com",
         "SMTP_PORT": 587,
-        "SMTP_PASS": "",
+        "SMTP_PASS": os.environ.get("SMTP_PASS", ""),
         "SEND_REPEAT_DELAY_MIN": 30,
     },
     "REPORT": {
@@ -65,84 +65,46 @@ CONFIG = {
 # 🔄 แปลงชื่อฟิลด์
 # ==============================================================
 FIELD_MAP = {
-    "id":               "device_id",
-    "esp_id":           "device_id",
-    "esp":              "device_id",
-    "site":             "site_name",
-    "cust":             "customer_id",
-    "role":             "role",
-    "is_master":        "is_master",
-    "active":           "backup_active",
-    "backup_active":    "backup_active",
-    "partner":          "partner_online",
-    "partner_online":   "partner_online",
-    "master":           "is_master",
-    "t":                "current_temp",
-    "temp":             "current_temp",
-    "temperature":      "current_temp",
-    "temp_max_c":       "current_temp",
-    "humi":             "humidity",
-    "rh":               "humidity",
-    "humidity_rh":      "humidity",
-    "v12":              "v_l1_l2",
-    "v23":              "v_l2_l3",
-    "v31":              "v_l3_l1",
-    "vl1l2":            "v_l1_l2",
-    "vl2l3":            "v_l2_l3",
-    "vl3l1":            "v_l3_l1",
-    "v_ab":             "v_l1_l2",
-    "v_bc":             "v_l2_l3",
-    "v_ca":             "v_l3_l1",
-    "i1":               "a_l1",
-    "i2":               "a_l2",
-    "i3":               "a_l3",
-    "il1":              "a_l1",
-    "il2":              "a_l2",
-    "il3":              "a_l3",
-    "ia":               "a_l1",
-    "ib":               "a_l2",
-    "ic":               "a_l3",
-    "in":               "a_n",
-    "power":            "power_kw",
-    "kw":               "power_kw",
-    "p_total":          "power_kw",
-    "power_total_kw":   "power_kw",
-    "vz1":              "z1_v", "v_z1": "z1_v", "vzone1": "z1_v", "sub1_v": "z1_v",
-    "az1":              "z1_a", "a_z1": "z1_a", "azone1": "z1_a", "sub1_a": "z1_a",
-    "wz1":              "z1_w", "w_z1": "z1_w", "sub1_w": "z1_w",
-    "vz2":              "z2_v", "v_z2": "z2_v", "vzone2": "z2_v", "sub2_v": "z2_v",
-    "az2":              "z2_a", "a_z2": "z2_a", "azone2": "z2_a", "sub2_a": "z2_a",
-    "wz2":              "z2_w", "w_z2": "z2_w", "sub2_w": "z2_w",
-    "vz3":              "z3_v", "v_z3": "z3_v", "vzone3": "z3_v", "sub3_v": "z3_v",
-    "az3":              "z3_a", "a_z3": "z3_a", "azone3": "z3_a", "sub3_a": "z3_a",
-    "wz3":              "z3_w", "w_z3": "z3_w", "sub3_w": "z3_w",
-    "gnd_r":            "gnd_resistance_ohm",
-    "ground_res":       "gnd_resistance_ohm",
-    "res_gnd":          "gnd_resistance_ohm",
-    "r_gnd":            "gnd_resistance_ohm",
-    "gnd_ohm":          "gnd_resistance_ohm",
-    "ground_resistance_ohm": "gnd_resistance_ohm",
-    "gnd_v":            "gnd_voltage_v",
-    "ground_v":         "gnd_voltage_v",
-    "v_leak":           "gnd_voltage_v",
-    "v_gnd":            "gnd_voltage_v",
-    "leak_volt":        "gnd_voltage_v",
-    "ground_leak_voltage_v": "gnd_voltage_v",
-    "wiring":           "wiring_fault",
-    "shutdown":         "critical_shutdown",
-    "psu_status":       "power_status",
-    "relay":            "relay_state",
-    "relay_state":      "relay_state",
-    "lock":             "safety_lock",
-    "safety_lock":      "safety_lock",
+    "id": "device_id", "esp_id": "device_id", "esp": "device_id",
+    "site": "site_name", "cust": "customer_id", "role": "role",
+    "is_master": "is_master", "active": "backup_active", "backup_active": "backup_active",
+    "partner": "partner_online", "partner_online": "partner_online", "master": "is_master",
+    "t": "current_temp", "temp": "current_temp", "temperature": "current_temp", "temp_max_c": "current_temp",
+    "humi": "humidity", "rh": "humidity", "humidity_rh": "humidity",
+    "v12": "v_l1_l2", "v23": "v_l2_l3", "v31": "v_l3_l1",
+    "vl1l2": "v_l1_l2", "vl2l3": "v_l2_l3", "vl3l1": "v_l3_l1",
+    "v_ab": "v_l1_l2", "v_bc": "v_l2_l3", "v_ca": "v_l3_l1",
+    "i1": "a_l1", "i2": "a_l2", "i3": "a_l3",
+    "il1": "a_l1", "il2": "a_l2", "il3": "a_l3",
+    "ia": "a_l1", "ib": "a_l2", "ic": "a_l3", "in": "a_n",
+    "power": "power_kw", "kw": "power_kw", "p_total": "power_kw", "power_total_kw": "power_kw",
+    "vz1": "z1_v", "v_z1": "z1_v", "vzone1": "z1_v", "sub1_v": "z1_v",
+    "az1": "z1_a", "a_z1": "z1_a", "azone1": "z1_a", "sub1_a": "z1_a",
+    "wz1": "z1_w", "w_z1": "z1_w", "sub1_w": "z1_w",
+    "vz2": "z2_v", "v_z2": "z2_v", "vzone2": "z2_v", "sub2_v": "z2_v",
+    "az2": "z2_a", "a_z2": "z2_a", "azone2": "z2_a", "sub2_a": "z2_a",
+    "wz2": "z2_w", "w_z2": "z2_w", "sub2_w": "z2_w",
+    "vz3": "z3_v", "v_z3": "z3_v", "vzone3": "z3_v", "sub3_v": "z3_v",
+    "az3": "z3_a", "a_z3": "z3_a", "azone3": "z3_a", "sub3_a": "z3_a",
+    "wz3": "z3_w", "w_z3": "z3_w", "sub3_w": "z3_w",
+    "gnd_r": "gnd_resistance_ohm", "ground_res": "gnd_resistance_ohm",
+    "res_gnd": "gnd_resistance_ohm", "r_gnd": "gnd_resistance_ohm",
+    "gnd_ohm": "gnd_resistance_ohm", "ground_resistance_ohm": "gnd_resistance_ohm",
+    "gnd_v": "gnd_voltage_v", "ground_v": "gnd_voltage_v",
+    "v_leak": "gnd_voltage_v", "v_gnd": "gnd_voltage_v",
+    "leak_volt": "gnd_voltage_v", "ground_leak_voltage_v": "gnd_voltage_v",
+    "wiring": "wiring_fault", "shutdown": "critical_shutdown",
+    "psu_status": "power_status", "relay": "relay_state",
+    "relay_state": "relay_state", "lock": "safety_lock",
+    "safety_lock": "safety_lock",
 }
 
 # ==============================================================
 # 📋 รายการอุปกรณ์
 # ==============================================================
 DEVICE_LIST = [
-    ("SAFE-001",      "แผงหลัก+ย่อย อาคารหลัก", "CUST-0891", "ขอนแก่น", "office"),
-    ("SAFE-001-BAK",  "สำรอง — แผงหลัก อาคารหลัก", "CUST-0891", "ขอนแก่น", "office"),
+    ("SAFE-001", "แผงหลัก+ย่อย อาคารหลัก", "CUST-0891", "ขอนแก่น", "office"),
+    ("SAFE-001-BAK", "สำรอง — แผงหลัก อาคารหลัก", "CUST-0891", "ขอนแก่น", "office"),
 ]
 
 # ==============================================================
@@ -154,13 +116,9 @@ TEMPLATE = {
     "last_updated": "-", "last_seen": None,
     "is_online": False, "status_summary": "offline",
     "last_alert_sent": None,
-    "role": "UNKNOWN",
-    "is_master": False,
-    "backup_active": False,
-    "partner_online": True,
-    "partner_id": "",
-    "current_temp": 0.0, "humidity": 0.0,
-    "power_status": "MAIN AC",
+    "role": "UNKNOWN", "is_master": False,
+    "backup_active": False, "partner_online": True, "partner_id": "",
+    "current_temp": 0.0, "humidity": 0.0, "power_status": "MAIN AC",
     "wiring_fault": False, "critical_shutdown": False,
     "relay_state": True, "safety_lock": False,
     "v_l1_l2": 380.0, "v_l2_l3": 380.0, "v_l3_l1": 380.0,
@@ -172,24 +130,24 @@ TEMPLATE = {
     "z_total_a": 0.0, "z_balance_ok": True,
     "gnd_resistance_ohm": 0.0, "gnd_voltage_v": 0.0, "gnd_system_ok": True,
     "sensors": {
-        "temp":      {"name": "อุณหภูมิตู้", "value": 0.0, "ok": None},
-        "humidity":  {"name": "ความชื้น", "value": 0.0, "ok": None},
-        "comm":      {"name": "สื่อสาร", "value": "ไม่เชื่อมต่อ", "ok": None},
-        "psu":       {"name": "แหล่งจ่ายภายใน", "value": "ตรวจสอบ", "ok": None},
-        "esp":       {"name": "อุปกรณ์ ESP", "value": "ไม่เชื่อมต่อ", "ok": None},
-        "v_l1_l2":  {"name": "แรงดัน L1-L2", "value": 0.0, "ok": None},
-        "v_l2_l3":  {"name": "แรงดัน L2-L3", "value": 0.0, "ok": None},
-        "v_l3_l1":  {"name": "แรงดัน L3-L1", "value": 0.0, "ok": None},
-        "a_l1":     {"name": "กระแสเฟส 1", "value": 0.0, "ok": None},
-        "a_l2":     {"name": "กระแสเฟส 2", "value": 0.0, "ok": None},
-        "a_l3":     {"name": "กระแสเฟส 3", "value": 0.0, "ok": None},
-        "z1_v":     {"name": "โซน1 แรงดัน", "value": 0.0, "ok": None},
-        "z1_a":     {"name": "โซน1 กระแส", "value": 0.0, "ok": None},
-        "z2_v":     {"name": "โซน2 แรงดัน", "value": 0.0, "ok": None},
-        "z2_a":     {"name": "โซน2 กระแส", "value": 0.0, "ok": None},
-        "z3_v":     {"name": "โซน3 แรงดัน", "value": 0.0, "ok": None},
-        "z3_a":     {"name": "โซน3 กระแส", "value": 0.0, "ok": None},
-        "gnd_resist":{"name": "กราวด์-ความต้านทาน", "value": 0.0, "unit": "Ω", "ok": None},
+        "temp": {"name": "อุณหภูมิตู้", "value": 0.0, "ok": None},
+        "humidity": {"name": "ความชื้น", "value": 0.0, "ok": None},
+        "comm": {"name": "สื่อสาร", "value": "ไม่เชื่อมต่อ", "ok": None},
+        "psu": {"name": "แหล่งจ่ายภายใน", "value": "ตรวจสอบ", "ok": None},
+        "esp": {"name": "อุปกรณ์ ESP", "value": "ไม่เชื่อมต่อ", "ok": None},
+        "v_l1_l2": {"name": "แรงดัน L1-L2", "value": 0.0, "ok": None},
+        "v_l2_l3": {"name": "แรงดัน L2-L3", "value": 0.0, "ok": None},
+        "v_l3_l1": {"name": "แรงดัน L3-L1", "value": 0.0, "ok": None},
+        "a_l1": {"name": "กระแสเฟส 1", "value": 0.0, "ok": None},
+        "a_l2": {"name": "กระแสเฟส 2", "value": 0.0, "ok": None},
+        "a_l3": {"name": "กระแสเฟส 3", "value": 0.0, "ok": None},
+        "z1_v": {"name": "โซน1 แรงดัน", "value": 0.0, "ok": None},
+        "z1_a": {"name": "โซน1 กระแส", "value": 0.0, "ok": None},
+        "z2_v": {"name": "โซน2 แรงดัน", "value": 0.0, "ok": None},
+        "z2_a": {"name": "โซน2 กระแส", "value": 0.0, "ok": None},
+        "z3_v": {"name": "โซน3 แรงดัน", "value": 0.0, "ok": None},
+        "z3_a": {"name": "โซน3 กระแส", "value": 0.0, "ok": None},
+        "gnd_resist": {"name": "กราวด์-ความต้านทาน", "value": 0.0, "unit": "Ω", "ok": None},
         "gnd_volt": {"name": "กราวด์-แรงดันรั่ว", "value": 0.0, "unit": "V", "ok": None},
         "dualmode": {"name": "ระบบคู่ขนาน", "value": "รอข้อมูล", "ok": None},
     },
@@ -207,12 +165,12 @@ for dev_id, site, cust, prov, stype in DEVICE_LIST:
     devices.append(d)
 
 # ==============================================================
-# 🔔 ระบบแจ้งเตือน
+# 🔔 ระบบแจ้งเตือน LINE — แก้ไขเพิ่ม timeout & debug
 # ==============================================================
 def send_line_alert(message):
     token = CONFIG["ALERT"]["LINE_TOKEN"]
-    if not token:
-        print("[LINE] ยังไม่ได้ตั้งค่า Token")
+    if not token or not CONFIG["ALERT"]["ENABLED"]:
+        print("[LINE] ข้ามส่ง: ยังไม่ได้ตั้งค่า Token หรือปิดใช้งาน")
         return False
     try:
         url = "https://notify-api.line.me/api/notify"
@@ -220,13 +178,16 @@ def send_line_alert(message):
         data = {"message": f"\n{message}"}
         res = requests.post(url, headers=headers, data=data, timeout=15)
         if res.status_code == 200:
-            print("[LINE] ส่งสำเร็จ")
+            print("[LINE] ส่งสำเร็จ ✅")
             return True
         else:
-            print(f"[LINE] ส่งไม่สำเร็จ: รหัส {res.status_code}")
+            print(f"[LINE] ส่งไม่สำเร็จ: รหัส {res.status_code} — {res.text}")
             return False
+    except requests.exceptions.Timeout:
+        print("[LINE] ผิดพลาด: เชื่อมต่อช้า/หมดเวลา")
+        return False
     except Exception as e:
-        print(f"[LINE] ข้อผิดพลาด: {e}")
+        print(f"[LINE] ผิดพลาด: {type(e).__name__} — {e}")
         return False
 
 def send_email_alert(subject, body, attach_file=None):
@@ -655,7 +616,7 @@ def logout():
     return redirect("/login")
 
 # ==============================================================
-# 📊 หน้าจอหลัก — ครบถ้วน ✅
+# 📊 หน้าจอหลัก — เต็มระบบ ✅
 # ==============================================================
 @app.route("/")
 def dashboard():
@@ -837,9 +798,5 @@ function render(list){
           <b>🏘️ โซน 1-3</b>
           <div class="row">โซน1: ${d.z1_v}V / ${d.z1_a}A / ${d.z1_w}kW</div>
           <div class="row">โซน2: ${d.z2_v}V / ${d.z2_a}A / ${d.z2_w}kW</div>
-          <div class="row">โซน3: ${d.z3_v}V / ${d.z3_a}
-
-if __name__ == "__main__":
-    import os
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+          <div class="row">โซน3: ${d.z3_v}V / ${d.z3_a}A / ${d.z3_w}kW</div>
+          <div class="row">กระแสรวม: ${d.z_total_a}A | สมดุล: ${d.z_balance_ok?'✅ ปกติ':'⚠️ ไม่สมดุล
