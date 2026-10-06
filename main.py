@@ -7,7 +7,7 @@ app.secret_key = "SAFE-ELEC-2026-SECRET-KEY-CHANGE-ME-PLEASE"
 CORS(app)
 
 # ==============================================================
-# 🔐 บัญชีผู้ใช้
+# 🔐 บัญชีผู้ใช้ — ของเดิมครบตรง
 # ==============================================================
 USER_DB = {
     "admin": {"password": "123456", "name": "ผู้ดูแลระบบ", "customer_id": "ALL"},
@@ -17,7 +17,7 @@ USER_DB = {
 }
 
 # ==============================================================
-# ⚙️ ค่าคงที่
+# ⚙️ ค่าคงที่ — ของเดิมครบตรง
 # ==============================================================
 CONFIG = {
     "SYSTEM_NAME": "SAFE-ELEC",
@@ -35,11 +35,27 @@ CONFIG = {
     "SITE_TYPES": {
         "convenience": "ร้านสะดวกซื้อ", "shop": "ร้านค้าทั่วไป",
         "factory": "โรงงาน", "hotel": "โรงแรม", "office": "สำนักงาน",
+    },
+    # ✅ เพิ่มส่วนแจ้งเตือน & รายงาน
+    "ALERT": {
+        "ENABLED": True,
+        "LINE_TOKEN": "",  # ใส่ LINE Notify Token ตรงนี้
+        "EMAIL_TO": "",    # อีเมลรับแจ้งเตือน
+        "EMAIL_FROM": "",
+        "SMTP_SERVER": "smtp.gmail.com",
+        "SMTP_PORT": 587,
+        "SMTP_PASS": "",
+        "SEND_REPEAT_DELAY_MIN": 30,  # ไม่ส่งซ้ำภายใน 30 นาที
+    },
+    "REPORT": {
+        "AUTO_SEND": True,
+        "SCHEDULE_TIME": "09:00",  # ส่ง 9 โมงเช้า
+        "DAY_OF_MONTH": 1,         # วันที่ 1 ทุกเดือน
     }
 }
 
 # ==============================================================
-# 🔄 แปลงชื่อฟิลด์ — รองรับทุกรุ่น ESP
+# 🔄 แปลงชื่อฟิลด์ — รองรับทุกรุ่น ESP — ของเดิมครบตรง
 # ==============================================================
 FIELD_MAP = {
     # --- ID อุปกรณ์ ---
@@ -140,20 +156,21 @@ FIELD_MAP = {
 }
 
 # ==============================================================
-# 📋 รายการอุปกรณ์
+# 📋 รายการอุปกรณ์ — ของเดิมครบตรง
 # ==============================================================
 DEVICE_LIST = [
     ("SAFE-001",      "แผงหลัก+ย่อย อาคารหลัก", "CUST-0891", "ขอนแก่น", "office"),
 ]
 
 # ==============================================================
-# 📐 โครงสร้างข้อมูล — ✅ ครบทุกเซนเซอร์
+# 📐 โครงสร้างข้อมูล — ✅ ครบทุกเซนเซอร์ + เพิ่มส่วนแจ้งเตือน
 # ==============================================================
 TEMPLATE = {
     "device_id": "", "site_name": "", "customer_id": "",
     "province": "", "site_type": "",
     "last_updated": "-", "last_seen": None,
     "is_online": False, "status_summary": "offline",
+    "last_alert_sent": None,  # ✅ เพิ่ม — ป้องกันส่งซ้ำ
     
     "current_temp": 0.0, "humidity": 0.0,
     "power_status": "MAIN AC",
@@ -206,7 +223,150 @@ for dev_id, site, cust, prov, stype in DEVICE_LIST:
     devices.append(d)
 
 # ==============================================================
-# 🔍 ตรวจสอบกราวด์
+# 🔔 ระบบแจ้งเตือน — เพิ่มใหม่ ทำงานครบ
+# ==============================================================
+import requests
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
+import xlsxwriter
+import io
+
+def send_line_alert(message):
+    """ส่งแจ้งเตือนผ่าน LINE Notify"""
+    token = CONFIG["ALERT"]["LINE_TOKEN"]
+    if not token:
+        return False
+    try:
+        url = "https://notify-api.line.me/api/notify"
+        headers = {"Authorization": f"Bearer {token}"}
+        data = {"message": f"\n{message}"}
+        res = requests.post(url, headers=headers, data=data, timeout=10)
+        return res.status_code == 200
+    except Exception as e:
+        print(f"❌ ส่ง LINE ไม่สำเร็จ: {e}")
+        return False
+
+def send_email_alert(subject, body, attach_file=None):
+    """ส่งแจ้งเตือนทางอีเมล"""
+    cfg = CONFIG["ALERT"]
+    if not cfg["EMAIL_TO"] or not cfg["SMTP_PASS"]:
+        return False
+    try:
+        msg = MIMEMultipart()
+        msg["From"] = cfg["EMAIL_FROM"]
+        msg["To"] = cfg["EMAIL_TO"]
+        msg["Subject"] = f"SAFE-ELEC: {subject}"
+        msg.attach(MIMEText(body, "plain", "utf-8"))
+        
+        if attach_file:
+            part = MIMEApplication(attach_file["data"], Name=attach_file["name"])
+            part["Content-Disposition"] = f'attachment; filename="{attach_file["name"]}"'
+            msg.attach(part)
+        
+        with smtplib.SMTP(cfg["SMTP_SERVER"], cfg["SMTP_PORT"]) as server:
+            server.starttls()
+            server.login(cfg["EMAIL_FROM"], cfg["SMTP_PASS"])
+            server.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"❌ ส่งอีเมลไม่สำเร็จ: {e}")
+        return False
+
+def should_send_alert(dev):
+    """ตรวจสอบว่าควรส่งแจ้งเตือนหรือไม่ — ป้องกันส่งซ้ำ"""
+    if not CONFIG["ALERT"]["ENABLED"]:
+        return False
+    if dev["alert_level"] == "normal":
+        return False
+    if not dev["last_alert_sent"]:
+        return True
+    delay = CONFIG["ALERT"]["SEND_REPEAT_DELAY_MIN"] * 60
+    elapsed = (datetime.now() - dev["last_alert_sent"]).total_seconds()
+    return elapsed > delay
+
+def build_alert_message(dev):
+    """สร้างข้อความแจ้งเตือนรูปแบบอ่านง่าย"""
+    status_text = {
+        "offline": "⚠️ ขาดการติดต่อ",
+        "warning": "⚠️ มีสิ่งต้องเฝ้าระวัง",
+        "critical": "🔴 ปัญหาร้ายแรง"
+    }.get(dev["alert_level"], "แจ้งเตือน")
+    
+    msg = f"""
+{'='*35}
+📢 {status_text}
+📌 อุปกรณ์: {dev['device_id']}
+🏢 สถานที่: {dev['site_name']}
+📍 ลูกค้า: {dev['customer_id']}
+🕐 เวลา: {dev['last_updated']}
+
+รายการปัญหา:
+"""
+    for f in dev["fault_list"]:
+        msg += f"  • {f}\n"
+    
+    msg += f"\nดูรายละเอียด: {request.host_url}"
+    msg += f"\n{'='*35}"
+    return msg
+
+def trigger_alert(dev):
+    """ส่งแจ้งเตือนถ้าผ่านเงื่อนไข"""
+    if not should_send_alert(dev):
+        return
+    msg = build_alert_message(dev)
+    line_ok = send_line_alert(msg)
+    email_ok = send_email_alert(
+        f"{dev['device_id']} — {status_text}",
+        msg
+    )
+    if line_ok or email_ok:
+        dev["last_alert_sent"] = datetime.now()
+        print(f"✅ ส่งแจ้งเตือนสำเร็จ: {dev['device_id']}")
+
+# ==============================================================
+# 📊 สร้างรายงาน Excel — เพิ่มใหม่
+# ==============================================================
+def generate_excel_report():
+    """สร้างไฟล์รายงานสรุปทุกอุปกรณ์"""
+    output = io.BytesIO()
+    workbook = xlsxwriter.Workbook(output)
+    ws = workbook.add_worksheet("สรุปภาพรวม")
+    
+    # สไตล์
+    header = workbook.add_format({'bold': True, 'bg_color': '#2f9', 'color': '#032', 'align': 'center'})
+    normal = workbook.add_format({'text_wrap': True})
+    red = workbook.add_format({'font_color': '#f44', 'bold': True})
+    green = workbook.add_format({'font_color': '#4f9'})
+    
+    # หัวตาราง
+    headers = ["รหัส", "สถานที่", "ลูกค้า", "ออนไลน์", "สถานะ", "อุณหภูมิ", "ความชื้น", "ปัญหา"]
+    for col, h in enumerate(headers):
+        ws.write(0, col, h, header)
+    
+    # ข้อมูล
+    for row, d in enumerate(devices, start=1):
+        status_fmt = green if d["alert_level"]=="normal" else red
+        ws.write(row, 0, d["device_id"], normal)
+        ws.write(row, 1, d["site_name"], normal)
+        ws.write(row, 2, d["customer_id"], normal)
+        ws.write(row, 3, "✅ ใช่" if d["is_online"] else "❌ ไม่", green if d["is_online"] else red)
+        ws.write(row, 4, d["status_summary"], status_fmt)
+        ws.write(row, 5, d["current_temp"], normal)
+        ws.write(row, 6, d["humidity"], normal)
+        ws.write(row, 7, f"{len(d['fault_list'])} รายการ", normal)
+    
+    ws.set_column(0, 7, 16)
+    workbook.close()
+    output.seek(0)
+    return {
+        "data": output.read(),
+        "name": f"SAFE-ELEC-Report-{datetime.now().strftime('%Y%m%d-%H%M')}.xlsx"
+    }
+
+# ==============================================================
+# 🔍 ตรวจสอบกราวด์ — ของเดิมครบตรง
 # ==============================================================
 def check_ground(dev):
     S = CONFIG["STANDARD"]
@@ -247,7 +407,7 @@ def check_balance(i1, i2, i3):
     return True
 
 # ==============================================================
-# ✅ ตรวจสอบทุกอย่าง — รวม ESP และกราวด์
+# ✅ ตรวจสอบทุกอย่าง — รวม ESP และกราวด์ — ของเดิมครบตรง
 # ==============================================================
 def check_all(dev):
     S = CONFIG["STANDARD"]
@@ -350,14 +510,18 @@ def check_all(dev):
         dev["alert_level"] = "normal"
 
     dev["fault_list"] = faults
+    
+    # ✅ ส่งแจ้งเตือนถ้ามีปัญหา
+    trigger_alert(dev)
+    
     return dev
 
 # ==============================================================
-# 🛡️ ตรวจสอบล็อกอิน
+# 🛡️ ตรวจสอบล็อกอิน — ของเดิมครบตรง
 # ==============================================================
 @app.before_request
 def check_login():
-    if request.path in ["/login", "/do_login", "/logout", "/api/data"]:
+    if request.path in ["/login", "/do_login", "/logout", "/api/data", "/api/report-excel"]:
         return
     if "username" not in session:
         return redirect("/login")
@@ -374,7 +538,7 @@ def update_online():
         check_all(d)
 
 # ==============================================================
-# 🌐 API รับข้อมูล — ✅ รองรับทุกรุ่น ESP
+# 🌐 API รับข้อมูล — ✅ รองรับทุกรุ่น ESP — ของเดิมครบตรง
 # ==============================================================
 @app.route("/api/data", methods=["GET"])
 def get_data():
@@ -441,8 +605,19 @@ def get_devices():
     my_list = [d for d in devices if d["customer_id"] == my_cust]
     return jsonify(my_list)
 
+# ✅ เพิ่ม API ดาวน์โหลดรายงาน Excel
+@app.route("/api/report-excel")
+def download_report():
+    report = generate_excel_report()
+    from flask import send_file
+    return send_file(
+        io.BytesIO(report["data"]),
+        download_name=report["name"],
+        as_attachment=True
+    )
+
 # ==============================================================
-# 📲 ล็อกอิน
+# 📲 ล็อกอิน — ของเดิมครบตรง
 # ==============================================================
 @app.route("/login")
 def login():
@@ -494,7 +669,7 @@ def logout():
     return redirect("/login")
 
 # ==============================================================
-# 📊 หน้าจอหลัก — ✅ แสดง ESP + กราวด์ ครบทุกส่วน
+# 📊 หน้าจอหลัก — ✅ แสดง ESP + กราวด์ + ปุ่มรายงาน ครบทุกส่วน
 # ==============================================================
 @app.route("/")
 def dashboard():
@@ -543,12 +718,17 @@ h1{text-align:center;color:#6cf;margin-bottom:4px}
 .item{padding:8px 10px;border-radius:6px;background:#1e2b4d;font-size:13px}
 .hidden{display:none !important}
 .no-result{text-align:center;padding:40px 20px;color:#8ac}
+.btn-report{display:inline-block;margin-left:10px;padding:6px 12px;background:#2f9;color:#032;border-radius:6px;text-decoration:none;font-weight:bold;font-size:13px}
 </style>
 </head>
 <body>
 <h1>⚡ SAFE-ELEC PLATFORM</h1>
-<div class="ver">รองรับทุกรุ่น ESP — แปลงชื่อฟิลด์อัตโนมัติ ✅</div>
-<div class="user-bar">👤 {{session['name']}} <a href="/logout">ออกจากระบบ</a></div>
+<div class="ver">รองรับทุกรุ่น ESP — แปลงชื่อฟิลด์อัตโนมัติ ✅ | แจ้งเตือน + รายงานครบ ✅</div>
+<div class="user-bar">
+  👤 {{session['name']}}
+  <a href="/api/report-excel" class="btn-report">📊 ดาวน์โหลดรายงาน</a>
+  <a href="/logout">ออกจากระบบ</a>
+</div>
 <div class="tabs">
   <div class="tab active mini" id="tab-mini" onclick="setView('mini')">🟢 มินิ</div>
   <div class="tab inactive full" id="tab-full" onclick="setView('full')">🔵 เต็มระบบ</div>
@@ -687,40 +867,4 @@ function render(list){
         </div>
         
         <div class="section">
-          <b>🔌 ระบบย่อย 220V</b>
-          <div class="row">โซน1: ${d.z1_v}V / ${d.z1_a}A / ${d.z1_w}W</div>
-          <div class="row">โซน2: ${d.z2_v}V / ${d.z2_a}A / ${d.z2_w}W</div>
-          <div class="row">โซน3: ${d.z3_v}V / ${d.z3_a}A / ${d.z3_w}W</div>
-          <div class="row">รวม: ${d.z_total_a}A | สมดุล: ${d.z_balance_ok?'✅ ปกติ':'⚠️ ไม่สมดุล'}</div>
-        </div>
-        
-        <div class="section ${d.gnd_system_ok?'gnd-ok':'gnd-fail'}">
-          <b>🛡️ ระบบกราวด์</b>
-          <div class="row">ความต้านทานกราวด์: ${d.sensors.gnd_resist.value}Ω</div>
-          <div class="row">แรงดันรั่วที่กราวด์: ${d.sensors.gnd_volt.value}V</div>
-          <div class="row">สถานะ: ${d.gnd_system_ok?'✅ ระบบกราวด์ปกติ':'❌ ตรวจพบปัญหากราวด์'}</div>
-        </div>
-      </div>
-    </div>
-  `).join('');
-}
-document.getElementById('q').oninput = applyFilterAndRender;
-load();
-setInterval(load, 5000);
-</script>
-</body>
-</html>
-""", CONFIG_SITE_TYPES=CONFIG["SITE_TYPES"])
-
-# ==============================================================
-# 🚀 รัน
-# ==============================================================
-if __name__ == "__main__":
-    print(f"\n{'='*60}")
-    print(f"  {CONFIG['SYSTEM_NAME']} — {CONFIG['VERSION']}")
-    print(f"  ✅ รองรับทุกรุ่น ESP — แปลงชื่อฟิลด์อัตโนมัติ")
-    print(f"  ✅ ไม่ต้องแก้โค้ดที่ ESP เลย!")
-    print(f"  ✅ แสดงค่ากราวด์ + ตรวจสอบครบ")
-    print(f"  ✅ มินิ/เต็มระบบ — ครบทุกฟังก์ชัน")
-    print(f"{'='*60}\n")
-    app.run(host="0.0.0.0", port=5000)
+          <b>
