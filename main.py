@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template_string, session, redirect, url_for
+from flask import Flask, request, jsonify, render_template_string, session, redirect, url_for, send_file
 from flask_cors import CORS
 from datetime import datetime
 import requests
@@ -596,7 +596,6 @@ def get_devices():
 @app.route("/api/report-excel")
 def download_report():
     report = generate_excel_report()
-    from flask import send_file
     return send_file(
         io.BytesIO(report["data"]),
         download_name=report["name"],
@@ -837,4 +836,4 @@ function render(list){
         <div class="section ${currentView!=='full'?'hidden':''}">
           <b>🏘️ โซน 1-3</b>
           <div class="row">โซน1: ${d.z1_v}V / ${d.z1_a}A / ${d.z1_w}kW</div>
-          <div class="
+          <div class="row">โซน2: ${d
