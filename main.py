@@ -1,13 +1,20 @@
 from flask import Flask, request, jsonify, render_template_string, session, redirect, url_for
 from flask_cors import CORS
 from datetime import datetime
+import requests
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import xlsxwriter
+import io
+import os
 
 app = Flask(__name__)
 app.secret_key = "SAFE-ELEC-2026-SECRET-KEY-CHANGE-ME-PLEASE"
 CORS(app)
 
 # ==============================================================
-# 🔐 บัญชีผู้ใช้ — ของเดิมครบตรง
+# 🔐 บัญชีผู้ใช้ — เดิมครบตรง
 # ==============================================================
 USER_DB = {
     "admin": {"password": "123456", "name": "ผู้ดูแลระบบ", "customer_id": "ALL"},
@@ -17,11 +24,11 @@ USER_DB = {
 }
 
 # ==============================================================
-# ⚙️ ค่าคงที่ — ของเดิมครบตรง
+# ⚙️ ค่าคงที่ — เพิ่มส่วนระบบสำรอง
 # ==============================================================
 CONFIG = {
     "SYSTEM_NAME": "SAFE-ELEC",
-    "VERSION": "2.9.2-MULTI-ESP-SUPPORT",
+    "VERSION": "3.0.0-ULTIMATE-DUAL-BACKUP",
     "STANDARD": {
         "V3_NOM": 380, "V3_MIN": 342, "V3_MAX": 418,
         "V1_NOM": 220, "V1_MIN": 198, "V1_MAX": 242,
@@ -31,44 +38,57 @@ CONFIG = {
         "OFFLINE_SEC": 90,
         "GND_RES_OK": 10.0, "GND_RES_WARN": 30.0,
         "GND_V_OK": 2.0,
+        "BACKUP_HEARTBEAT_SEC": 3,  # ⚡ เพิ่ม — ตรวจคู่ขนานทุก 3 วินาที
     },
     "SITE_TYPES": {
         "convenience": "ร้านสะดวกซื้อ", "shop": "ร้านค้าทั่วไป",
         "factory": "โรงงาน", "hotel": "โรงแรม", "office": "สำนักงาน",
     },
-    # ✅ เพิ่มส่วนแจ้งเตือน & รายงาน
     "ALERT": {
         "ENABLED": True,
-        "LINE_TOKEN": "",  # ใส่ LINE Notify Token ตรงนี้
-        "EMAIL_TO": "",    # อีเมลรับแจ้งเตือน
+        "LINE_TOKEN": os.environ.get("LINE_TOKEN", ""),
+        "EMAIL_TO": "",
         "EMAIL_FROM": "",
         "SMTP_SERVER": "smtp.gmail.com",
         "SMTP_PORT": 587,
         "SMTP_PASS": "",
-        "SEND_REPEAT_DELAY_MIN": 30,  # ไม่ส่งซ้ำภายใน 30 นาที
+        "SEND_REPEAT_DELAY_MIN": 30,
     },
     "REPORT": {
         "AUTO_SEND": True,
-        "SCHEDULE_TIME": "09:00",  # ส่ง 9 โมงเช้า
-        "DAY_OF_MONTH": 1,         # วันที่ 1 ทุกเดือน
+        "SCHEDULE_TIME": "09:00",
+        "DAY_OF_MONTH": 1,
     }
 }
 
 # ==============================================================
-# 🔄 แปลงชื่อฟิลด์ — รองรับทุกรุ่น ESP — ของเดิมครบตรง
+# 🔄 แปลงชื่อฟิลด์ — เพิ่มฟิลด์ระบบสำรอง
 # ==============================================================
 FIELD_MAP = {
     # --- ID อุปกรณ์ ---
     "id":               "device_id",
     "esp_id":           "device_id",
     "esp":              "device_id",
+    "site":             "site_name",
+    "cust":             "customer_id",
+    
+    # --- ระบบสำรอง ESP ⚡ เพิ่ม ---
+    "role":             "role",
+    "is_master":        "is_master",
+    "active":           "backup_active",
+    "backup_active":    "backup_active",
+    "partner":          "partner_online",
+    "partner_online":   "partner_online",
+    "master":           "is_master",
     
     # --- อุณหภูมิ & ความชื้น ---
     "t":                "current_temp",
     "temp":             "current_temp",
     "temperature":      "current_temp",
+    "temp_max_c":       "current_temp",
     "humi":             "humidity",
     "rh":               "humidity",
+    "humidity_rh":      "humidity",
     
     # --- แรงดัน 3 เฟส ---
     "v12":              "v_l1_l2",
@@ -97,45 +117,18 @@ FIELD_MAP = {
     "power":            "power_kw",
     "kw":               "power_kw",
     "p_total":          "power_kw",
+    "power_total_kw":   "power_kw",
     
-    # --- โซน 1 ---
-    "vz1":              "z1_v",
-    "v_z1":             "z1_v",
-    "vzone1":           "z1_v",
-    "sub1_v":           "z1_v",
-    "az1":              "z1_a",
-    "a_z1":             "z1_a",
-    "azone1":           "z1_a",
-    "sub1_a":           "z1_a",
-    "wz1":              "z1_w",
-    "w_z1":             "z1_w",
-    "sub1_w":           "z1_w",
-    
-    # --- โซน 2 ---
-    "vz2":              "z2_v",
-    "v_z2":             "z2_v",
-    "vzone2":           "z2_v",
-    "sub2_v":           "z2_v",
-    "az2":              "z2_a",
-    "a_z2":             "z2_a",
-    "azone2":           "z2_a",
-    "sub2_a":           "z2_a",
-    "wz2":              "z2_w",
-    "w_z2":             "z2_w",
-    "sub2_w":           "z2_w",
-    
-    # --- โซน 3 ---
-    "vz3":              "z3_v",
-    "v_z3":             "z3_v",
-    "vzone3":           "z3_v",
-    "sub3_v":           "z3_v",
-    "az3":              "z3_a",
-    "a_z3":             "z3_a",
-    "azone3":           "z3_a",
-    "sub3_a":           "z3_a",
-    "wz3":              "z3_w",
-    "w_z3":             "z3_w",
-    "sub3_w":           "z3_w",
+    # --- โซน 1-3 ---
+    "vz1":              "z1_v", "v_z1": "z1_v", "vzone1": "z1_v", "sub1_v": "z1_v",
+    "az1":              "z1_a", "a_z1": "z1_a", "azone1": "z1_a", "sub1_a": "z1_a",
+    "wz1":              "z1_w", "w_z1": "z1_w", "sub1_w": "z1_w",
+    "vz2":              "z2_v", "v_z2": "z2_v", "vzone2": "z2_v", "sub2_v": "z2_v",
+    "az2":              "z2_a", "a_z2": "z2_a", "azone2": "z2_a", "sub2_a": "z2_a",
+    "wz2":              "z2_w", "w_z2": "z2_w", "sub2_w": "z2_w",
+    "vz3":              "z3_v", "v_z3": "z3_v", "vzone3": "z3_v", "sub3_v": "z3_v",
+    "az3":              "z3_a", "a_z3": "z3_a", "azone3": "z3_a", "sub3_a": "z3_a",
+    "wz3":              "z3_w", "w_z3": "z3_w", "sub3_w": "z3_w",
     
     # --- กราวด์ ---
     "gnd_r":            "gnd_resistance_ohm",
@@ -143,38 +136,53 @@ FIELD_MAP = {
     "res_gnd":          "gnd_resistance_ohm",
     "r_gnd":            "gnd_resistance_ohm",
     "gnd_ohm":          "gnd_resistance_ohm",
+    "ground_resistance_ohm": "gnd_resistance_ohm",
     "gnd_v":            "gnd_voltage_v",
     "ground_v":         "gnd_voltage_v",
     "v_leak":           "gnd_voltage_v",
     "v_gnd":            "gnd_voltage_v",
     "leak_volt":        "gnd_voltage_v",
+    "ground_leak_voltage_v": "gnd_voltage_v",
     
     # --- สถานะเพิ่มเติม ---
     "wiring":           "wiring_fault",
     "shutdown":         "critical_shutdown",
     "psu_status":       "power_status",
+    "relay":            "relay_state",
+    "relay_state":      "relay_state",
+    "lock":             "safety_lock",
+    "safety_lock":      "safety_lock",
 }
 
 # ==============================================================
-# 📋 รายการอุปกรณ์ — ของเดิมครบตรง
+# 📋 รายการอุปกรณ์ — เพิ่มรองรับคู่ขนาน
 # ==============================================================
 DEVICE_LIST = [
     ("SAFE-001",      "แผงหลัก+ย่อย อาคารหลัก", "CUST-0891", "ขอนแก่น", "office"),
+    ("SAFE-001-BAK",  "สำรอง — แผงหลัก อาคารหลัก", "CUST-0891", "ขอนแก่น", "office"),
 ]
 
 # ==============================================================
-# 📐 โครงสร้างข้อมูล — ✅ ครบทุกเซนเซอร์ + เพิ่มส่วนแจ้งเตือน
+# 📐 โครงสร้างข้อมูล — เพิ่มฟิลด์ระบบสำรอง ESP
 # ==============================================================
 TEMPLATE = {
     "device_id": "", "site_name": "", "customer_id": "",
     "province": "", "site_type": "",
     "last_updated": "-", "last_seen": None,
     "is_online": False, "status_summary": "offline",
-    "last_alert_sent": None,  # ✅ เพิ่ม — ป้องกันส่งซ้ำ
+    "last_alert_sent": None,
+    
+    # ⚡ ระบบสำรอง ESP — เพิ่ม
+    "role": "UNKNOWN",         # MASTER / BACKUP
+    "is_master": False,
+    "backup_active": False,     # ตัวสำรองรับหน้าที่แทนหรือยัง
+    "partner_online": True,    # เห็นคู่ขนานไหม
+    "partner_id": "",          # รหัสคู่ขนาน
     
     "current_temp": 0.0, "humidity": 0.0,
     "power_status": "MAIN AC",
     "wiring_fault": False, "critical_shutdown": False,
+    "relay_state": True, "safety_lock": False,
     
     "v_l1_l2": 380.0, "v_l2_l3": 380.0, "v_l3_l1": 380.0,
     "a_l1": 0.0, "a_l2": 0.0, "a_l3": 0.0, "a_n": 0.0,
@@ -207,6 +215,7 @@ TEMPLATE = {
         "z3_a":     {"name": "โซน3 กระแส", "value": 0.0, "ok": None},
         "gnd_resist":{"name": "กราวด์-ความต้านทาน", "value": 0.0, "unit": "Ω", "ok": None},
         "gnd_volt": {"name": "กราวด์-แรงดันรั่ว", "value": 0.0, "unit": "V", "ok": None},
+        "dualmode": {"name": "ระบบคู่ขนาน", "value": "รอข้อมูล", "ok": None},
     },
     
     "fault_list": [], "alert_level": "normal",
@@ -223,33 +232,29 @@ for dev_id, site, cust, prov, stype in DEVICE_LIST:
     devices.append(d)
 
 # ==============================================================
-# 🔔 ระบบแจ้งเตือน — เพิ่มใหม่ ทำงานครบ
+# 🔔 ระบบแจ้งเตือน — แก้จุดที่ส่ง LINE พัง
 # ==============================================================
-import requests
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.application import MIMEApplication
-import xlsxwriter
-import io
-
 def send_line_alert(message):
-    """ส่งแจ้งเตือนผ่าน LINE Notify"""
     token = CONFIG["ALERT"]["LINE_TOKEN"]
     if not token:
+        print("[LINE] ยังไม่ได้ตั้งค่า Token")
         return False
     try:
         url = "https://notify-api.line.me/api/notify"
         headers = {"Authorization": f"Bearer {token}"}
         data = {"message": f"\n{message}"}
-        res = requests.post(url, headers=headers, data=data, timeout=10)
-        return res.status_code == 200
+        res = requests.post(url, headers=headers, data=data, timeout=15)
+        if res.status_code == 200:
+            print("[LINE] ส่งสำเร็จ")
+            return True
+        else:
+            print(f"[LINE] ส่งไม่สำเร็จ: รหัส {res.status_code} — {res.text}")
+            return False
     except Exception as e:
-        print(f"❌ ส่ง LINE ไม่สำเร็จ: {e}")
+        print(f"[LINE] ข้อผิดพลาด: {type(e).__name__}: {e}")
         return False
 
 def send_email_alert(subject, body, attach_file=None):
-    """ส่งแจ้งเตือนทางอีเมล"""
     cfg = CONFIG["ALERT"]
     if not cfg["EMAIL_TO"] or not cfg["SMTP_PASS"]:
         return False
@@ -259,23 +264,20 @@ def send_email_alert(subject, body, attach_file=None):
         msg["To"] = cfg["EMAIL_TO"]
         msg["Subject"] = f"SAFE-ELEC: {subject}"
         msg.attach(MIMEText(body, "plain", "utf-8"))
-        
         if attach_file:
-            part = MIMEApplication(attach_file["data"], Name=attach_file["name"])
-            part["Content-Disposition"] = f'attachment; filename="{attach_file["name"]}"'
+            part = MIMEText(attach_file["data"], _subtype="csv", _charset="utf-8")
+            part.add_header("Content-Disposition", f'attachment; filename="{attach_file["name"]}"')
             msg.attach(part)
-        
-        with smtplib.SMTP(cfg["SMTP_SERVER"], cfg["SMTP_PORT"]) as server:
+        with smtplib.SMTP(cfg["SMTP_SERVER"], cfg["SMTP_PORT"], timeout=15) as server:
             server.starttls()
             server.login(cfg["EMAIL_FROM"], cfg["SMTP_PASS"])
             server.send_message(msg)
         return True
     except Exception as e:
-        print(f"❌ ส่งอีเมลไม่สำเร็จ: {e}")
+        print(f"[อีเมล] ส่งไม่สำเร็จ: {e}")
         return False
 
 def should_send_alert(dev):
-    """ตรวจสอบว่าควรส่งแจ้งเตือนหรือไม่ — ป้องกันส่งซ้ำ"""
     if not CONFIG["ALERT"]["ENABLED"]:
         return False
     if dev["alert_level"] == "normal":
@@ -287,12 +289,18 @@ def should_send_alert(dev):
     return elapsed > delay
 
 def build_alert_message(dev):
-    """สร้างข้อความแจ้งเตือนรูปแบบอ่านง่าย"""
     status_text = {
         "offline": "⚠️ ขาดการติดต่อ",
         "warning": "⚠️ มีสิ่งต้องเฝ้าระวัง",
         "critical": "🔴 ปัญหาร้ายแรง"
     }.get(dev["alert_level"], "แจ้งเตือน")
+    
+    # ⚡ เพิ่มข้อความระบบสำรอง
+    backup_note = ""
+    if dev.get("backup_active"):
+        backup_note = "\n🛡️ ระบบสำรองกำลังทำงานแทน"
+    if not dev.get("partner_online", True):
+        backup_note = "\n⚠️ ไม่พบคู่ขนาน — ตรวจสอบการเชื่อมต่อ"
     
     msg = f"""
 {'='*35}
@@ -300,73 +308,72 @@ def build_alert_message(dev):
 📌 อุปกรณ์: {dev['device_id']}
 🏢 สถานที่: {dev['site_name']}
 📍 ลูกค้า: {dev['customer_id']}
-🕐 เวลา: {dev['last_updated']}
+🕐 เวลา: {dev['last_updated']}{backup_note}
 
 รายการปัญหา:
 """
     for f in dev["fault_list"]:
         msg += f"  • {f}\n"
-    
-    msg += f"\nดูรายละเอียด: {request.host_url}"
-    msg += f"\n{'='*35}"
+    msg += f"\nดูรายละเอียด: {request.host_url}\n{'='*35}"
     return msg
 
 def trigger_alert(dev):
-    """ส่งแจ้งเตือนถ้าผ่านเงื่อนไข"""
     if not should_send_alert(dev):
         return
     msg = build_alert_message(dev)
     line_ok = send_line_alert(msg)
-    email_ok = send_email_alert(
-        f"{dev['device_id']} — {status_text}",
-        msg
-    )
+    status_text = {
+        "offline": "ขาดการติดต่อ",
+        "warning": "เฝ้าระวัง",
+        "critical": "แจ้งเตือนรุนแรง"
+    }.get(dev["alert_level"], "แจ้งเตือน")
+    email_ok = send_email_alert(f"{dev['device_id']} — {status_text}", msg)
     if line_ok or email_ok:
         dev["last_alert_sent"] = datetime.now()
         print(f"✅ ส่งแจ้งเตือนสำเร็จ: {dev['device_id']}")
 
 # ==============================================================
-# 📊 สร้างรายงาน Excel — เพิ่มใหม่
+# 📊 รายงาน Excel — แก้จุดพัง
 # ==============================================================
 def generate_excel_report():
-    """สร้างไฟล์รายงานสรุปทุกอุปกรณ์"""
     output = io.BytesIO()
     workbook = xlsxwriter.Workbook(output)
     ws = workbook.add_worksheet("สรุปภาพรวม")
     
-    # สไตล์
     header = workbook.add_format({'bold': True, 'bg_color': '#2f9', 'color': '#032', 'align': 'center'})
     normal = workbook.add_format({'text_wrap': True})
     red = workbook.add_format({'font_color': '#f44', 'bold': True})
     green = workbook.add_format({'font_color': '#4f9'})
     
-    # หัวตาราง
-    headers = ["รหัส", "สถานที่", "ลูกค้า", "ออนไลน์", "สถานะ", "อุณหภูมิ", "ความชื้น", "ปัญหา"]
+    headers = ["รหัส", "สถานที่", "บทบาท", "ออนไลน์", "สถานะ", "อุณหภูมิ", "กราวด์ R(Ω)", "กราวด์ V(V)", "ปัญหา"]
     for col, h in enumerate(headers):
         ws.write(0, col, h, header)
     
-    # ข้อมูล
     for row, d in enumerate(devices, start=1):
         status_fmt = green if d["alert_level"]=="normal" else red
+        role_label = d.get("role", "-")
+        if d.get("backup_active"):
+            role_label += " (ทำงานแทน)"
         ws.write(row, 0, d["device_id"], normal)
         ws.write(row, 1, d["site_name"], normal)
-        ws.write(row, 2, d["customer_id"], normal)
+        ws.write(row, 2, role_label, normal)
         ws.write(row, 3, "✅ ใช่" if d["is_online"] else "❌ ไม่", green if d["is_online"] else red)
         ws.write(row, 4, d["status_summary"], status_fmt)
         ws.write(row, 5, d["current_temp"], normal)
-        ws.write(row, 6, d["humidity"], normal)
-        ws.write(row, 7, f"{len(d['fault_list'])} รายการ", normal)
+        ws.write(row, 6, d["gnd_resistance_ohm"], normal)
+        ws.write(row, 7, d["gnd_voltage_v"], normal)
+        ws.write(row, 8, f"{len(d['fault_list'])} รายการ", normal)
     
-    ws.set_column(0, 7, 16)
+    ws.set_column(0, 8, 18)
     workbook.close()
     output.seek(0)
     return {
         "data": output.read(),
-        "name": f"SAFE-ELEC-Report-{datetime.now().strftime('%Y%m%d-%H%M')}.xlsx"
+        "name": f"SAFE-ELEC-Report-{datetime.now().strftime('%Y%m%d-%H%M%S')}.xlsx"
     }
 
 # ==============================================================
-# 🔍 ตรวจสอบกราวด์ — ของเดิมครบตรง
+# 🔍 ตรวจสอบกราวด์ — เดิมครบตรง
 # ==============================================================
 def check_ground(dev):
     S = CONFIG["STANDARD"]
@@ -407,13 +414,45 @@ def check_balance(i1, i2, i3):
     return True
 
 # ==============================================================
-# ✅ ตรวจสอบทุกอย่าง — รวม ESP และกราวด์ — ของเดิมครบตรง
+# ⚡ ตรวจสอบระบบสำรอง ESP — เพิ่มใหม่
+# ==============================================================
+def check_dual_backup(dev):
+    """ตรวจสอบสถานะคู่ขนานและเพิ่มแจ้งเตือน"""
+    faults = []
+    role = dev.get("role", "UNKNOWN")
+    is_active = dev.get("backup_active", False)
+    partner_online = dev.get("partner_online", True)
+    
+    # อัปเดตสถานะในหน้าจอ
+    if role == "MASTER":
+        dev["sensors"]["dualmode"]["value"] = "ตัวหลัก"
+        dev["sensors"]["dualmode"]["ok"] = partner_online
+        if not partner_online:
+            faults.append("⚠️ ไม่พบตัวสำรอง — ตรวจสอบการเชื่อมต่อ")
+    elif role == "BACKUP":
+        if is_active:
+            dev["sensors"]["dualmode"]["value"] = "ทำงานแทนหลัก ⚡"
+            dev["sensors"]["dualmode"]["ok"] = False
+            faults.append("🔴 ตัวหลักขาดการติดต่อ — สำรองรับหน้าที่แล้ว")
+        else:
+            dev["sensors"]["dualmode"]["value"] = "คอยเฝ้าดู"
+            dev["sensors"]["dualmode"]["ok"] = True
+    else:
+        dev["sensors"]["dualmode"]["value"] = "ไม่ระบุ"
+        dev["sensors"]["dualmode"]["ok"] = None
+    
+    return faults
+
+# ==============================================================
+# ✅ ตรวจสอบทุกอย่าง — รวมระบบสำรอง ESP
 # ==============================================================
 def check_all(dev):
     S = CONFIG["STANDARD"]
     faults = check_ground(dev)
+    
+    # ⚡ เพิ่มตรวจสอบระบบคู่ขนาน
+    faults += check_dual_backup(dev)
 
-    # 🟢 สถานะ ESP / สื่อสาร / แหล่งจ่าย
     if dev["is_online"]:
         dev["sensors"]["esp"]["value"] = "เชื่อมต่อปกติ"
         dev["sensors"]["esp"]["ok"] = True
@@ -429,7 +468,6 @@ def check_all(dev):
         dev["sensors"]["psu"]["value"] = "ตรวจสอบ"
         dev["sensors"]["psu"]["ok"] = None
 
-    # อุณหภูมิ
     t = dev["current_temp"]
     dev["sensors"]["temp"]["value"] = t
     if not dev["is_online"]:
@@ -443,7 +481,6 @@ def check_all(dev):
     else:
         dev["sensors"]["temp"]["ok"] = True
 
-    # ความชื้น
     h = dev["humidity"]
     dev["sensors"]["humidity"]["value"] = h
     if not dev["is_online"] or h == 0:
@@ -451,7 +488,6 @@ def check_all(dev):
     else:
         dev["sensors"]["humidity"]["ok"] = S["HUMI_MIN"] <= h <= S["HUMI_MAX"]
 
-    # แรงดัน 3 เฟส
     for k, v in [("v_l1_l2", dev["v_l1_l2"]), ("v_l2_l3", dev["v_l2_l3"]), ("v_l3_l1", dev["v_l3_l1"])]:
         dev["sensors"][k]["value"] = v
         if not dev["is_online"] or v == 0:
@@ -459,15 +495,10 @@ def check_all(dev):
         else:
             dev["sensors"][k]["ok"] = S["V3_MIN"] <= v <= S["V3_MAX"]
 
-    # กระแส 3 เฟส
     for k, v in [("a_l1", dev["a_l1"]), ("a_l2", dev["a_l2"]), ("a_l3", dev["a_l3"])]:
         dev["sensors"][k]["value"] = v
-        if not dev["is_online"] or v == 0:
-            dev["sensors"][k]["ok"] = None
-        else:
-            dev["sensors"][k]["ok"] = True
+        dev["sensors"][k]["ok"] = None if not dev["is_online"] or v == 0 else True
 
-    # แรงดันโซน
     for k, v in [("z1_v", dev["z1_v"]), ("z2_v", dev["z2_v"]), ("z3_v", dev["z3_v"])]:
         dev["sensors"][k]["value"] = v
         if not dev["is_online"] or v == 0:
@@ -475,15 +506,10 @@ def check_all(dev):
         else:
             dev["sensors"][k]["ok"] = S["V1_MIN"] <= v <= S["V1_MAX"]
 
-    # กระแสโซน
     for k, v in [("z1_a", dev["z1_a"]), ("z2_a", dev["z2_a"]), ("z3_a", dev["z3_a"])]:
         dev["sensors"][k]["value"] = v
-        if not dev["is_online"] or v == 0:
-            dev["sensors"][k]["ok"] = None
-        else:
-            dev["sensors"][k]["ok"] = True
+        dev["sensors"][k]["ok"] = None if not dev["is_online"] or v == 0 else True
 
-    # ความสมดุล
     dev["balance_3ph_ok"] = check_balance(dev["a_l1"], dev["a_l2"], dev["a_l3"])
     dev["z_total_a"] = round(dev["z1_a"] + dev["z2_a"] + dev["z3_a"], 2)
     dev["z_balance_ok"] = check_balance(dev["z1_a"], dev["z2_a"], dev["z3_a"])
@@ -493,7 +519,6 @@ def check_all(dev):
     if dev["is_online"] and not dev["z_balance_ok"] and dev["z_total_a"] > 0:
         faults.append("⚠️ ระบบ 220V ไม่สมดุล")
 
-    # สรุปสถานะ
     critical = any("🔴" in f for f in faults)
     warning = any("⚠️" in f for f in faults)
     if not dev["is_online"]:
@@ -510,18 +535,15 @@ def check_all(dev):
         dev["alert_level"] = "normal"
 
     dev["fault_list"] = faults
-    
-    # ✅ ส่งแจ้งเตือนถ้ามีปัญหา
     trigger_alert(dev)
-    
     return dev
 
 # ==============================================================
-# 🛡️ ตรวจสอบล็อกอิน — ของเดิมครบตรง
+# 🛡️ ตรวจสอบล็อกอิน — แก้เส้นทางให้ตรงกัน
 # ==============================================================
 @app.before_request
 def check_login():
-    if request.path in ["/login", "/do_login", "/logout", "/api/data", "/api/report-excel"]:
+    if request.path in ["/login", "/do_login", "/logout", "/api/data", "/api/devices", "/api/report-excel"]:
         return
     if "username" not in session:
         return redirect("/login")
@@ -538,7 +560,7 @@ def update_online():
         check_all(d)
 
 # ==============================================================
-# 🌐 API รับข้อมูล — ✅ รองรับทุกรุ่น ESP — ของเดิมครบตรง
+# 🌐 API รับข้อมูล — รองรับระบบสำรอง
 # ==============================================================
 @app.route("/api/data", methods=["GET"])
 def get_data():
@@ -547,10 +569,14 @@ def get_data():
         if d["device_id"] == dev_id:
             return jsonify({
                 "device_id": d["device_id"],
+                "role": d["role"],
+                "backup_active": d["backup_active"],
+                "partner_online": d["partner_online"],
                 "current_temp": d["current_temp"],
                 "humidity": d["humidity"],
-                "power_status": d["power_status"],
-                "is_online": d["is_online"]
+                "is_online": d["is_online"],
+                "relay_state": d["relay_state"],
+                "safety_lock": d["safety_lock"]
             })
     return jsonify({"error": "Not found"}), 404
 
@@ -559,42 +585,36 @@ def receive():
     data = request.get_json(force=True) or {}
     now = datetime.now()
     
-    # --- แปลงชื่อฟิลด์ทุกรุ่นให้เป็นมาตรฐาน ---
     normalized = {}
     for key, value in data.items():
         key_low = key.lower().strip()
         std_key = FIELD_MAP.get(key_low, key_low)
         normalized[std_key] = value
     
-    # --- ดึง ID อุปกรณ์ ---
     dev_id = normalized.get("device_id", "")
     if not dev_id:
-        return jsonify({"ok": False, "error": "ต้องระบุ device_id (หรือ id / esp_id)"}), 400
+        return jsonify({"ok": False, "error": "ต้องระบุ device_id"}), 400
     
-    # --- ค้นหาอุปกรณ์ ---
     d = next((dev for dev in devices if dev["device_id"] == dev_id), None)
     if not d:
         return jsonify({"ok": False, "error": f"ไม่พบอุปกรณ์: {dev_id}"}), 404
     
-    # --- อัปเดตค่าทุกฟิลด์ที่มีข้อมูล ---
     for k, v in normalized.items():
         if k in d and k not in ["sensors", "fault_list"]:
             d[k] = v
     
-    # --- อัปเดตเวลาและสถานะ ---
     d["last_updated"] = now.strftime("%H:%M:%S")
     d["last_seen"] = now
     d["is_online"] = True
-    
-    # --- ตรวจสอบและคำนวณทั้งระบบ ---
     d = check_all(d)
     
     return jsonify({
         "ok": True,
         "device_id": dev_id,
-        "received_fields": len(data),
-        "mapped_fields": len(normalized),
-        "status": d["status_summary"]
+        "role": d["role"],
+        "backup_active": d["backup_active"],
+        "status": d["status_summary"],
+        "received_fields": len(normalized)
     }), 200
 
 @app.route("/api/devices")
@@ -602,10 +622,8 @@ def get_devices():
     my_cust = session.get("cust_id", "")
     if my_cust == "ALL":
         return jsonify(devices)
-    my_list = [d for d in devices if d["customer_id"] == my_cust]
-    return jsonify(my_list)
+    return jsonify([d for d in devices if d["customer_id"] == my_cust])
 
-# ✅ เพิ่ม API ดาวน์โหลดรายงาน Excel
 @app.route("/api/report-excel")
 def download_report():
     report = generate_excel_report()
@@ -617,7 +635,7 @@ def download_report():
     )
 
 # ==============================================================
-# 📲 ล็อกอิน — ของเดิมครบตรง
+# 📲 ล็อกอิน — แก้เส้นทางให้ตรงกัน
 # ==============================================================
 @app.route("/login")
 def login():
@@ -645,7 +663,7 @@ button{width:100%;padding:12px;background:#2f9;border:none;border-radius:8px;col
 <input type="text" name="user" placeholder="ชื่อผู้ใช้" required>
 <input type="password" name="pwd" placeholder="รหัสผ่าน" required>
 <button type="submit">เข้าสู่ระบบ</button>
-<div class="err">{{err}}</div>
+{% if err %}<div class="err">{{err}}</div>{% endif %}
 </form>
 </div>
 </body>
@@ -669,7 +687,7 @@ def logout():
     return redirect("/login")
 
 # ==============================================================
-# 📊 หน้าจอหลัก — ✅ แสดง ESP + กราวด์ + ปุ่มรายงาน ครบทุกส่วน
+# 📊 หน้าจอหลัก — แสดงระบบสำรอง ESP
 # ==============================================================
 @app.route("/")
 def dashboard():
@@ -705,6 +723,10 @@ h1{text-align:center;color:#6cf;margin-bottom:4px}
 .card.offline{border-left:4px solid #666;opacity:0.85}
 .name{font-size:17px;font-weight:bold;color:#c9f;margin-bottom:8px}
 .meta{font-size:13px;color:#aaa;margin-bottom:10px}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;margin-left:8px;font-weight:bold}
+.badge-master{background:#2f9;color:#032}
+.badge-backup{background:#48f;color:#fff}
+.badge-active{background:#f44;color:#fff}
 .section{margin:12px 0;padding:12px;border-radius:10px;background:#0f1f3f}
 .row{margin:5px 0;font-size:14px;line-height:1.5}
 .ok{color:#4f9}
@@ -723,7 +745,7 @@ h1{text-align:center;color:#6cf;margin-bottom:4px}
 </head>
 <body>
 <h1>⚡ SAFE-ELEC PLATFORM</h1>
-<div class="ver">รองรับทุกรุ่น ESP — แปลงชื่อฟิลด์อัตโนมัติ ✅ | แจ้งเตือน + รายงานครบ ✅</div>
+<div class="ver">รองรับระบบคู่ขนาน ESP — ตัวหลักเสีย สำรองทำงานแทนทันที ✅</div>
 <div class="user-bar">
   👤 {{session['name']}}
   <a href="/api/report-excel" class="btn-report">📊 ดาวน์โหลดรายงาน</a>
@@ -761,6 +783,12 @@ function getIcon(d){
   const m={online:'🟢',warning:'🟡',critical:'🔴',offline:'⚫'};
   return m[d.status_summary]||'❓';
 }
+function getBadge(d){
+  if(d.backup_active) return '<span class="badge badge-active">⚡ ทำงานแทน</span>';
+  if(d.role==='MASTER') return '<span class="badge badge-master">ตัวหลัก</span>';
+  if(d.role==='BACKUP') return '<span class="badge badge-backup">สำรอง</span>';
+  return '';
+}
 function getSensorIcon(s){
   if(s.ok===true) return '✅';
   if(s.ok===false) return '❌';
@@ -772,7 +800,7 @@ function matchDevice(d, kw){
   const searchText = [
     d.device_id, d.site_name, d.customer_id, d.province, typeLabel,
     d.status_summary, d.is_online ? 'ออนไลน์' : 'ออฟไลน์',
-    d.current_temp+'', d.humidity+''
+    d.current_temp+'', d.humidity+'', d.role||''
   ].join(' ').toLowerCase();
   return searchText.includes(kw);
 }
@@ -798,11 +826,12 @@ function render(list){
   }
   document.getElementById('list').innerHTML = list.map(d=>`
     <div class="card ${d.status_summary}">
-      <div class="name">${getIcon(d)} ${d.device_id} — ${d.site_name}</div>
+      <div class="name">${getIcon(d)} ${d.device_id} — ${d.site_name} ${getBadge(d)}</div>
       <div class="meta">🏢 ${d.customer_id} | 📍 ${d.province} | ⏰ ${d.last_updated}</div>
+      ${!d.partner_online && d.role==='MASTER'?'<div class="fbox">⚠️ ไม่พบคู่ขนาน — ตรวจสอบตัวสำรอง</div>':''}
+      ${d.backup_active?'<div class="fbox">⚡ ตัวหลักขาดการติดต่อ — สำรองกำลังทำงานแทน</div>':''}
       ${d.fault_list.length>0?`<div class="fbox"><b>⚠️ พบ ${d.fault_list.length} ปัญหา</b>${d.fault_list.map(f=>`<div class="row">${f}</div>`).join('')}</div>`:''}
       
-      <!-- ========== มินิมุมมอง ========== -->
       <div class="${currentView!=='mini'?'hidden':''}">
         <div class="section">
           <b>🌡️ สภาพแวดล้อม</b>
@@ -813,58 +842,15 @@ function render(list){
         </div>
         
         <div class="section">
-          <b>📋 สถานะอุปกรณ์หลัก</b>
+          <b>📋 สถานะระบบคู่ขนาน</b>
           <div class="grid">
-            ${['esp','temp','humidity','comm','psu'].map(k=>{
-              const s=d.sensors[k];
+            ${Object.entries(d.sensors).filter(([k])=>k==='dualmode'||k==='comm'||k==='esp').map(([k,s])=>{
               return `<div class="item ${s.ok===true?'ok':s.ok===false?'dang':'warn'}">
-                ${getSensorIcon(s)} ${s.name}<br><b>${s.value}${s.unit||''}</b>
+                ${getSensorIcon(s)} ${s.name}<br><b>${s.value}</b>
               </div>`;
             }).join('')}
           </div>
         </div>
         
         <div class="section">
-          <b>⚡ ตู้หลัก 380V</b>
-          <div class="row">L1-L2: ${d.v_l1_l2}V | L2-L3: ${d.v_l2_l3}V | L3-L1: ${d.v_l3_l1}V</div>
-          <div class="row">กระแส L1: ${d.a_l1}A | L2: ${d.a_l2}A | L3: ${d.a_l3}A</div>
-          <div class="row">กำลัง: ${d.power_kw}kW | สมดุล: ${d.balance_3ph_ok?'✅ ปกติ':'⚠️ ไม่สมดุล'}</div>
-        </div>
-        
-        <div class="section ${d.gnd_system_ok?'gnd-ok':'gnd-fail'}">
-          <b>🛡️ ตรวจสอบกราวด์</b>
-          <div class="row">ความต้านทาน: ${d.sensors.gnd_resist.value}Ω — ${d.sensors.gnd_resist.ok===true?'✅ ปกติ':d.sensors.gnd_resist.ok===false?'❌ ผิดปกติ':'⏳ รอข้อมูล'}</div>
-          <div class="row">แรงดันรั่ว: ${d.sensors.gnd_volt.value}V — ${d.sensors.gnd_volt.ok===true?'✅ ปกติ':d.sensors.gnd_volt.ok===false?'❌ ผิดปกติ':'⏳ รอข้อมูล'}</div>
-        </div>
-      </div>
-      
-      <!-- ========== เต็มระบบ ========== -->
-      <div class="${currentView!=='full'?'hidden':''}">
-        <div class="section">
-          <b>🌡️ สภาพแวดล้อม</b>
-          <div class="row">อุณหภูมิ: <b class="${d.current_temp>=60?'dang':'ok'}">${d.current_temp}°C</b></div>
-          <div class="row">ความชื้น: ${d.humidity}%</div>
-          <div class="row">สถานะไฟ: ${d.power_status||'MAIN AC'}</div>
-          <div class="row ${d.wiring_fault?'dang':'ok'}">สายไฟ: ${d.wiring_fault?'⚠️ ผิดปกติ':'✅ ปกติ'}</div>
-        </div>
-        
-        <div class="section">
-          <b>📋 ทุกเซนเซอร์</b>
-          <div class="grid">
-            ${Object.entries(d.sensors).map(([k,s])=>{
-              return `<div class="item ${s.ok===true?'ok':s.ok===false?'dang':'warn'}">
-                ${getSensorIcon(s)} ${s.name}<br><b>${s.value}${s.unit||''}</b>
-              </div>`;
-            }).join('')}
-          </div>
-        </div>
-        
-        <div class="section">
-          <b>⚡ ตู้หลัก 380V</b>
-          <div class="row">L1-L2: ${d.v_l1_l2}V | L2-L3: ${d.v_l2_l3}V | L3-L1: ${d.v_l3_l1}V</div>
-          <div class="row">กระแส L1: ${d.a_l1}A | L2: ${d.a_l2}A | L3: ${d.a_l3}A</div>
-          <div class="row">กำลัง: ${d.power_kw}kW | สมดุล: ${d.balance_3ph_ok?'✅ ปกติ':'⚠️ ไม่สมดุล'}</div>
-        </div>
-        
-        <div class="section">
-          <b>
+          <b>⚡ ตู้หลัก 380
