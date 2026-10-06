@@ -655,7 +655,7 @@ def logout():
     return redirect("/login")
 
 # ==============================================================
-# 📊 หน้าจอหลัก — ปิดครบ ✅
+# 📊 หน้าจอหลัก — ครบถ้วน ✅
 # ==============================================================
 @app.route("/")
 def dashboard():
@@ -837,4 +837,4 @@ function render(list){
           <b>🏘️ โซน 1-3</b>
           <div class="row">โซน1: ${d.z1_v}V / ${d.z1_a}A / ${d.z1_w}kW</div>
           <div class="row">โซน2: ${d.z2_v}V / ${d.z2_a}A / ${d.z2_w}kW</div>
-          <div class="row">โซน3: ${d.z3_v}
+          <div class="row">โซน3: ${d.z3_v}V / ${d.z3_a}
