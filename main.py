@@ -352,7 +352,7 @@ def check_all(dev):
     S = CONFIG["STANDARD"]
     faults = check_ground(dev)
     faults += check_dual_backup(dev)
-       sensors_list = [
+    sensors_list = [
         ("sens_current", "เซ็นเซอร์กระแส"),
         ("sens_temp", "เซ็นเซอร์อุณหภูมิ"),
         ("sens_volt", "เซ็นเซอร์แรงดัน"),
