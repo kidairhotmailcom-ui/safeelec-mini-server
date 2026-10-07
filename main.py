@@ -722,6 +722,18 @@ function render(list){
       
       <div class="${currentView!=='mini'?'hidden':''}">
         <div class="section">
+                <b>📊 ตรวจสอบอุปกรณ์วัด</b>
+          <div class="grid">
+            ${Object.entries(d.sensors)
+              .filter(([k]) => k.startsWith('sens_'))
+              .map(([k, s]) => `
+                <div class="item ${s.ok === true ? 'ok' : s.ok === false ? 'dang' : 'warn'}">
+                  ${getSensorIcon(s)} ${s.name}<br><b>${s.value}</b>
+                </div>`
+              ).join('')}
+          </div>
+        </div>
+
           <b>🌡️ สภาพแวดล้อม</b>
           <div class="row">อุณหภูมิ: <b class="${d.current_temp>=60?'dang':'ok'}">${d.current_temp}°C</b></div>
           <div class="row">ความชื้น: ${d.humidity}%</div>
