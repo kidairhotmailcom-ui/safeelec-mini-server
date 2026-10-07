@@ -88,6 +88,11 @@ FIELD_MAP = {
     "psu_status": "power_status", "relay": "relay_state",
     "relay_state": "relay_state", "lock": "safety_lock",
     "safety_lock": "safety_lock",
+    "sens_current": "sens_current",
+    "sens_temp": "sens_temp",
+    "sens_volt": "sens_volt",
+    "sens_heat": "sens_heat",
+    "sens_ground": "sens_ground",
 }
 
 DEVICE_LIST = [
@@ -347,6 +352,26 @@ def check_all(dev):
     S = CONFIG["STANDARD"]
     faults = check_ground(dev)
     faults += check_dual_backup(dev)
+       sensors_list = [
+        ("sens_current", "เซ็นเซอร์กระแส"),
+        ("sens_temp", "เซ็นเซอร์อุณหภูมิ"),
+        ("sens_volt", "เซ็นเซอร์แรงดัน"),
+        ("sens_heat", "เซ็นเซอร์ความร้อน"),
+        ("sens_ground", "เซ็นเซอร์กราวด์"),
+    ]
+    
+    for key, name in sensors_list:
+        val = dev["sensors"][key]["value"]
+        if val == "ปกติ" or val is True:
+            dev["sensors"][key]["ok"] = True
+            dev["sensors"][key]["value"] = "ปกติ"
+        elif val in ["เสีย", "ผิดปกติ", False]:
+            dev["sensors"][key]["ok"] = False
+            dev["sensors"][key]["value"] = "เสีย"
+            faults.append(f"❌ {name} ทำงานผิดปกติ")
+        else:
+            dev["sensors"][key]["ok"] = None
+            dev["sensors"][key]["value"] = "รอข้อมูล"
     if dev["is_online"]:
         dev["sensors"]["esp"]["value"] = "เชื่อมต่อปกติ"
         dev["sensors"]["esp"]["ok"] = True
