@@ -135,6 +135,12 @@ TEMPLATE = {
         "gnd_resist": {"name": "กราวด์-ความต้านทาน", "value": 0.0, "unit": "Ω", "ok": None},
         "gnd_volt": {"name": "กราวด์-แรงดันรั่ว", "value": 0.0, "unit": "V", "ok": None},
         "dualmode": {"name": "ระบบคู่ขนาน", "value": "รอข้อมูล", "ok": None},
+        "sens_current": {"name": "เซ็นเซอร์กระแส", "value": "รอข้อมูล", "ok": None},
+        "sens_temp": {"name": "เซ็นเซอร์อุณหภูมิ", "value": "รอข้อมูล", "ok": None},
+        "sens_volt": {"name": "เซ็นเซอร์แรงดัน", "value": "รอข้อมูล", "ok": None},
+        "sens_heat": {"name": "เซ็นเซอร์ความร้อน", "value": "รอข้อมูล", "ok": None},
+        "sens_ground": {"name": "เซ็นเซอร์กราวด์", "value": "รอข้อมูล", "ok": None},
+    
     },
     "fault_list": [], "alert_level": "normal",
 }
