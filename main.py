@@ -738,7 +738,7 @@ document.getElementById('q').addEventListener('input', applyFilterAndRender);
 </script>
 </body>
 </html>
-""")
+""", CONFIG_SITE_TYPES=CONFIG["SITE_TYPES"])
 
 if __name__ == "__main__":
     import os
