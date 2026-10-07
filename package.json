@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "date-fns": "^4.4.0",
+    "exceljs": "^4.4.0",
+    "express": "^5.2.1",
+    "mysql2": "^3.24.5",
+    "node-cron": "^4.6.0",
+    "nodemailer": "^10.0.15"
+  }
+}
