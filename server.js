@@ -10,7 +10,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // === ตั้งค่าฐานข้อมูล ===
-const db = mysql.createPool({
+const db = mnysql.createPool({
   host: 'localhost',
   user: 'root',
   password: '',           // ใส่รหัสผ่าน MySQL ถ้ามี
