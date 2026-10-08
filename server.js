@@ -7,6 +7,7 @@ const { format } = require('date-fns');
 const fs = require('fs');
 
 const app = express();
+app.use('/static', express.static('static'));
 const port = process.env.PORT || 3000;
 
 // === ตั้งค่าฐานข้อมูล ===
