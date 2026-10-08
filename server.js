@@ -7,7 +7,6 @@ const { format } = require('date-fns');
 const fs = require('fs');
 
 const app = express();
-app.use('/static', express.static(require('path').join(__dirname, 'static')));
 const port = process.env.PORT || 3000;
 
 // === ตั้งค่าฐานข้อมูล ===
@@ -28,7 +27,7 @@ const transporter = nodemailer.createTransport({
 });
 
 app.use(express.json());
-app.use(express.static('static'));
+app.use('/static', express.static('static'));
 
 // เพิ่มลูกค้า
 app.post('/api/customers', async (req, res) => {
@@ -175,9 +174,11 @@ app.get('/', (req, res) => {
       box-shadow: 0 10px 30px rgba(0,0,0,0.15);
     }
     .logo {
-      max-width: 320px;
-      width: 100%;
-      margin-bottom: 25px;
+      max-width: 180px;
+      width: 65%;
+      height: auto;       /* รักษาสัดส่วน */
+      display: block;  
+      margin: 0 auto 20px;
     }
     h1 { color: #00337A; font-size: 1.5rem; margin-bottom: 8px; }
     .en { color: #666; font-size: 1rem; margin-bottom: 20px; }
@@ -187,6 +188,7 @@ app.get('/', (req, res) => {
 <body>
   <div class="box">
     <img src="/static/pns-logo.png"
+  alt="โลโก้ pns" class="logo">
     <h1>บริษัท เพชรนาคา ซิสเต็มเวิร์ก จำกัด</h1>
     <p class="en">PETCHNAKA SYSTEM WORK CO.,LTD.</p>
     <p>ระบบตรวจสอบและเฝ้าดูอุปกรณ์ไฟฟ้า</p>
