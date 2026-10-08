@@ -188,7 +188,7 @@ app.get('/', (req, res) => {
 </head>
 <body>
   <div class="box">
-    <img src="pns-logo.png"
+    <img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/pns-logo.png" alt="โลโก้ PNS">
   alt="โลโก้ pns" class="logo">
     <h1>บริษัท เพชรนาคา ซิสเต็มเวิร์ก จำกัด</h1>
     <p class="en">PETCHNAKA SYSTEM WORK CO.,LTD.</p>
