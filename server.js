@@ -12,7 +12,7 @@ app.use('/static', express.static(path.join(__dirname, 'static')));
 const port = process.env.PORT || 3000;
 
 // === ตั้งค่าฐานข้อมูล ===
-const db = mnysql.createPool({
+const db = mnysql.createPgitool({
   host: 'localhost',
   user: 'root',
   password: '',           // ใส่รหัสผ่าน MySQL ถ้ามี
