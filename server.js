@@ -5,9 +5,10 @@ const ExcelJS = require('exceljs');
 const cron = require('node-cron');
 const { format } = require('date-fns');
 const fs = require('fs');
+const path = require('path');  
 
 const app = express();
-app.use('/static', express.static('static'));
+app.use('/static', express.static(path.join(__dirname, 'static')));
 const port = process.env.PORT || 3000;
 
 // === ตั้งค่าฐานข้อมูล ===
