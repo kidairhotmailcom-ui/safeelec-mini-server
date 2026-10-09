@@ -29,7 +29,6 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-app.use(express.static(__dirname));
 
 // เพิ่มลูกค้า
 app.post('/api/customers', async (req, res) => {
