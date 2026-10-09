@@ -9,10 +9,11 @@ const path = require('path');
 
 const app = express();
 app.use('/static', express.static(path.join(__dirname, 'static')));
+app.use(express.json());
 const port = process.env.PORT || 3000;
 
 // === ตั้งค่าฐานข้อมูล ===
-const db = mnysql.createPgitool({
+const db = mysql.createPool({
   host: 'localhost',
   user: 'root',
   password: '',           // ใส่รหัสผ่าน MySQL ถ้ามี
@@ -177,8 +178,8 @@ app.get('/', (req, res) => {
     .logo {
       max-width: 180px;
       width: 65%;
-      height: auto;       /* รักษาสัดส่วน */
-      display: block;  
+      height: auto;
+      display: block;
       margin: 0 auto 20px;
     }
     h1 { color: #00337A; font-size: 1.5rem; margin-bottom: 8px; }
@@ -188,8 +189,7 @@ app.get('/', (req, res) => {
 </head>
 <body>
   <div class="box">
-    <img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/pns-logo.png" alt="โลโก้ PNS">
-  alt="โลโก้ pns" class="logo">
+    <img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/pns-logo.png" alt="โลโก้ PNS" class="logo">
     <h1>บริษัท เพชรนาคา ซิสเต็มเวิร์ก จำกัด</h1>
     <p class="en">PETCHNAKA SYSTEM WORK CO.,LTD.</p>
     <p>ระบบตรวจสอบและเฝ้าดูอุปกรณ์ไฟฟ้า</p>
@@ -199,7 +199,6 @@ app.get('/', (req, res) => {
   `);
 });
 
-// อย่าลืมเช็คว่ามีบรรทัดนี้อยู่ท้ายสุดไฟล์นะ
-app.listen(PORT, () => {
-  console.log(`✅ ทำงานที่พอร์ต ${PORT}`);
+app.listen(port, () => {
+  console.log(`✅ ทำงานที่พอร์ต ${port}`);
 });
