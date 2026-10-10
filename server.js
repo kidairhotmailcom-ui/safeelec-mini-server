@@ -8,6 +8,8 @@ const fs = require('fs');
 const path = require('path');  
 
 const app = express();
+
+// === ตั้งค่าให้ระบบอ่านไฟล์สาธารณะ (Static Files) ===
 app.use(express.static(__dirname));
 app.use('/static', express.static(path.join(__dirname, 'static')));
 app.use(express.json());
@@ -144,9 +146,9 @@ cron.schedule('0 9 1 * *', async () => {
     });
   }
   console.log('ส่งรายงานเสร็จแล้ว');
-})
+});
 
-// === หน้าแรกแสดงโลโก้ + ปุ่มเข้าสู่ระบบ ===
+// === หน้าแรกดีไซน์ใหม่: จัดวางตำแหน่ง โทนสี และเอฟเฟกต์ให้สวยงามทันสมัย ===
 app.get('/', (req, res) => {
   res.send(`
 <!DOCTYPE html>
@@ -155,57 +157,162 @@ app.get('/', (req, res) => {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PNS - เพชรนาคา ซิสเต็มเวิร์ก</title>
+  <link rel="preconnect" href="https://googleapis.com">
+  <link rel="preconnect" href="https://gstatic.com" crossorigin>
+  <link href="https://googleapis.com/css2?family=Chakra+Petch:wght@300;400;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    
     body {
-      background: linear-gradient(135deg, #00337A, #0052CC);
+      background: radial-gradient(circle at top right, #0a2540 0%, #020c1b 100%);
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
-      font-family: sans-serif;
+      padding: 24px;
+      font-family: 'Sarabun', sans-serif;
+      color: #e6f1ff;
+      overflow-x: hidden;
+      position: relative;
     }
+
+    /* แสงไฟนีออนตกแต่งพื้นหลัง */
+    body::before {
+      content: '';
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: rgba(0, 98, 255, 0.15);
+      border-radius: 50%;
+      filter: blur(80px);
+      top: 10%;
+      left: 10%;
+      z-index: 0;
+    }
+
     .box {
-      background: white;
-      padding: 40px 30px;
-      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 50px 40px;
+      border-radius: 28px;
       text-align: center;
-      max-width: 480px;
+      max-width: 500px;
       width: 100%;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+      position: relative;
+      z-index: 1;
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
+
+    .box:hover {
+      transform: translateY(-5px);
+      border-color: rgba(0, 98, 255, 0.3);
+      box-shadow: 0 25px 60px rgba(0, 98, 255, 0.15);
+    }
+
+    /* กรอบขาวครอบโลโก้ให้เด่นขึ้นชัดเจน */
+    .logo-container {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 15px;
+      border-radius: 20px;
+      display: inline-block;
+      margin-bottom: 25px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
     .logo {
-      max-width: 180px;
-      width: 65%;
+      max-width: 140px;
       height: auto;
       display: block;
-      margin: 0 auto 20px;
     }
-    h1 { color: #00337A; font-size: 1.5rem; margin-bottom: 8px; }
-    .en { color: #666; font-size: 1rem; margin-bottom: 15px; }
-    p { color: #444; font-size: 1.1rem; line-height: 1.6; margin-bottom: 30px; }
+
+    h1 { 
+      font-family: 'Chakra Petch', sans-serif;
+      color: #ffffff; 
+      font-size: 1.6rem; 
+      font-weight: 700;
+      margin-bottom: 6px; 
+      letter-spacing: 0.5px;
+    }
+
+    .en { 
+      font-family: 'Chakra Petch', sans-serif;
+      color: #00d2ff; 
+      font-size: 0.85rem; 
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 24px; 
+    }
+
+    /* เส้นคั่นสไตล์โมเดิร์น */
+    .divider {
+      height: 2px;
+      width: 60px;
+      background: linear-gradient(90deg, #0062ff, #00d2ff);
+      margin: 0 auto 24px;
+      border-radius: 2px;
+    }
+
+    p { 
+      color: #a0aec0; 
+      font-size: 1.1rem; 
+      line-height: 1.6; 
+      margin-bottom: 35px; 
+      font-weight: 300;
+    }
+
+    /* ปุ่มกดเข้าสู่ระบบสไตล์พรีเมียม */
     .btn {
-      display: inline-block;
-      background: #00c853;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: linear-gradient(135deg, #0062ff 0%, #004bd4 100%);
       color: white;
-      padding: 15px 40px;
+      padding: 16px 32px;
       font-size: 18px;
-      border-radius: 10px;
+      border-radius: 14px;
       text-decoration: none;
-      font-weight: bold;
-      transition: background 0.3s;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 15px rgba(0, 98, 255, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
-    .btn:hover { background: #00a844; }
+
+    .btn:hover { 
+      background: linear-gradient(135deg, #1a75ff 0%, #0056f5 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 98, 255, 0.5);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-icon {
+      font-size: 20px;
+    }
   </style>
 </head>
 <body>
   <div class="box">
-    <img src="865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" alt="PNS เพชรนาคา ซิสเต็มเวิร์ค" class="logo">
+    <div class="logo-container">
+      <img src="/865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" alt="PNS เพชรนาคา ซิสเต็มเวิร์ค" class="logo">
+    </div>
     <h1>บริษัท เพชรนาคา ซิสเต็มเวิร์ก จำกัด</h1>
-    <p class="en">PETCHNAKA SYSTEM WORK CO.,LTD.</p>
-    <p>ระบบตรวจสอบและเฝ้าดูอุปกรณ์ไฟฟ้า</p>
-    <a href="https://safeelec-mini-server.onrender.com/" class="btn">🔐 เข้าสู่ระบบ SAFE-ELEC</a>
+    <p class="en">Petchnaka System Work Co.,Ltd.</p>
+    
+    <div class="divider"></div>
+    
+    <p>ระบบตรวจสอบและเฝ้าดูอุปกรณ์ไฟฟ้า<br><span style="font-size: 0.95rem; color: #718096;">Electrical Device Monitoring System</span></p>
+    
+    <a href="https://onrender.com" class="btn">
+      <span class="btn-icon">🔐</span> เข้าสู่ระบบ SAFE-ELEC
+    </a>
   </div>
 </body>
 </html>
