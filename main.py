@@ -552,7 +552,7 @@ button{width:100%;padding:12px;background:#2f9;border:none;border-radius:8px;col
 </head>
 <body>
 <div class="box">
-<img src="865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" alt="PANS" class="logo">
+<img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" alt="PANS" class="logo">
 <h2>🔐 เข้าสู่ระบบ SAFE-ELEC</h2>
 <form method="post" action="/do_login">
 <input type="text" name="user" placeholder="ชื่อผู้ใช้" required>
