@@ -13,6 +13,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "SAFE-ELEC-2026-SECRET-KEY-CHANGE-ME-PLEASE")
 CORS(app, supports_credentials=True)
 
+# ==================== ข้อมูลผู้ใช้ ====================
 USER_DB = {
     "admin": {"password": "123456", "name": "ผู้ดูแลระบบ", "customer_id": "ALL"},
     "cust0891": {"password": "123456", "name": "อาคารหลัก ขอนแก่น", "customer_id": "CUST-0891"},
@@ -20,6 +21,7 @@ USER_DB = {
     "cust0004": {"password": "123456", "name": "โรงงานผลิต ระยอง", "customer_id": "CUST-0004"},
 }
 
+# ==================== การตั้งค่าระบบ ====================
 CONFIG = {
     "SYSTEM_NAME": "SAFE-ELEC",
     "VERSION": "3.0.0-FULL-DEPLOY",
@@ -55,6 +57,7 @@ CONFIG = {
     }
 }
 
+# ==================== แมปชื่อฟิลด์ ====================
 FIELD_MAP = {
     "id": "device_id", "esp_id": "device_id", "esp": "device_id",
     "site": "site_name", "cust": "customer_id", "role": "role",
@@ -95,11 +98,13 @@ FIELD_MAP = {
     "sens_ground": "sens_ground",
 }
 
+# ==================== ข้อมูลอุปกรณ์ ====================
 DEVICE_LIST = [
     ("SAFE-001", "แผงหลัก+ย่อย อาคารหลัก", "CUST-0891", "ขอนแก่น", "office"),
     ("SAFE-001-BAK", "สำรอง — แผงหลัก อาคารหลัก", "CUST-0891", "ขอนแก่น", "office"),
 ]
 
+# ==================== แม่แบบข้อมูลอุปกรณ์ ====================
 TEMPLATE = {
     "device_id": "", "site_name": "", "customer_id": "",
     "province": "", "site_type": "",
@@ -149,6 +154,7 @@ TEMPLATE = {
     "fault_list": [], "alert_level": "normal",
 }
 
+# สร้างรายการอุปกรณ์
 devices = []
 for dev_id, site, cust, prov, stype in DEVICE_LIST:
     d = TEMPLATE.copy()
@@ -159,6 +165,7 @@ for dev_id, site, cust, prov, stype in DEVICE_LIST:
     d["site_type"] = stype
     devices.append(d)
 
+# ==================== ฟังก์ชันส่งแจ้งเตือน ====================
 def send_line_alert(message):
     token = CONFIG["ALERT"]["LINE_TOKEN"]
     if not token or not CONFIG["ALERT"]["ENABLED"]:
@@ -254,32 +261,124 @@ def trigger_alert(dev):
         dev["last_alert_sent"] = datetime.now()
         print(f"✅ ส่งแจ้งเตือนสำเร็จ: {dev['device_id']}")
 
+# ==================== สร้างรายงาน Excel ====================
 def generate_excel_report():
     output = io.BytesIO()
     workbook = xlsxwriter.Workbook(output)
     ws = workbook.add_worksheet("สรุปภาพรวม")
-    header = workbook.add_format({'bold': True, 'bg_color': '#22c55e', 'color': '#000', 'align': 'center'})
-    normal = workbook.add_format({'text_wrap': True})
-    red = workbook.add_format({'font_color': '#ef4444', 'bold': True})
-    green = workbook.add_format({'font_color': '#22c55e'})
-    headers = ["รหัส", "สถานที่", "บทบาท", "ออนไลน์", "สถานะ", "อุณหภูมิ", "กราวด์ R(Ω)", "กราวด์ V(V)", "ปัญหา"]
+    
+    header_format = workbook.add_format({'bold': True, 'bg_color': '#1e40af', 'color': '#FFFFFF', 'align': 'center', 'valign': 'vcenter'})
+    header_format.set_text_wrap()
+    normal = workbook.add_format({'text_wrap': True, 'align': 'center', 'valign': 'vcenter'})
+    left_align = workbook.add_format({'text_wrap': True, 'align': 'left', 'valign': 'vcenter'})
+    red_text = workbook.add_format({'font_color': '#dc2626', 'bold': True, 'align': 'center'})
+    orange_text = workbook.add_format({'font_color': '#f97316', 'bold': True, 'align': 'center'})
+    green_text = workbook.add_format({'font_color': '#16a34a', 'bold': True, 'align': 'center'})
+    gray_text = workbook.add_format({'font_color': '#6b7280', 'align': 'center'})
+
+    headers = [
+        "รหัสอุปกรณ์", "ชื่อสถานที่", "รหัสลูกค้า", "จังหวัด", "ประเภทสถานที่",
+        "บทบาท", "สถานะออนไลน์", "ระดับแจ้งเตือน", "เวลาอัปเดตล่าสุด",
+        "อุณหภูมิ (°C)", "ความชื้น (%)", "สถานะแหล่งจ่าย",
+        "V L1-L2 (V)", "V L2-L3 (V)", "V L3-L1 (V)",
+        "A L1 (A)", "A L2 (A)", "A L3 (A)", "A N (A)",
+        "กำลังไฟฟ้า (kW)", "ความสมดุล 3เฟส",
+        "โซน1 V(V)", "โซน1 A(A)", "โซน1 kW",
+        "โซน2 V(V)", "โซน2 A(A)", "โซน2 kW",
+        "โซน3 V(V)", "โซน3 A(A)", "โซน3 kW",
+        "กราวด์ ความต้านทาน (Ω)", "กราวด์ แรงดันรั่ว (V)", "สถานะกราวด์",
+        "จำนวนปัญหา", "รายการปัญหา"
+    ]
+    
     for col, h in enumerate(headers):
-        ws.write(0, col, h, header)
+        ws.write(0, col, h, header_format)
+
     for row, d in enumerate(devices, start=1):
-        status_fmt = green if d["alert_level"]=="normal" else red
         role_label = d.get("role", "-")
+        if role_label == "MASTER":
+            role_label = "ตัวหลัก"
+        elif role_label == "BACKUP":
+            role_label = "ตัวสำรอง"
         if d.get("backup_active"):
             role_label += " (ทำงานแทน)"
-        ws.write(row, 0, d["device_id"], normal)
-        ws.write(row, 1, d["site_name"], normal)
-        ws.write(row, 2, role_label, normal)
-        ws.write(row, 3, "✅ ใช่" if d["is_online"] else "❌ ไม่", green if d["is_online"] else red)
-        ws.write(row, 4, d["status_summary"], status_fmt)
-        ws.write(row, 5, d["current_temp"], normal)
-        ws.write(row, 6, d["gnd_resistance_ohm"], normal)
-        ws.write(row, 7, d["gnd_voltage_v"], normal)
-        ws.write(row, 8, f"{len(d['fault_list'])} รายการ", normal)
-    ws.set_column(0, 8, 18)
+        
+        online_text = "✅ ออนไลน์" if d["is_online"] else "❌ ขาดการติดต่อ"
+        online_fmt = green_text if d["is_online"] else red_text
+        
+        alert_text = {
+            "normal": "ปกติ",
+            "warning": "เฝ้าระวัง",
+            "critical": "อันตราย",
+            "offline": "ขาดการติดต่อ"
+        }.get(d["alert_level"], "-")
+        alert_fmt = {
+            "normal": green_text,
+            "warning": orange_text,
+            "critical": red_text,
+            "offline": gray_text
+        }.get(d["alert_level"], normal)
+        
+        balance_ok = d.get("balance_3ph_ok", True)
+        balance_text = "ปกติ" if balance_ok else "ไม่สมดุล"
+        balance_fmt = green_text if balance_ok else orange_text
+        
+        gnd_ok = d.get("gnd_system_ok", True)
+        gnd_val = d.get("gnd_resistance_ohm", 0)
+        if gnd_val <= 0:
+            gnd_status = "รอข้อมูล"
+            gnd_fmt = gray_text
+        elif gnd_ok:
+            gnd_status = "ปกติ"
+            gnd_fmt = green_text
+        else:
+            gnd_status = "ผิดปกติ"
+            gnd_fmt = red_text
+
+        fault_count = len(d.get('fault_list', []))
+        fault_text = "; ".join(d.get('fault_list', [])) if fault_count > 0 else "-"
+
+        ws.write(row, 0, d["device_id"], left_align)
+        ws.write(row, 1, d["site_name"], left_align)
+        ws.write(row, 2, d["customer_id"], normal)
+        ws.write(row, 3, d.get("province", "-"), normal)
+        ws.write(row, 4, CONFIG["SITE_TYPES"].get(d.get("site_type",""), d.get("site_type","")), normal)
+        ws.write(row, 5, role_label, normal)
+        ws.write(row, 6, online_text, online_fmt)
+        ws.write(row, 7, alert_text, alert_fmt)
+        ws.write(row, 8, d.get("last_updated", "-"), normal)
+        ws.write(row, 9, d.get("current_temp", 0), normal)
+        ws.write(row, 10, d.get("humidity", 0), normal)
+        ws.write(row, 11, d.get("power_status", "-"), normal)
+        ws.write(row, 12, d.get("v_l1_l2", 0), normal)
+        ws.write(row, 13, d.get("v_l2_l3", 0), normal)
+        ws.write(row, 14, d.get("v_l3_l1", 0), normal)
+        ws.write(row, 15, d.get("a_l1", 0), normal)
+        ws.write(row, 16, d.get("a_l2", 0), normal)
+        ws.write(row, 17, d.get("a_l3", 0), normal)
+        ws.write(row, 18, d.get("a_n", 0), normal)
+        ws.write(row, 19, d.get("power_kw", 0), normal)
+        ws.write(row, 20, balance_text, balance_fmt)
+        ws.write(row, 21, d.get("z1_v", 0), normal)
+        ws.write(row, 22, d.get("z1_a", 0), normal)
+        ws.write(row, 23, d.get("z1_w", 0), normal)
+        ws.write(row, 24, d.get("z2_v", 0), normal)
+        ws.write(row, 25, d.get("z2_a", 0), normal)
+        ws.write(row, 26, d.get("z2_w", 0), normal)
+        ws.write(row, 27, d.get("z3_v", 0), normal)
+        ws.write(row, 28, d.get("z3_a", 0), normal)
+        ws.write(row, 29, d.get("z3_w", 0), normal)
+        ws.write(row, 30, d.get("gnd_resistance_ohm", 0), normal)
+        ws.write(row, 31, d.get("gnd_voltage_v", 0), normal)
+        ws.write(row, 32, gnd_status, gnd_fmt)
+        ws.write(row, 33, fault_count, normal)
+        ws.write(row, 34, fault_text, left_align)
+    
+    col_widths = [16, 28, 14, 12, 14, 16, 14, 12, 18, 12, 12, 14,
+                  12, 12, 12, 10, 10, 10, 10, 12, 14, 10, 10, 10,
+                  10, 10, 10, 10, 10, 10, 16, 14, 12, 14, 40]
+    for i, w in enumerate(col_widths):
+        ws.set_column(i, i, w)
+    
     workbook.close()
     output.seek(0)
     return {
@@ -287,6 +386,7 @@ def generate_excel_report():
         "name": f"SAFE-ELEC-Report-{datetime.now().strftime('%Y%m%d-%H%M%S')}.xlsx"
     }
 
+# ==================== ฟังก์ชันตรวจสอบระบบ ====================
 def check_ground(dev):
     S = CONFIG["STANDARD"]
     faults = []
@@ -371,6 +471,7 @@ def check_all(dev):
         else:
             dev["sensors"][key]["ok"] = None
             dev["sensors"][key]["value"] = "รอข้อมูล"
+    
     if dev["is_online"]:
         dev["sensors"]["esp"]["value"] = "เชื่อมต่อปกติ"
         dev["sensors"]["esp"]["ok"] = True
@@ -385,6 +486,7 @@ def check_all(dev):
         dev["sensors"]["comm"]["ok"] = None
         dev["sensors"]["psu"]["value"] = "ตรวจสอบ"
         dev["sensors"]["psu"]["ok"] = None
+    
     t = dev["current_temp"]
     dev["sensors"]["temp"]["value"] = t
     if not dev["is_online"]:
@@ -397,37 +499,45 @@ def check_all(dev):
         faults.append(f"⚠️ อุณหภูมิสูง: {t}°C")
     else:
         dev["sensors"]["temp"]["ok"] = True
+    
     h = dev["humidity"]
     dev["sensors"]["humidity"]["value"] = h
     if not dev["is_online"] or h == 0:
         dev["sensors"]["humidity"]["ok"] = None
     else:
         dev["sensors"]["humidity"]["ok"] = S["HUMI_MIN"] <= h <= S["HUMI_MAX"]
+    
     for k, v in [("v_l1_l2", dev["v_l1_l2"]), ("v_l2_l3", dev["v_l2_l3"]), ("v_l3_l1", dev["v_l3_l1"])]:
         dev["sensors"][k]["value"] = v
         if not dev["is_online"] or v == 0:
             dev["sensors"][k]["ok"] = None
         else:
             dev["sensors"][k]["ok"] = S["V3_MIN"] <= v <= S["V3_MAX"]
+    
     for k, v in [("a_l1", dev["a_l1"]), ("a_l2", dev["a_l2"]), ("a_l3", dev["a_l3"])]:
         dev["sensors"][k]["value"] = v
         dev["sensors"][k]["ok"] = None if not dev["is_online"] or v == 0 else True
+    
     for k, v in [("z1_v", dev["z1_v"]), ("z2_v", dev["z2_v"]), ("z3_v", dev["z3_v"])]:
         dev["sensors"][k]["value"] = v
         if not dev["is_online"] or v == 0:
             dev["sensors"][k]["ok"] = None
         else:
             dev["sensors"][k]["ok"] = S["V1_MIN"] <= v <= S["V1_MAX"]
+    
     for k, v in [("z1_a", dev["z1_a"]), ("z2_a", dev["z2_a"]), ("z3_a", dev["z3_a"])]:
         dev["sensors"][k]["value"] = v
         dev["sensors"][k]["ok"] = None if not dev["is_online"] or v == 0 else True
+    
     dev["balance_3ph_ok"] = check_balance(dev["a_l1"], dev["a_l2"], dev["a_l3"])
     dev["z_total_a"] = round(dev["z1_a"] + dev["z2_a"] + dev["z3_a"], 2)
     dev["z_balance_ok"] = check_balance(dev["z1_a"], dev["z2_a"], dev["z3_a"])
+    
     if dev["is_online"] and not dev["balance_3ph_ok"]:
         faults.append("⚠️ ระบบ 380V ไม่สมดุล")
     if dev["is_online"] and not dev["z_balance_ok"] and dev["z_total_a"] > 0:
         faults.append("⚠️ ระบบ 220V ไม่สมดุล")
+    
     critical = any("🔴" in f for f in faults)
     warning = any("⚠️" in f for f in faults)
     if not dev["is_online"]:
@@ -442,17 +552,12 @@ def check_all(dev):
     else:
         dev["status_summary"] = "online"
         dev["alert_level"] = "normal"
+    
     dev["fault_list"] = faults
     trigger_alert(dev)
     return dev
 
-@app.before_request
-def check_login():
-    if request.path in ["/login", "/do_login", "/logout", "/api/data", "/api/devices", "/api/report-excel"]:
-        return
-    if "username" not in session:
-        return redirect("/login")
-
+# ==================== Middleware ====================
 @app.before_request
 def update_online():
     now = datetime.now()
@@ -464,22 +569,13 @@ def update_online():
             d["is_online"] = False
         check_all(d)
 
+# ==================== API Routes ====================
 @app.route("/api/data", methods=["GET"])
 def get_data():
     dev_id = request.args.get("device_id", "SAFE-001")
     for d in devices:
         if d["device_id"] == dev_id:
-            return jsonify({
-                "device_id": d["device_id"],
-                "role": d["role"],
-                "backup_active": d["backup_active"],
-                "partner_online": d["partner_online"],
-                "current_temp": d["current_temp"],
-                "humidity": d["humidity"],
-                "is_online": d["is_online"],
-                "relay_state": d["relay_state"],
-                "safety_lock": d["safety_lock"]
-            })
+            return jsonify(d)
     return jsonify({"error": "Not found"}), 404
 
 @app.route("/api/data", methods=["POST"])
@@ -516,19 +612,23 @@ def receive():
 @app.route("/api/devices")
 def get_devices():
     my_cust = session.get("cust_id", "")
-    if my_cust == "ALL":
+    if my_cust == "ALL" or not my_cust:
         return jsonify(devices)
     return jsonify([d for d in devices if d["customer_id"] == my_cust])
 
 @app.route("/api/report-excel")
 def download_report():
+    if "username" not in session:
+        return redirect("/login")
     report = generate_excel_report()
     return send_file(
         io.BytesIO(report["data"]),
-        download_name=report["name"],
-        as_attachment=True
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=report["name"]
     )
 
+# ==================== หน้าเข้าสู่ระบบ ====================
 @app.route("/login")
 def login():
     err = request.args.get("err", "")
@@ -540,236 +640,76 @@ def login():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>เข้าสู่ระบบ — SAFE-ELEC</title>
 <style>
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
         min-height: 100vh;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", "Helvetica Neue", sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif;
         color: #fff;
+        background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%);
         position: relative;
         overflow-x: hidden;
-        background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%);
     }
-
     .circuit-bg {
-        position: fixed;
-        inset: 0;
-        background-image: 
-            radial-gradient(circle at 20% 30%, rgba(6, 182, 212, 0.08) 0%, transparent 40%),
-            radial-gradient(circle at 80% 70%, rgba(16, 185, 129, 0.08) 0%, transparent 40%);
-        background-size: 100% 100%;
+        position: fixed; inset: 0;
+        background-image: radial-gradient(circle at 20% 30%, rgba(6,182,212,.08) 0%, transparent 40%),
+        radial-gradient(circle at 80% 70%, rgba(16,185,129,.08) 0%, transparent 40%);
         z-index: -2;
     }
-
     .circuit-lines {
-        position: fixed;
-        inset: 0;
-        z-index: -1;
-        opacity: 0.4;
-        background-image: 
-            linear-gradient(90deg, rgba(6, 182, 212, 0.3) 1px, transparent 1px),
-            linear-gradient(rgba(6, 182, 212, 0.3) 1px, transparent 1px);
+        position: fixed; inset: 0; z-index: -1; opacity: 0.4;
+        background-image: linear-gradient(90deg, rgba(6,182,212,.3) 1px, transparent 1px),
+        linear-gradient(rgba(6,182,212,.3) 1px, transparent 1px);
         background-size: 60px 60px;
         mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
         -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
     }
-
-    .circuit-paths {
-        position: fixed;
-        inset: 0;
-        z-index: -1;
-        opacity: 0.6;
-        background: 
-            radial-gradient(circle at 10% 15%, rgba(6, 182, 212, 0.6) 3px, transparent 3px),
-            radial-gradient(circle at 90% 10%, rgba(6, 182, 212, 0.6) 3px, transparent 3px),
-            radial-gradient(circle at 5% 85%, rgba(16, 185, 129, 0.5) 3px, transparent 3px),
-            radial-gradient(circle at 95% 90%, rgba(6, 182, 212, 0.5) 3px, transparent 3px);
-        background-size: 100% 100%;
-    }
-
-    .container {
-        width: 100%;
-        max-width: 440px;
-        padding: 24px;
-        position: relative;
-        z-index: 1;
-    }
-
+    .container { width: 100%; max-width: 440px; padding: 24px; position: relative; z-index: 1; }
     .login-card {
-        background: linear-gradient(135deg, rgba(30, 41, 59, 0.75), rgba(15, 23, 42, 0.8));
-        border-radius: 24px;
-        padding: 36px 28px;
-        box-shadow: 
-            0 0 0 1px rgba(6, 182, 212, 0.15),
-            0 20px 60px rgba(0, 0, 0, 0.4),
-            inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        background: linear-gradient(135deg, rgba(30,41,59,.75), rgba(15,23,42,.8));
+        border-radius: 24px; padding: 36px 28px;
+        box-shadow: 0 0 0 1px rgba(6,182,212,.15), 0 20px 60px rgba(0,0,0,.4);
         backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
     }
-
     .logo-box {
         background: linear-gradient(145deg, #1E293B, #0F172A);
-        border-radius: 16px;
-        padding: 28px 20px;
-        text-align: center;
-        margin-bottom: 32px;
-        box-shadow: 
-            inset 0 1px 0 rgba(255, 255, 255, 0.05),
-            0 4px 20px rgba(0, 0, 0, 0.3);
+        border-radius: 16px; padding: 28px 20px; text-align: center; margin-bottom: 32px;
     }
-
-    .logo-img {
-        width: 180px;
-        height: auto;
-        margin-bottom: 16px;
-    }
-
-    .company-name {
-        font-size: 22px;
-        font-weight: 600;
-        color: #F1F5F9;
-        margin-bottom: 6px;
-    }
-
-    .company-en {
-        font-size: 13px;
-        color: #94A3B8;
-        letter-spacing: 1px;
-    }
-
-    .header {
-        text-align: center;
-        margin-bottom: 32px;
-    }
-
+    .logo-img { width: 180px; margin-bottom: 16px; }
+    .company-name { font-size: 22px; font-weight: 600; color: #F1F5F9; margin-bottom: 6px; }
+    .company-en { font-size: 13px; color: #94A3B8; letter-spacing: 1px; }
+    .header { text-align: center; margin-bottom: 32px; }
     .header h1 {
-        font-size: 26px;
-        font-weight: 700;
-        background: linear-gradient(90deg, #22D3EE, #34D399);
-        -webkit-background-clip: text;
-        background-clip: text;
-        color: transparent;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
+        font-size: 26px; background: linear-gradient(90deg, #22D3EE, #34D399);
+        -webkit-background-clip: text; color: transparent;
     }
-
-    .header p {
-        color: #94A3B8;
-        font-size: 15px;
-        margin-top: 8px;
-    }
-
-    .form-group {
-        margin-bottom: 20px;
-        position: relative;
-    }
-
+    .header p { color: #94A3B8; font-size: 15px; margin-top: 8px; }
+    .form-group { margin-bottom: 20px; }
     .input-wrapper {
-        position: relative;
-        display: flex;
-        align-items: center;
-        background: rgba(15, 23, 42, 0.6);
-        border-radius: 12px;
-        border: 1px solid rgba(6, 182, 212, 0.25);
-        padding: 0 18px;
-        transition: all 0.3s ease;
+        display: flex; align-items: center; background: rgba(15,23,42,.6);
+        border-radius: 12px; border: 1px solid rgba(6,182,212,.25); padding: 0 18px;
     }
-
-    .input-wrapper:focus-within {
-        border-color: rgba(6, 182, 212, 0.7);
-        box-shadow: 
-            0 0 15px rgba(6, 182, 212, 0.15),
-            inset 0 0 8px rgba(6, 182, 212, 0.08);
-        outline: none;
-    }
-
-    .input-icon {
-        color: #22D3EE;
-        font-size: 18px;
-        flex-shrink: 0;
-    }
-
+    .input-wrapper:focus-within { border-color: rgba(6,182,212,.7); }
+    .input-icon { color: #22D3EE; font-size: 18px; }
     input {
-        width: 100%;
-        padding: 16px 12px;
-        background: transparent;
-        border: none;
-        outline: none;
-        color: #F1F5F9;
-        font-size: 16px;
+        width: 100%; padding: 16px 12px; background: transparent; border: none;
+        outline: none; color: #F1F5F9; font-size: 16px;
     }
-
-    input::placeholder {
-        color: #64748B;
-    }
-
+    input::placeholder { color: #64748B; }
     .btn-login {
-        width: 100%;
-        padding: 16px;
-        border: none;
-        border-radius: 12px;
-        font-size: 18px;
-        font-weight: 600;
-        color: #0F172A;
-        background: linear-gradient(90deg, #34D399, #22D3EE);
-        cursor: pointer;
-        position: relative;
-        overflow: hidden;
-        transition: transform 0.2s ease, box-shadow 0.3s ease;
-        margin-top: 8px;
+        width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 18px;
+        font-weight: 600; color: #0F172A;
+        background: linear-gradient(90deg, #34D399, #22D3EE); cursor: pointer;
+        transition: transform .2s; margin-top: 8px;
     }
-
-    .btn-login::before {
-        content: '';
-        position: absolute;
-        top: -2px;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
-    }
-
-    .btn-login:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(52, 211, 153, 0.35);
-    }
-
-    .btn-login:active {
-        transform: translateY(0);
-    }
-
+    .btn-login:hover { transform: translateY(-2px); }
     .error-box {
-        background: rgba(239, 68, 68, 0.1);
-        border: 1px solid rgba(239, 68, 68, 0.3);
-        color: #FCA5A5;
-        padding: 12px;
-        border-radius: 8px;
-        text-align: center;
-        margin-bottom: 20px;
-        font-size: 14px;
+        background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3);
+        color: #FCA5A5; padding: 12px; border-radius: 8px; text-align: center;
+        margin-bottom: 20px; font-size: 14px;
     }
-
-    .glow-corner {
-        position: absolute;
-        width: 120px;
-        height: 120px;
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(6, 182, 212, 0.08), transparent 70%);
-        pointer-events: none;
-    }
-
-    .glow-tl { top: -60px; left: -60px; }
-    .glow-br { bottom: -60px; right: -60px; }
-
     @media (max-width: 480px) {
         .container { padding: 16px; }
         .login-card { padding: 28px 20px; }
@@ -780,29 +720,19 @@ def login():
 <body>
     <div class="circuit-bg"></div>
     <div class="circuit-lines"></div>
-    <div class="circuit-paths"></div>
-
     <div class="container">
-        <div class="login-card" style="position: relative;">
-            <div class="glow-corner glow-tl"></div>
-            <div class="glow-corner glow-br"></div>
-
+        <div class="login-card">
             <div class="logo-box">
                 <img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" 
-                     alt="PANS Logo" class="logo-img" onerror="this.style.display='none'">
+                     alt="Logo" class="logo-img" onerror="this.style.display='none'">
                 <div class="company-name">บริษัท เพชรนาคา</div>
                 <div class="company-en">PETCHNAKA SYSTEM WORK CO.,LTD.</div>
             </div>
-
             <div class="header">
                 <h1>🔐 เข้าสู่ระบบ SAFE-ELEC</h1>
                 <p>กรุณากรอกข้อมูลเพื่อเข้าใช้งานระบบ</p>
             </div>
-
-            {% if err %}
-            <div class="error-box">{{ err }}</div>
-            {% endif %}
-
+            {% if err %}<div class="error-box">{{ err }}</div>{% endif %}
             <form method="post" action="/do_login">
                 <div class="form-group">
                     <div class="input-wrapper">
@@ -810,14 +740,12 @@ def login():
                         <input type="text" name="user" placeholder="ชื่อผู้ใช้" required autofocus>
                     </div>
                 </div>
-
                 <div class="form-group">
                     <div class="input-wrapper">
                         <span class="input-icon">🔒</span>
                         <input type="password" name="pwd" placeholder="รหัสผ่าน" required>
                     </div>
                 </div>
-
                 <button type="submit" class="btn-login">เข้าสู่ระบบ</button>
             </form>
         </div>
@@ -842,53 +770,9 @@ def logout():
     session.clear()
     return redirect("/login")
 
+# ==================== หน้าหลัก/แดชบอร์ด ====================
 @app.route("/")
 def dashboard():
     return render_template_string("""
 <!DOCTYPE html>
-<html lang="th">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SAFE-ELEC PLATFORM</title>
-<style>
-*{
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", "Helvetica Neue", sans-serif;
-}
-body{
-    background: linear-gradient(135deg, #0a1628 0%, #0f2540 50%, #0a1628 100%);
-    color: #fff;
-    padding: 16px;
-    min-height: 100vh;
-}
-h1{
-    text-align: center;
-    color: #22D3EE;
-    margin-bottom: 4px;
-    font-size: 28px;
-}
-.ver{
-    text-align: center;
-    color: #94A3B8;
-    margin-bottom: 20px;
-    font-size: 14px;
-}
-.user-bar{
-    text-align: right;
-    margin-bottom: 20px;
-    padding: 12px 20px;
-    background: rgba(15, 23, 42, 0.7);
-    border: 1px solid rgba(34, 211, 238, 0.15);
-    border-radius: 12px;
-    font-size: 14px;
-    backdrop-filter: blur(8px);
-}
-.user-bar span{
-    color: #94A3B8;
-}
-.user-bar strong{
-    color: #F1F5F9;
-}
+<html lang="
