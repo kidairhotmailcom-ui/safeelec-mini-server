@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');  
 
 const app = express();
-app.use(express.static(__dirname)); // เปิดสิทธิ์ให้หน้าเว็บดึงรูปภาพรหัสยาวจากหน้าแรกสุดไปใช้ได้โดยตรง
+app.use(express.static(__dirname));
 app.use('/static', express.static(path.join(__dirname, 'static')));
 app.use(express.json());
 const port = process.env.PORT || 3000;
@@ -17,7 +17,7 @@ const port = process.env.PORT || 3000;
 const db = mysql.createPool({
   host: 'localhost',
   user: 'root',
-  password: '',           // ใส่รหัสผ่าน MySQL ถ้ามี
+  password: '',
   database: 'device_system'
 });
 
@@ -25,8 +25,8 @@ const db = mysql.createPool({
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'your-email@gmail.com',     // เปลี่ยนเป็นอีเมลจริง
-    pass: 'your-app-password'        // ใส่รหัสผ่านแอป
+    user: 'your-email@gmail.com',
+    pass: 'your-app-password'
   }
 });
 
@@ -111,7 +111,7 @@ app.post('/api/reports/generate-excel', async (req, res) => {
       await transporter.sendMail({
         to: cust.email,
         subject: `รายงาน ${report_id}`,
-        text: 'แนบรายงานข้อมูลอุปกรณ์',
+        text: 'แนบรายงานข้อมูลอุปกรณ์ไฟฟ้า',
         attachments: [{path: filePath}]
       });
       await db.query('UPDATE reports SET sent_at=NOW() WHERE report_id=?', [report_id]);
@@ -145,7 +145,8 @@ cron.schedule('0 9 1 * *', async () => {
   }
   console.log('ส่งรายงานเสร็จแล้ว');
 })
-// === หน้าแรกแสดงโลโก้ ===
+
+// === หน้าแรกแสดงโลโก้ + ปุ่มเข้าสู่ระบบ ===
 app.get('/', (req, res) => {
   res.send(`
 <!DOCTYPE html>
@@ -182,17 +183,29 @@ app.get('/', (req, res) => {
       margin: 0 auto 20px;
     }
     h1 { color: #00337A; font-size: 1.5rem; margin-bottom: 8px; }
-    .en { color: #666; font-size: 1rem; margin-bottom: 20px; }
-    p { color: #444; font-size: 1.1rem; line-height: 1.6; }
+    .en { color: #666; font-size: 1rem; margin-bottom: 15px; }
+    p { color: #444; font-size: 1.1rem; line-height: 1.6; margin-bottom: 30px; }
+    .btn {
+      display: inline-block;
+      background: #00c853;
+      color: white;
+      padding: 15px 40px;
+      font-size: 18px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+    .btn:hover { background: #00a844; }
   </style>
 </head>
 <body>
   <div class="box">
-    <!-- แก้ไขชื่อภาพตัวจริงให้ตรงกับหน้า GitHub เรียบร้อยครับ -->
     <img src="865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" alt="PNS เพชรนาคา ซิสเต็มเวิร์ค" class="logo">
     <h1>บริษัท เพชรนาคา ซิสเต็มเวิร์ก จำกัด</h1>
     <p class="en">PETCHNAKA SYSTEM WORK CO.,LTD.</p>
     <p>ระบบตรวจสอบและเฝ้าดูอุปกรณ์ไฟฟ้า</p>
+    <a href="https://safeelec-mini-server.onrender.com/" class="btn">🔐 เข้าสู่ระบบ SAFE-ELEC</a>
   </div>
 </body>
 </html>
