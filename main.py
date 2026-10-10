@@ -543,6 +543,7 @@ def login():
 <style>
 body{background:#0f1629;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px}
 .box{background:#1a2342;padding:30px;border-radius:16px;width:100%;max-width:400px;border:1px solid #2a3b63}
+.logo{max-width:220px;margin:0 auto 20px;display:block}  
 h2{text-align:center;color:#6cf;margin-bottom:25px}
 input{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:none;background:#0f1f3f;color:#fff;font-size:16px}
 button{width:100%;padding:12px;background:#2f9;border:none;border-radius:8px;color:#032;font-weight:bold;font-size:16px;margin-top:10px;cursor:pointer}
@@ -551,6 +552,7 @@ button{width:100%;padding:12px;background:#2f9;border:none;border-radius:8px;col
 </head>
 <body>
 <div class="box">
+<img src="865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" alt="PANS" class="logo">
 <h2>🔐 เข้าสู่ระบบ SAFE-ELEC</h2>
 <form method="post" action="/do_login">
 <input type="text" name="user" placeholder="ชื่อผู้ใช้" required>
