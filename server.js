@@ -1,156 +1,174 @@
-const express = require('express');
-const mysql = require('mysql2/promise');
-const nodemailer = require('nodemailer');
-const ExcelJS = require('exceljs');
-const cron = require('node-cron');
-const { format } = require('date-fns');
-const fs = require('fs');
-const path = require('path');  
+from flask import Flask, request, jsonify, render_template_string, send_from_directory
+from flask_cors import CORS
+import mysql.connector
+from mysql.connector import pooling
+import datetime
+import os
+import requests
+import xlsxwriter
+from dotenv import load_dotenv
 
-const app = express();
+load_dotenv()
 
-// === ตั้งค่าให้ระบบอ่านไฟล์สาธารณะ (Static Files) ===
-app.use(express.static(__dirname));
-app.use('/static', express.static(path.join(__dirname, 'static')));
-app.use(express.json());
-const port = process.env.PORT || 3000;
+app = Flask(__name__)
+CORS(app)
 
-// === ตั้งค่าฐานข้อมูล ===
-const db = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: '',
-  database: 'device_system'
-});
+# === เปิดสิทธิ์ให้ระบบเข้าถึงไฟล์โลโก้ในโฟลเดอร์หลัก (Root) ได้โดยตรง ===
+@app.route('/<path:filename>')
+def serve_root_files(filename):
+    return send_from_directory(os.getcwd(), filename)
 
-// === ตั้งค่าส่งเมล ===
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: 'your-email@gmail.com',
-    pass: 'your-app-password'
-  }
-});
+# === ตั้งค่าฐานข้อมูล MySQL (Connection Pool) ===
+try:
+    db_pool = pooling.MySQLConnectionPool(
+        pool_name="mypool",
+        pool_size=5,
+        host='localhost',
+        user='root',
+        password='',
+        database='device_system'
+    )
+except Exception as e:
+    print(f"⚠️ เตือน: ไม่สามารถเชื่อมต่อ MySQL ได้ (โปรดตรวจสอบสิทธิ์การเข้าถึง): {e}")
 
-// เพิ่มลูกค้า
-app.post('/api/customers', async (req, res) => {
-  try {
-    const { customer_id, name, email, phone } = req.body;
-    await db.query(
-      'INSERT INTO customers VALUES (?, ?, ?, ?)',
-      [customer_id, name, email, phone]
-    );
-    res.json({ok:true, message:'เพิ่มลูกค้าสำเร็จ'});
-  } catch (e) { res.json({ok:false, error:e.message}); }
-});
+def get_db_connection():
+    return db_pool.get_connection()
 
-// เพิ่มอุปกรณ์
-app.post('/api/devices', async (req, res) => {
-  try {
-    const { device_id, device_name, type, customer_id, serial_number } = req.body;
-    await db.query(
-      'INSERT INTO devices (device_id, device_name, type, customer_id, serial_number) VALUES (?,?,?,?,?)',
-      [device_id, device_name, type, customer_id, serial_number]
-    );
-    res.json({ok:true, message:'เพิ่มอุปกรณ์สำเร็จ'});
-  } catch (e) { res.json({ok:false, error:e.message}); }
-});
+# === API: เพิ่มลูกค้า ===
+@app.route('/api/customers', methods=['POST'])
+def add_customer():
+    try:
+        data = request.json
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            'INSERT INTO customers VALUES (%s, %s, %s, %s)',
+            (data['customer_id'], data['name'], data['email'], data['phone'])
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({'ok': True, 'message': 'เพิ่มลูกค้าสำเร็จ'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
 
-// รับข้อมูลจาก ESP32
-app.post('/api/esp/upload', async (req, res) => {
-  try {
-    const { device_id, temperature, humidity, voltage, current } = req.body;
-    let status = 'normal';
-    if (temperature > 40 || voltage < 200) status = 'warning';
-    if (temperature > 50 || voltage < 190) status = 'critical';
+# === API: เพิ่มอุปกรณ์ ===
+@app.route('/api/devices', methods=['POST'])
+def add_device():
+    try:
+        data = request.json
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            'INSERT INTO devices (device_id, device_name, type, customer_id, serial_number) VALUES (%s,%s,%s,%s,%s)',
+            (data['device_id'], data['device_name'], data['type'], data['customer_id'], data['serial_number'])
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({'ok': True, 'message': 'เพิ่มอุปกรณ์สำเร็จ'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
 
-    await db.query(
-      'INSERT INTO esp_readings (device_id, temperature, humidity, voltage, current, status) VALUES (?,?,?,?,?,?)',
-      [device_id, temperature, humidity, voltage, current, status]
-    );
-    res.json({ok:true, status});
-  } catch (e) { res.json({ok:false, error:e.message}); }
-});
+# === API: รับข้อมูลจาก ESP32 ===
+@app.route('/api/esp/upload', methods=['POST'])
+def esp_upload():
+    try:
+        data = request.json
+        device_id = data['device_id']
+        temp = float(data['temperature'])
+        humidity = float(data['humidity'])
+        voltage = float(data['voltage'])
+        current = float(data['current'])
+        
+        status = 'normal'
+        if temp > 40 or voltage < 200: status = 'warning'
+        if temp > 50 or voltage < 190: status = 'critical'
 
-// สร้างรายงาน Excel + ส่งเมล
-app.post('/api/reports/generate-excel', async (req, res) => {
-  try {
-    const { customer_id, device_id, start_date, end_date, send_email } = req.body;
-    const report_id = `RPT${Date.now()}`;
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            'INSERT INTO esp_readings (device_id, temperature, humidity, voltage, current, status) VALUES (%s,%s,%s,%s,%s,%s)',
+            (device_id, temp, humidity, voltage, current, status)
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({'ok': True, 'status': status})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
 
-    const [readings] = await db.query(
-      'SELECT * FROM esp_readings WHERE device_id=? AND recorded_at BETWEEN ? AND ?',
-      [device_id, start_date, end_date+' 23:59:59']
-    );
-    const [cust] = await db.query('SELECT * FROM customers WHERE customer_id=?', [customer_id]);
-    if (!cust.length) return res.json({ok:false, message:'ไม่พบลูกค้า'});
+# === API: สร้างรายงาน Excel ===
+@app.route('/api/reports/generate-excel', methods=['POST'])
+def generate_excel():
+    try:
+        data = request.json
+        customer_id = data['customer_id']
+        device_id = data['device_id']
+        start_date = data['start_date']
+        end_date = data['end_date'] + ' 23:59:59'
+        
+        report_id = f"RPT{int(datetime.datetime.now().timestamp() * 1000)}"
 
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet('ข้อมูล');
-    ws.columns = [
-      {header:'เวลา', key:'time', width:20},
-      {header:'อุณหภูมิ', key:'temp', width:12},
-      {header:'ความชื้น', key:'hum', width:12},
-      {header:'แรงดัน', key:'volt', width:12},
-      {header:'กระแส', key:'amp', width:12},
-      {header:'สถานะ', key:'st', width:12}
-    ];
-    readings.forEach(r => ws.addRow({
-      time: format(new Date(r.recorded_at), 'yyyy-MM-dd HH:mm'),
-      temp: r.temperature, hum: r.humidity, volt: r.voltage, amp: r.current, st: r.status
-    }));
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # ดึงข้อมูลการอ่านค่า
+        cursor.execute('SELECT * FROM esp_readings WHERE device_id=%s AND recorded_at BETWEEN %s AND %s', (device_id, start_date, end_date))
+        readings = cursor.fetchall()
+        
+        # ดึงข้อมูลลูกค้า
+        cursor.execute('SELECT * FROM customers WHERE customer_id=%s', (customer_id,))
+        cust = cursor.fetchone()
+        
+        if not cust:
+            return jsonify({'ok': False, 'message': 'ไม่พบลูกค้า'})
 
-    fs.mkdirSync('./reports', {recursive:true});
-    const filePath = `./reports/${report_id}.xlsx`;
-    await wb.xlsx.writeFile(filePath);
+        # สร้างโฟลเดอร์สำหรับเก็บรายงาน
+        os.makedirs('./reports', exist_ok=True)
+        file_path = f"./reports/{report_id}.xlsx"
+        
+        # เขียนไฟล์ Excel ด้วย XlsxWriter
+        workbook = xlsxwriter.Workbook(file_path)
+        worksheet = workbook.add_worksheet('ข้อมูล')
+        
+        worksheet.write(0, 0, 'เวลา')
+        worksheet.write(0, 1, 'อุณหภูมิ')
+        worksheet.write(0, 2, 'ความชื้น')
+        worksheet.write(0, 3, 'แรงดัน')
+        worksheet.write(0, 4, 'กระแส')
+        worksheet.write(0, 5, 'สถานะ')
+        
+        row = 1
+        for r in readings:
+            worksheet.write(row, 0, str(r['recorded_at']))
+            worksheet.write(row, 1, r['temperature'])
+            worksheet.write(row, 2, r['humidity'])
+            worksheet.write(row, 3, r['voltage'])
+            worksheet.write(row, 4, r['current'])
+            worksheet.write(row, 5, r['status'])
+            row += 1
+            
+        workbook.close()
 
-    await db.query(
-      'INSERT INTO reports (report_id, customer_id, device_id, start_date, end_date, file_path) VALUES (?,?,?,?,?,?)',
-      [report_id, customer_id, device_id, start_date, end_date, filePath]
-    );
+        # บันทึกลงฐานข้อมูลรายงาน
+        cursor.execute(
+            'INSERT INTO reports (report_id, customer_id, device_id, start_date, end_date, file_path) VALUES (%s,%s,%s,%s,%s,%s)',
+            (report_id, customer_id, device_id, start_date, data['end_date'], file_path)
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
 
-    if (send_email) {
-      await transporter.sendMail({
-        to: cust.email,
-        subject: `รายงาน ${report_id}`,
-        text: 'แนบรายงานข้อมูลอุปกรณ์ไฟฟ้า',
-        attachments: [{path: filePath}]
-      });
-      await db.query('UPDATE reports SET sent_at=NOW() WHERE report_id=?', [report_id]);
-    }
+        # หมายเหตุ: ในฝั่ง Python สำหรับระบบส่งเมลจริง แนะนำให้ใช้ flask-mail หรือ smtplib เพิ่มเติม
+        return jsonify({'ok': True, 'report_id': report_id})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
 
-    res.json({ok:true, report_id});
-  } catch (e) { res.json({ok:false, error:e.message}); }
-});
-
-// ส่งรายงานอัตโนมัติ ทุกวันที่ 1 เดือนละครั้ง
-cron.schedule('0 9 1 * *', async () => {
-  console.log('เริ่มส่งรายงานประจำเดือน...');
-  const [devices] = await db.query('SELECT DISTINCT device_id, customer_id FROM devices');
-  const end = new Date();
-  const start = new Date(end.getFullYear(), end.getMonth()-1, 1);
-  const startStr = format(start, 'yyyy-MM-dd');
-  const endStr = format(end, 'yyyy-MM-dd');
-  
-  for (const d of devices) {
-    await fetch(`http://localhost:${port}/api/reports/generate-excel`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        customer_id: d.customer_id,
-        device_id: d.device_id,
-        start_date: startStr,
-        end_date: endStr,
-        send_email: true
-      })
-    });
-  }
-  console.log('ส่งรายงานเสร็จแล้ว');
-});
-
-// === หน้าแรกแบบปุ่มกดเข้าสู่ระบบ ดีไซน์สไตล์ Cyber-Tech ===
-app.get('/', (req, res) => {
-  res.send(`
+# === หน้าที่ 1: หน้าแรกสไตล์ Cyber-Tech ===
+@app.route('/')
+def index():
+    return render_template_string('''
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -159,7 +177,7 @@ app.get('/', (req, res) => {
   <title>PNS - เพชรนาคา ซิสเต็มเวิร์ก</title>
   <link rel="preconnect" href="https://googleapis.com">
   <link rel="preconnect" href="https://gstatic.com" crossorigin>
-  <link href="https://googleapis.com/css2?family=Chakra+Petch:wght@300;400;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -200,7 +218,6 @@ app.get('/', (req, res) => {
       box-shadow: 0 4px 15px rgba(0, 98, 255, 0.3); border: 1px solid rgba(255, 255, 255, 0.1);
     }
     .btn:hover { background: linear-gradient(135deg, #1a75ff 0%, #0056f5 100%); transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0, 98, 255, 0.5); }
-    .btn:active { transform: translateY(1px); }
     .btn-icon { font-size: 20px; }
   </style>
 </head>
@@ -219,12 +236,12 @@ app.get('/', (req, res) => {
   </div>
 </body>
 </html>
-  `);
-});
+    ''')
 
-// === หน้าล็อกอินหลัก (Login Page) ที่ได้รับการฝังโลโก้ไว้ที่ยอดบนสุดตามรูปที่ส่งมา ===
-app.get('/login', (req, res) => {
-  res.send(`
+# === หน้าที่ 2: หน้าล็อกอินหลักที่ถูกจัดแต่งตำแหน่งฝังโลโก้บริษัทไว้ด้านบนฟอร์ม ===
+@app.route('/login')
+def login_page():
+    return render_template_string('''
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -232,22 +249,3 @@ app.get('/login', (req, res) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>เข้าสู่ระบบ — SAFE-ELEC</title>
   <link rel="preconnect" href="https://googleapis.com">
-  <link rel="preconnect" href="https://gstatic.com" crossorigin>
-  <link href="https://googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #0d1624;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      font-family: 'Sarabun', sans-serif;
-    }
-    .login-box {
-      background: #192231;
-      padding: 40px 30px;
-      border-radius: 20px;
-      max-width: 420px;
-      width: 100%;
