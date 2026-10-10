@@ -109,7 +109,7 @@ app.post('/api/reports/generate-excel', async (req, res) => {
 
     if (send_email) {
       await transporter.sendMail({
-        to: cust[0].email,
+        to: cust.email,
         subject: `รายงาน ${report_id}`,
         text: 'แนบรายงานข้อมูลอุปกรณ์',
         attachments: [{path: filePath}]
@@ -188,7 +188,8 @@ app.get('/', (req, res) => {
 </head>
 <body>
   <div class="box">
-    <img src="865611D1-AE49-4F4F-9460-CA01F09460E9.png" alt="PNS เพชรนาคา ซิสเต็มเวิร์ค" class="logo">
+    <!-- แก้ไขชื่อภาพตัวจริงให้ตรงกับหน้า GitHub เรียบร้อยครับ -->
+    <img src="865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" alt="PNS เพชรนาคา ซิสเต็มเวิร์ค" class="logo">
     <h1>บริษัท เพชรนาคา ซิสเต็มเวิร์ก จำกัด</h1>
     <p class="en">PETCHNAKA SYSTEM WORK CO.,LTD.</p>
     <p>ระบบตรวจสอบและเฝ้าดูอุปกรณ์ไฟฟ้า</p>
