@@ -145,7 +145,6 @@ TEMPLATE = {
         "sens_volt": {"name": "เซ็นเซอร์แรงดัน", "value": "รอข้อมูล", "ok": None},
         "sens_heat": {"name": "เซ็นเซอร์ความร้อน", "value": "รอข้อมูล", "ok": None},
         "sens_ground": {"name": "เซ็นเซอร์กราวด์", "value": "รอข้อมูล", "ok": None},
-    
     },
     "fault_list": [], "alert_level": "normal",
 }
@@ -259,10 +258,10 @@ def generate_excel_report():
     output = io.BytesIO()
     workbook = xlsxwriter.Workbook(output)
     ws = workbook.add_worksheet("สรุปภาพรวม")
-    header = workbook.add_format({'bold': True, 'bg_color': '#2f9', 'color': '#032', 'align': 'center'})
+    header = workbook.add_format({'bold': True, 'bg_color': '#22c55e', 'color': '#000', 'align': 'center'})
     normal = workbook.add_format({'text_wrap': True})
-    red = workbook.add_format({'font_color': '#f44', 'bold': True})
-    green = workbook.add_format({'font_color': '#4f9'})
+    red = workbook.add_format({'font_color': '#ef4444', 'bold': True})
+    green = workbook.add_format({'font_color': '#22c55e'})
     headers = ["รหัส", "สถานที่", "บทบาท", "ออนไลน์", "สถานะ", "อุณหภูมิ", "กราวด์ R(Ω)", "กราวด์ V(V)", "ปัญหา"]
     for col, h in enumerate(headers):
         ws.write(0, col, h, header)
@@ -535,35 +534,297 @@ def login():
     err = request.args.get("err", "")
     return render_template_string("""
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>เข้าสู่ระบบ — SAFE-ELEC</title>
 <style>
-body{background:#0f1629;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px}
-.box{background:#1a2342;padding:30px;border-radius:16px;width:100%;max-width:400px;border:1px solid #2a3b63}
-.logo{max-width:220px;margin:0 auto 20px;display:block}  
-h2{text-align:center;color:#6cf;margin-bottom:25px}
-input{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:none;background:#0f1f3f;color:#fff;font-size:16px}
-button{width:100%;padding:12px;background:#2f9;border:none;border-radius:8px;color:#032;font-weight:bold;font-size:16px;margin-top:10px;cursor:pointer}
-.err{color:#f44;text-align:center;margin-top:15px}
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", "Helvetica Neue", sans-serif;
+        color: #fff;
+        position: relative;
+        overflow-x: hidden;
+        background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%);
+    }
+
+    .circuit-bg {
+        position: fixed;
+        inset: 0;
+        background-image: 
+            radial-gradient(circle at 20% 30%, rgba(6, 182, 212, 0.08) 0%, transparent 40%),
+            radial-gradient(circle at 80% 70%, rgba(16, 185, 129, 0.08) 0%, transparent 40%);
+        background-size: 100% 100%;
+        z-index: -2;
+    }
+
+    .circuit-lines {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        opacity: 0.4;
+        background-image: 
+            linear-gradient(90deg, rgba(6, 182, 212, 0.3) 1px, transparent 1px),
+            linear-gradient(rgba(6, 182, 212, 0.3) 1px, transparent 1px);
+        background-size: 60px 60px;
+        mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
+        -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
+    }
+
+    .circuit-paths {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        opacity: 0.6;
+        background: 
+            radial-gradient(circle at 10% 15%, rgba(6, 182, 212, 0.6) 3px, transparent 3px),
+            radial-gradient(circle at 90% 10%, rgba(6, 182, 212, 0.6) 3px, transparent 3px),
+            radial-gradient(circle at 5% 85%, rgba(16, 185, 129, 0.5) 3px, transparent 3px),
+            radial-gradient(circle at 95% 90%, rgba(6, 182, 212, 0.5) 3px, transparent 3px);
+        background-size: 100% 100%;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 440px;
+        padding: 24px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .login-card {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.75), rgba(15, 23, 42, 0.8));
+        border-radius: 24px;
+        padding: 36px 28px;
+        box-shadow: 
+            0 0 0 1px rgba(6, 182, 212, 0.15),
+            0 20px 60px rgba(0, 0, 0, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+    .logo-box {
+        background: linear-gradient(145deg, #1E293B, #0F172A);
+        border-radius: 16px;
+        padding: 28px 20px;
+        text-align: center;
+        margin-bottom: 32px;
+        box-shadow: 
+            inset 0 1px 0 rgba(255, 255, 255, 0.05),
+            0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .logo-img {
+        width: 180px;
+        height: auto;
+        margin-bottom: 16px;
+    }
+
+    .company-name {
+        font-size: 22px;
+        font-weight: 600;
+        color: #F1F5F9;
+        margin-bottom: 6px;
+    }
+
+    .company-en {
+        font-size: 13px;
+        color: #94A3B8;
+        letter-spacing: 1px;
+    }
+
+    .header {
+        text-align: center;
+        margin-bottom: 32px;
+    }
+
+    .header h1 {
+        font-size: 26px;
+        font-weight: 700;
+        background: linear-gradient(90deg, #22D3EE, #34D399);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .header p {
+        color: #94A3B8;
+        font-size: 15px;
+        margin-top: 8px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+        position: relative;
+    }
+
+    .input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        background: rgba(15, 23, 42, 0.6);
+        border-radius: 12px;
+        border: 1px solid rgba(6, 182, 212, 0.25);
+        padding: 0 18px;
+        transition: all 0.3s ease;
+    }
+
+    .input-wrapper:focus-within {
+        border-color: rgba(6, 182, 212, 0.7);
+        box-shadow: 
+            0 0 15px rgba(6, 182, 212, 0.15),
+            inset 0 0 8px rgba(6, 182, 212, 0.08);
+        outline: none;
+    }
+
+    .input-icon {
+        color: #22D3EE;
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+
+    input {
+        width: 100%;
+        padding: 16px 12px;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: #F1F5F9;
+        font-size: 16px;
+    }
+
+    input::placeholder {
+        color: #64748B;
+    }
+
+    .btn-login {
+        width: 100%;
+        padding: 16px;
+        border: none;
+        border-radius: 12px;
+        font-size: 18px;
+        font-weight: 600;
+        color: #0F172A;
+        background: linear-gradient(90deg, #34D399, #22D3EE);
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.3s ease;
+        margin-top: 8px;
+    }
+
+    .btn-login::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+    }
+
+    .btn-login:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(52, 211, 153, 0.35);
+    }
+
+    .btn-login:active {
+        transform: translateY(0);
+    }
+
+    .error-box {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #FCA5A5;
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 14px;
+    }
+
+    .glow-corner {
+        position: absolute;
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(6, 182, 212, 0.08), transparent 70%);
+        pointer-events: none;
+    }
+
+    .glow-tl { top: -60px; left: -60px; }
+    .glow-br { bottom: -60px; right: -60px; }
+
+    @media (max-width: 480px) {
+        .container { padding: 16px; }
+        .login-card { padding: 28px 20px; }
+        .header h1 { font-size: 22px; }
+    }
 </style>
 </head>
 <body>
-<div class="box">
-<img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" alt="PANS" class="logo">
-<h2>🔐 เข้าสู่ระบบ SAFE-ELEC</h2>
-<form method="post" action="/do_login">
-<input type="text" name="user" placeholder="ชื่อผู้ใช้" required>
-<input type="password" name="pwd" placeholder="รหัสผ่าน" required>
-<button type="submit">เข้าสู่ระบบ</button>
-{% if err %}<div class="err">{{err}}</div>{% endif %}
-</form>
-</div>
+    <div class="circuit-bg"></div>
+    <div class="circuit-lines"></div>
+    <div class="circuit-paths"></div>
+
+    <div class="container">
+        <div class="login-card" style="position: relative;">
+            <div class="glow-corner glow-tl"></div>
+            <div class="glow-corner glow-br"></div>
+
+            <div class="logo-box">
+                <img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" 
+                     alt="PANS Logo" class="logo-img" onerror="this.style.display='none'">
+                <div class="company-name">บริษัท เพชรนาคา</div>
+                <div class="company-en">PETCHNAKA SYSTEM WORK CO.,LTD.</div>
+            </div>
+
+            <div class="header">
+                <h1>🔐 เข้าสู่ระบบ SAFE-ELEC</h1>
+                <p>กรุณากรอกข้อมูลเพื่อเข้าใช้งานระบบ</p>
+            </div>
+
+            {% if err %}
+            <div class="error-box">{{ err }}</div>
+            {% endif %}
+
+            <form method="post" action="/do_login">
+                <div class="form-group">
+                    <div class="input-wrapper">
+                        <span class="input-icon">👤</span>
+                        <input type="text" name="user" placeholder="ชื่อผู้ใช้" required autofocus>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="input-wrapper">
+                        <span class="input-icon">🔒</span>
+                        <input type="password" name="pwd" placeholder="รหัสผ่าน" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-login">เข้าสู่ระบบ</button>
+            </form>
+        </div>
+    </div>
 </body>
 </html>
-""", err=err)
+    """, err=err)
 
 @app.route("/do_login", methods=["POST"])
 def do_login():
@@ -591,202 +852,43 @@ def dashboard():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SAFE-ELEC PLATFORM</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif}
-body{background:#0f1629;color:#fff;padding:16px}
-h1{text-align:center;color:#6cf;margin-bottom:4px}
-.ver{text-align:center;color:#8ac;margin-bottom:8px}
-.user-bar{text-align:right;margin-bottom:12px;padding:8px 12px;background:#1a2342;border-radius:8px;font-size:14px}
-.user-bar a{color:#f66;text-decoration:none;margin-left:12px}
-.tabs{display:flex;max-width:450px;margin:0 auto 12px;border-radius:10px;background:#1a2342;padding:4px}
-.tab{flex:1;padding:10px 0;text-align:center;border-radius:8px;cursor:pointer;font-weight:bold;transition:all .2s}
-.tab.inactive{background:transparent;color:#8ac}
-.tab.active.mini{background:#2f9;color:#032}
-.tab.active.full{background:#48f;color:#fff}
-.search-box{max-width:520px;margin:0 auto 12px}
-.search-input-wrap{position:relative}
-.search-input-wrap input{width:100%;padding:12px 12px 12px 40px;border-radius:10px;border:none;background:#1a2342;color:#fff;font-size:15px}
-.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#8ac}
-.result-info{margin:8px 4px;color:#8ac;font-size:13px}
-.result-info b{color:#fff}
-.card{background:#1a2342;border-radius:16px;padding:16px;margin-bottom:16px;border:1px solid #2a3b63}
-.card.online{border-left:4px solid #4f9}
-.card.warning{border-left:4px solid #fa4}
-.card.critical{border-left:4px solid #f44;background:#251a30}
-.card.offline{border-left:4px solid #666;opacity:0.85}
-.name{font-size:17px;font-weight:bold;color:#c9f;margin-bottom:8px}
-.meta{font-size:13px;color:#aaa;margin-bottom:10px}
-.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;margin-left:8px;font-weight:bold}
-.badge-master{background:#2f9;color:#032}
-.badge-backup{background:#48f;color:#fff}
-.badge-active{background:#f44;color:#fff}
-.section{margin:12px 0;padding:12px;border-radius:10px;background:#0f1f3f}
-.row{margin:5px 0;font-size:14px;line-height:1.5}
-.ok{color:#4f9}
-.warn{color:#fa4}
-.dang{color:#f44}
-.fbox{border:1px solid #f44;background:#2e1515;padding:12px;border-radius:8px;margin:10px 0}
-.gnd-ok{border-left:3px solid #4f9;padding-left:10px}
-.gnd-warn{border-left:3px solid #fa4;padding-left:10px}
-.gnd-fail{border-left:3px solid #f44;padding-left:10px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:10px}
-.item{padding:8px 10px;border-radius:6px;background:#1e2b4d;font-size:13px}
-.hidden{display:none !important}
-.no-result{text-align:center;padding:40px 20px;color:#8ac}
-.btn-report{display:inline-block;margin-left:10px;padding:6px 12px;background:#2f9;color:#032;border-radius:6px;text-decoration:none;font-weight:bold;font-size:13px}
-</style>
-</head>
-<body>
-<h1>⚡ SAFE-ELEC PLATFORM</h1>
-<div class="ver">รองรับระบบคู่ขนาน ESP — ตัวหลักเสีย สำรองทำงานแทนทันที ✅</div>
-<div class="user-bar">
-  👤 {{session['name']}}
-  <a href="/api/report-excel" class="btn-report">📊 ดาวน์โหลดรายงาน</a>
-  <a href="/logout">ออกจากระบบ</a>
-</div>
-<div class="tabs">
-  <div class="tab active mini" id="tab-mini" onclick="setView('mini')">🟢 มินิ</div>
-  <div class="tab inactive full" id="tab-full" onclick="setView('full')">🔵 เต็มระบบ</div>
-</div>
-<div class="search-box">
-  <div class="search-input-wrap">
-    <span class="search-icon">🔍</span>
-    <input id="q" placeholder="ค้นหา...">
-  </div>
-  <div id="result-info" class="result-info"></div>
-</div>
-<div id="list"></div>
-<script>
-let all = [];
-let currentView = 'mini';
-const CONFIG_SITE_TYPES = {{CONFIG_SITE_TYPES|tojson}};
-
-async function load(){
-  const res = await fetch('/api/devices');
-  all = await res.json();
-  applyFilterAndRender();
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", "Helvetica Neue", sans-serif;
 }
-function setView(view){
-  currentView = view;
-  document.getElementById('tab-mini').className = view==='mini'?'tab active mini':'tab inactive';
-  document.getElementById('tab-full').className = view==='full'?'tab active full':'tab inactive';
-  applyFilterAndRender();
+body{
+    background: linear-gradient(135deg, #0a1628 0%, #0f2540 50%, #0a1628 100%);
+    color: #fff;
+    padding: 16px;
+    min-height: 100vh;
 }
-function getIcon(d){
-  const m={online:'🟢',warning:'🟡',critical:'🔴',offline:'⚫'};
-  return m[d.status_summary]||'❓';
+h1{
+    text-align: center;
+    color: #22D3EE;
+    margin-bottom: 4px;
+    font-size: 28px;
 }
-function getBadge(d){
-  if(d.backup_active) return '<span class="badge badge-active">⚡ ทำงานแทน</span>';
-  if(d.role==='MASTER') return '<span class="badge badge-master">ตัวหลัก</span>';
-  if(d.role==='BACKUP') return '<span class="badge badge-backup">สำรอง</span>';
-  return '';
+.ver{
+    text-align: center;
+    color: #94A3B8;
+    margin-bottom: 20px;
+    font-size: 14px;
 }
-function getSensorIcon(s){
-  if(s.ok===true) return '✅';
-  if(s.ok===false) return '❌';
-  return '⏳';
+.user-bar{
+    text-align: right;
+    margin-bottom: 20px;
+    padding: 12px 20px;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(34, 211, 238, 0.15);
+    border-radius: 12px;
+    font-size: 14px;
+    backdrop-filter: blur(8px);
 }
-function matchDevice(d, kw){
-  if(!kw) return true;
-  const typeLabel = CONFIG_SITE_TYPES[d.site_type] || d.site_type;
-  const searchText = [
-    d.device_id, d.site_name, d.customer_id, d.province, typeLabel,
-    d.status_summary, d.is_online ? 'ออนไลน์' : 'ออฟไลน์',
-    d.current_temp+'', d.humidity+'', d.role||''
-  ].join(' ').toLowerCase();
-  return searchText.includes(kw);
+.user-bar span{
+    color: #94A3B8;
 }
-function applyFilterAndRender(){
-  const kw = document.getElementById('q').value.trim().toLowerCase();
-  let filtered = all.filter(d => matchDevice(d, kw));
-  if (!kw) {
-    filtered = filtered.filter(d => d.is_online);
-    document.getElementById('result-info').innerHTML = 
-      `แสดง <b>${filtered.length}</b> ออนไลน์ จากทั้งหมด <b>${all.length}</b> รายการ`;
-  } else {
-    document.getElementById('result-info').innerHTML = 
-      `พบ <b>${filtered.length}</b> จากทั้งหมด <b>${all.length}</b> รายการ`;
-  }
-  render(filtered);
+.user-bar strong{
+    color: #F1F5F9;
 }
-function render(list){
-  if(list.length === 0){
-    document.getElementById('list').innerHTML = `<div class="no-result">ไม่พบอุปกรณ์ที่ออนไลน์ 😊<br>รอการเชื่อมต่อจากอุปกรณ์...</div>`;
-    return;
-  }
-  document.getElementById('list').innerHTML = list.map(d=>`
-    <div class="card ${d.status_summary}">
-      <div class="name">${getIcon(d)} ${d.device_id} — ${d.site_name} ${getBadge(d)}</div>
-      <div class="meta">🏢 ${d.customer_id} | 📍 ${d.province} | ⏰ ${d.last_updated}</div>
-      ${!d.partner_online && d.role==='MASTER'?'<div class="fbox">⚠️ ไม่พบคู่ขนาน — ตรวจสอบตัวสำรอง</div>':''}
-      ${d.backup_active?'<div class="fbox">⚡ ตัวหลักขาดการติดต่อ — สำรองกำลังทำงานแทน</div>':''}
-      ${d.fault_list.length>0?`<div class="fbox"><b>⚠️ พบ ${d.fault_list.length} ปัญหา</b>${d.fault_list.map(f=>`<div class="row">${f}</div>`).join('')}</div>`:''}
-      
-      <div class="${currentView!=='mini'?'hidden':''}">
-        <div class="section">
-                <b>📊 ตรวจสอบอุปกรณ์วัด</b>
-          <div class="grid">
-            ${Object.entries(d.sensors)
-              .filter(([k]) => k.startsWith('sens_'))
-              .map(([k, s]) => `
-                <div class="item ${s.ok === true ? 'ok' : s.ok === false ? 'dang' : 'warn'}">
-                  ${getSensorIcon(s)} ${s.name}<br><b>${s.value}</b>
-                </div>`
-              ).join('')}
-          </div>
-        </div>
-
-          <b>🌡️ สภาพแวดล้อม</b>
-          <div class="row">อุณหภูมิ: <b class="${d.current_temp>=60?'dang':'ok'}">${d.current_temp}°C</b></div>
-          <div class="row">ความชื้น: ${d.humidity}%</div>
-          <div class="row">สถานะไฟ: ${d.power_status||'MAIN AC'}</div>
-          <div class="row ${d.wiring_fault?'dang':'ok'}">สายไฟ: ${d.wiring_fault?'⚠️ ผิดปกติ':'✅ ปกติ'}</div>
-        </div>
-        
-        <div class="section">
-          <b>📋 สถานะระบบคู่ขนาน</b>
-          <div class="grid">
-            ${Object.entries(d.sensors).filter(([k])=>k==='dualmode'||k==='comm'||k==='esp').map(([k,s])=>{
-              return `<div class="item ${s.ok===true?'ok':s.ok===false?'dang':'warn'}">
-                ${getSensorIcon(s)} ${s.name}<br><b>${s.value}</b>
-              </div>`;
-            }).join('')}
-          </div>
-        </div>
-        
-        <div class="section">
-          <b>⚡ ตู้หลัก 380V</b>
-          <div class="row">L1-L2: ${d.v_l1_l2}V | L2-L3: ${d.v_l2_l3}V | L3-L1: ${d.v_l3_l1}V</div>
-          <div class="row">กระแส L1: ${d.a_l1}A | L2: ${d.a_l2}A | L3: ${d.a_l3}A</div>
-          <div class="row">กำลัง: ${d.power_kw}kW | สมดุล: ${d.balance_3ph_ok?'✅ ปกติ':'⚠️ ไม่สมดุล'}</div>
-        </div>
-        
-        <div class="section ${d.gnd_system_ok?'gnd-ok':'gnd-fail'}">
-          <b>🛡️ ตรวจสอบกราวด์</b>
-          <div class="row">ความต้านทาน: ${d.sensors.gnd_resist.value}Ω — ${d.sensors.gnd_resist.ok===true?'✅ ปกติ':d.sensors.gnd_resist.ok===false?'❌ ผิดปกติ':'⏳ รอข้อมูล'}</div>
-          <div class="row">แรงดันรั่ว: ${d.sensors.gnd_volt.value}V — ${d.sensors.gnd_volt.ok===true?'✅ ปกติ':d.sensors.gnd_volt.ok===false?'❌ ผิดปกติ':'⏳ รอข้อมูล'}</div>
-        </div>
-        
-        <div class="section ${currentView!=='full'?'hidden':''}">
-          <b>🏘️ โซน 1-3</b>
-          <div class="row">โซน1: ${d.z1_v}V / ${d.z1_a}A / ${d.z1_w}kW</div>
-          <div class="row">โซน2: ${d.z2_v}V / ${d.z2_a}A / ${d.z2_w}kW</div>
-          <div class="row">โซน3: ${d.z3_v}V / ${d.z3_a}A / ${d.z3_w}kW</div>
-          <div class="row">กระแสรวม: ${d.z_total_a}A | สมดุล: ${d.z_balance_ok?'✅ ปกติ':'⚠️ ไม่สมดุล'}</div>
-        </div>
-      </div>
-    </div>
-  `).join('');
-}
-load();
-document.getElementById('q').addEventListener('input', applyFilterAndRender);
-</script>
-</body>
-</html>
-""", CONFIG_SITE_TYPES=CONFIG["SITE_TYPES"])
-
-if __name__ == "__main__":
-    import os
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
-    
