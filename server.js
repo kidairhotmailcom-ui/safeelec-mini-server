@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');  
 
 const app = express();
+app.use(express.static(__dirname)); // เปิดสิทธิ์ให้หน้าเว็บดึงรูปภาพรหัสยาวจากหน้าแรกสุดไปใช้ได้โดยตรง
 app.use('/static', express.static(path.join(__dirname, 'static')));
 app.use(express.json());
 const port = process.env.PORT || 3000;
@@ -28,7 +29,6 @@ const transporter = nodemailer.createTransport({
     pass: 'your-app-password'        // ใส่รหัสผ่านแอป
   }
 });
-
 
 // เพิ่มลูกค้า
 app.post('/api/customers', async (req, res) => {
@@ -188,8 +188,7 @@ app.get('/', (req, res) => {
 </head>
 <body>
   <div class="box">
-   <!-- ตัวอย่างโค้ดที่จะได้ (เปลี่ยนเป็นชื่อรหัสภาพจริงของคุณทั้งหมด) -->
-    <img src="865611D1-AE49-4F4F-9460-CA01F09XXXXX.png" alt="PNS เพชรนาคา ซิสเต็มเวิร์ค" class="logo">
+    <img src="865611D1-AE49-4F4F-9460-CA01F09460E9.png" alt="PNS เพชรนาคา ซิสเต็มเวิร์ค" class="logo">
     <h1>บริษัท เพชรนาคา ซิสเต็มเวิร์ก จำกัด</h1>
     <p class="en">PETCHNAKA SYSTEM WORK CO.,LTD.</p>
     <p>ระบบตรวจสอบและเฝ้าดูอุปกรณ์ไฟฟ้า</p>
