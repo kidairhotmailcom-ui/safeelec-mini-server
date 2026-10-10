@@ -251,12 +251,12 @@ def index():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SAFE-ELEC ระบบเฝ้าระวังความปลอดภัยระบบไฟฟ้า</title>
 <style>
-*{margin:0; padding:0; box-sizing:border-box; font-family:sans-serif;}
+*{margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif;}
 body{background:#f0f4f8; min-height:100vh;}
 .header{background:linear-gradient(135deg,#1e40af,#3b82f6); color:white; padding:16px 24px; display:flex; justify-content:space-between; align-items:center;}
 .header h1{font-size:22px;}
 .user-info{display:flex; gap:16px; align-items:center;}
-.logout-btn{background:rgba(255,255,255,.2); color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;}
+.logout-btn{background:rgba(255,255,255,.2); color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; text-decoration:none; font-size:14px;}
 .container{max-width:1400px; margin:0 auto; padding:24px;}
 .card{background:white; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,.06);}
 .card h2{font-size:18px; margin-bottom:16px; color:#1e293b; border-bottom:1px solid #e2e8f0; padding-bottom:8px;}
@@ -277,7 +277,6 @@ body{background:#f0f4f8; min-height:100vh;}
 .value{font-weight:500; color:#1e293b;}
 .action-bar{display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap;}
 .btn{padding:10px 20px; border:none; border-radius:8px; font-size:15px; cursor:pointer; text-decoration:none; display:inline-block; text-align:center;}
-.btn-primary{background:#2563eb; color:white;}
 .btn-success{background:#16a34a; color:white;}
 .btn:hover{opacity:.9;}
 @media(max-width:640px){.device-grid{grid-template-columns:1fr;}}
@@ -339,37 +338,288 @@ def login_page():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>เข้าสู่ระบบ — SAFE-ELEC</title>
 <style>
-*{margin:0; padding:0; box-sizing:border-box; font-family:sans-serif;}
-body{background:linear-gradient(135deg,#1e40af,#3b82f6); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;}
-.login-box{background:white; border-radius:16px; padding:32px 24px; width:100%; max-width:400px; box-shadow:0 10px 40px rgba(0,0,0,.15);}
-.login-box h1{text-align:center; color:#1e40af; margin-bottom:24px; font-size:26px;}
-.login-box p{text-align:center; color:#64748b; margin-bottom:24px; font-size:15px;}
-.form-group{margin-bottom:18px;}
-.form-group label{display:block; margin-bottom:6px; font-size:14px; color:#334155; font-weight:500;}
-.form-group input{width:100%; padding:12px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:15px;}
-.form-group input:focus{outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.15);}
-.btn{width:100%; padding:12px; background:#2563eb; color:white; border:none; border-radius:8px; font-size:16px; font-weight:600; cursor:pointer;}
-.btn:hover{background:#1d4ed8;}
-.error{color:#dc2626; text-align:center; margin-bottom:16px; font-size:14px;}
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", "Helvetica Neue", sans-serif;
+        color: #fff;
+        position: relative;
+        overflow-x: hidden;
+        background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%);
+    }
+
+    .circuit-bg {
+        position: fixed;
+        inset: 0;
+        background-image: 
+            radial-gradient(circle at 20% 30%, rgba(6, 182, 212, 0.08) 0%, transparent 40%),
+            radial-gradient(circle at 80% 70%, rgba(16, 185, 129, 0.08) 0%, transparent 40%);
+        background-size: 100% 100%;
+        z-index: -2;
+    }
+
+    .circuit-lines {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        opacity: 0.4;
+        background-image: 
+            linear-gradient(90deg, rgba(6, 182, 212, 0.3) 1px, transparent 1px),
+            linear-gradient(rgba(6, 182, 212, 0.3) 1px, transparent 1px);
+        background-size: 60px 60px;
+        mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
+        -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
+    }
+
+    .circuit-paths {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        opacity: 0.6;
+        background: 
+            radial-gradient(circle at 10% 15%, rgba(6, 182, 212, 0.6) 3px, transparent 3px),
+            radial-gradient(circle at 90% 10%, rgba(6, 182, 212, 0.6) 3px, transparent 3px),
+            radial-gradient(circle at 5% 85%, rgba(16, 185, 129, 0.5) 3px, transparent 3px),
+            radial-gradient(circle at 95% 90%, rgba(6, 182, 212, 0.5) 3px, transparent 3px);
+        background-size: 100% 100%;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 440px;
+        padding: 24px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .login-card {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.75), rgba(15, 23, 42, 0.8));
+        border-radius: 24px;
+        padding: 36px 28px;
+        box-shadow: 
+            0 0 0 1px rgba(6, 182, 212, 0.15),
+            0 20px 60px rgba(0, 0, 0, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+    .logo-box {
+        background: linear-gradient(145deg, #1E293B, #0F172A);
+        border-radius: 16px;
+        padding: 28px 20px;
+        text-align: center;
+        margin-bottom: 32px;
+        box-shadow: 
+            inset 0 1px 0 rgba(255, 255, 255, 0.05),
+            0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .logo-img {
+        width: 180px;
+        height: auto;
+        margin-bottom: 16px;
+    }
+
+    .company-name {
+        font-size: 22px;
+        font-weight: 600;
+        color: #F1F5F9;
+        margin-bottom: 6px;
+    }
+
+    .company-en {
+        font-size: 13px;
+        color: #94A3B8;
+        letter-spacing: 1px;
+    }
+
+    .header {
+        text-align: center;
+        margin-bottom: 32px;
+    }
+
+    .header h1 {
+        font-size: 26px;
+        font-weight: 700;
+        background: linear-gradient(90deg, #22D3EE, #34D399);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .header p {
+        color: #94A3B8;
+        font-size: 15px;
+        margin-top: 8px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+        position: relative;
+    }
+
+    .input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        background: rgba(15, 23, 42, 0.6);
+        border-radius: 12px;
+        border: 1px solid rgba(6, 182, 212, 0.25);
+        padding: 0 18px;
+        transition: all 0.3s ease;
+    }
+
+    .input-wrapper:focus-within {
+        border-color: rgba(6, 182, 212, 0.7);
+        box-shadow: 
+            0 0 15px rgba(6, 182, 212, 0.15),
+            inset 0 0 8px rgba(6, 182, 212, 0.08);
+        outline: none;
+    }
+
+    .input-icon {
+        color: #22D3EE;
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+
+    input {
+        width: 100%;
+        padding: 16px 12px;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: #F1F5F9;
+        font-size: 16px;
+    }
+
+    input::placeholder {
+        color: #64748B;
+    }
+
+    .btn-login {
+        width: 100%;
+        padding: 16px;
+        border: none;
+        border-radius: 12px;
+        font-size: 18px;
+        font-weight: 600;
+        color: #0F172A;
+        background: linear-gradient(90deg, #34D399, #22D3EE);
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.3s ease;
+        margin-top: 8px;
+    }
+
+    .btn-login::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+    }
+
+    .btn-login:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(52, 211, 153, 0.35);
+    }
+
+    .btn-login:active {
+        transform: translateY(0);
+    }
+
+    .error-box {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #FCA5A5;
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 14px;
+    }
+
+    .glow-corner {
+        position: absolute;
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(6, 182, 212, 0.08), transparent 70%);
+        pointer-events: none;
+    }
+
+    .glow-tl { top: -60px; left: -60px; }
+    .glow-br { bottom: -60px; right: -60px; }
+
+    @media (max-width: 480px) {
+        .container { padding: 16px; }
+        .login-card { padding: 28px 20px; }
+        .header h1 { font-size: 22px; }
+    }
 </style>
 </head>
 <body>
-<div class="login-box">
-    <h1>⚡ SAFE-ELEC</h1>
-    <p>ระบบเฝ้าระวังความปลอดภัยระบบไฟฟ้า</p>
-    {% if error %}<div class="error">{{ error }}</div>{% endif %}
-    <form method="post" action="/do-login">
-        <div class="form-group">
-            <label>ชื่อผู้ใช้</label>
-            <input type="text" name="username" required autofocus>
+    <div class="circuit-bg"></div>
+    <div class="circuit-lines"></div>
+    <div class="circuit-paths"></div>
+
+    <div class="container">
+        <div class="login-card" style="position: relative;">
+            <div class="glow-corner glow-tl"></div>
+            <div class="glow-corner glow-br"></div>
+
+            <div class="logo-box">
+                <img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" 
+                     alt="PANS Logo" class="logo-img" onerror="this.style.display='none'">
+                <div class="company-name">บริษัท เพชรนาคา</div>
+                <div class="company-en">PETCHNAKA SYSTEM WORK CO.,LTD.</div>
+            </div>
+
+            <div class="header">
+                <h1>🔐 เข้าสู่ระบบ SAFE-ELEC</h1>
+                <p>กรุณากรอกข้อมูลเพื่อเข้าใช้งานระบบ</p>
+            </div>
+
+            {% if error %}
+            <div class="error-box">{{ error }}</div>
+            {% endif %}
+
+            <form method="post" action="/do-login">
+                <div class="form-group">
+                    <div class="input-wrapper">
+                        <span class="input-icon">👤</span>
+                        <input type="text" name="username" placeholder="ชื่อผู้ใช้" required autofocus>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="input-wrapper">
+                        <span class="input-icon">🔒</span>
+                        <input type="password" name="password" placeholder="รหัสผ่าน" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-login">เข้าสู่ระบบ</button>
+            </form>
         </div>
-        <div class="form-group">
-            <label>รหัสผ่าน</label>
-            <input type="password" name="password" required>
-        </div>
-        <button type="submit" class="btn">เข้าสู่ระบบ</button>
-    </form>
-</div>
+    </div>
 </body>
 </html>
     """, error=request.args.get("error"))
