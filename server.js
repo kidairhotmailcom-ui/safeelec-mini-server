@@ -188,7 +188,8 @@ app.get('/', (req, res) => {
 </head>
 <body>
   <div class="box">
-    <img src="/static/pns-logo.png" alt="PNS เพชรนาคา ซิสเต็มเวิร์ค" class="logo">
+   <!-- ตัวอย่างโค้ดที่จะได้ (เปลี่ยนเป็นชื่อรหัสภาพจริงของคุณทั้งหมด) -->
+    <img src="865611D1-AE49-4F4F-9460-CA01F09XXXXX.png" alt="PNS เพชรนาคา ซิสเต็มเวิร์ค" class="logo">
     <h1>บริษัท เพชรนาคา ซิสเต็มเวิร์ก จำกัด</h1>
     <p class="en">PETCHNAKA SYSTEM WORK CO.,LTD.</p>
     <p>ระบบตรวจสอบและเฝ้าดูอุปกรณ์ไฟฟ้า</p>
