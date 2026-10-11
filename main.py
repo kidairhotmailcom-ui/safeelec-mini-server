@@ -550,161 +550,158 @@ def login():
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>เข้าสู่ระบบ — SAFE-ELEC</title>
 <style>
 * {margin: 0; padding: 0; box-sizing: border-box;}
+html, body {
+    width: 100%;
+    height: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: hidden;
+}
 body {
-    background: linear-gradient(135deg, #051428 0%, #0a2a4f 50%, #051428 100%);
+    background: url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=1200') no-repeat center center;
+    background-size: cover;
     color: #fff;
     font-family: 'Segoe UI', Tahoma, sans-serif;
-    min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 16px;
+    padding: 20px;
     position: relative;
-    overflow: hidden;
 }
-
-body::before, body::after {
+body::before {
     content: '';
     position: absolute;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    pointer-events: none;
+    background: rgba(5, 20, 40, 0.55);
     z-index: 0;
 }
-
-body::before {
-    background-image: 
-        radial-gradient(circle at 15% 20%, rgba(0, 200, 255, 0.12) 0%, transparent 25%),
-        radial-gradient(circle at 85% 15%, rgba(0, 180, 255, 0.08) 0%, transparent 30%),
-        radial-gradient(circle at 10% 85%, rgba(0, 200, 255, 0.06) 0%, transparent 20%),
-        radial-gradient(circle at 90% 80%, rgba(0, 150, 255, 0.06) 0%, transparent 25%);
-}
-
-body::after {
-    background-image:
-        linear-gradient(90deg, transparent 45%, rgba(0, 210, 255, 0.15) 46%, rgba(0, 210, 255, 0.15) 54%, transparent 55%),
-        linear-gradient(0deg, transparent 45%, rgba(0, 210, 255, 0.15) 46%, rgba(0, 210, 255, 0.15) 54%, transparent 55%),
-        linear-gradient(90deg, transparent 25%, rgba(0, 180, 255, 0.08) 26%, rgba(0, 180, 255, 0.08) 34%, transparent 35%),
-        linear-gradient(90deg, transparent 65%, rgba(0, 180, 255, 0.08) 66%, rgba(0, 180, 255, 0.08) 74%, transparent 75%),
-        linear-gradient(0deg, transparent 15%, rgba(0, 180, 255, 0.08) 16%, rgba(0, 180, 255, 0.08) 24%, transparent 25%),
-        linear-gradient(0deg, transparent 75%, rgba(0, 180, 255, 0.08) 76%, rgba(0, 180, 255, 0.08) 84%, transparent 85%);
-    background-size: 140px 140px;
-}
-
 .circuit-dots {
     position: absolute;
     top: 0; left: 0;
     width: 100%; height: 100%;
     pointer-events: none;
-    z-index: 0;
+    z-index: 1;
 }
 .circuit-dots span {
     position: absolute;
-    width: 10px; height: 10px;
-    background: rgba(0, 230, 255, 0.7);
+    width: 14px; height: 14px;
+    background: rgba(0, 230, 255, 0.9);
     border-radius: 50%;
-    box-shadow: 0 0 10px 4px rgba(0, 230, 255, 0.4);
+    box-shadow: 0 0 18px 7px rgba(0, 230, 255, 0.5);
+    animation: pulse 2.5s infinite alternate;
 }
-
+@keyframes pulse {
+    from { opacity: 0.4; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1.15); }
+}
 .wrapper {
     position: relative;
-    z-index: 1;
+    z-index: 2;
     width: 100%;
-    max-width: 360px;
+    max-width: 340px;
 }
-
 .logo-card {
-    background: rgba(80, 160, 255, 0.06);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(100, 200, 255, 0.25);
-    border-radius: 16px;
-    padding: 24px 20px;
+    background: rgba(80, 160, 255, 0.1);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(100, 200, 255, 0.3);
+    border-radius: 20px;
+    padding: 32px 24px;
     text-align: center;
-    margin-bottom: 20px;
-    box-shadow: 0 0 40px rgba(0, 150, 255, 0.12);
+    margin-bottom: 32px;
+    box-shadow: 0 0 60px rgba(0, 150, 255, 0.2);
 }
-
 .logo-img {
-    max-width: 180px;
-    margin: 0 auto;
+    max-width: 220px;
+    margin: 0 auto 16px;
     display: block;
 }
-
-h2 {
+.company-th {
     font-size: 20px;
-    color: #b0e0ff;
-    margin: 10px 0 24px;
-    text-shadow: 0 0 15px rgba(0, 200, 255, 0.25);
+    color: #e0f0ff;
+    font-weight: 600;
+}
+.company-en {
+    font-size: 13px;
+    color: #94c8f0;
+    margin-top: 6px;
+}
+h2 {
+    font-size: 24px;
+    color: #e6f2ff;
+    margin-bottom: 32px;
+    text-shadow: 0 0 25px rgba(0, 200, 255, 0.4);
     text-align: center;
 }
-
 input {
     width: 100%;
-    padding: 14px 18px;
-    margin: 8px 0;
-    border-radius: 10px;
-    border: 1px solid rgba(80, 160, 240, 0.2);
-    background: rgba(10, 35, 70, 0.5);
+    padding: 18px 22px;
+    margin: 12px 0;
+    border-radius: 14px;
+    border: 1px solid rgba(80, 160, 240, 0.25);
+    background: rgba(10, 35, 70, 0.6);
     color: #fff;
-    font-size: 16px;
+    font-size: 18px;
     outline: none;
     transition: all 0.3s;
 }
-input::placeholder {color: #6098c0;}
+input::placeholder {color: #70a0d0;}
 input:focus {
     border-color: #00ccff;
-    box-shadow: 0 0 0 3px rgba(0, 200, 255, 0.1);
+    box-shadow: 0 0 0 3px rgba(0, 200, 255, 0.15);
 }
-
 button {
     width: 100%;
-    padding: 14px;
-    background: linear-gradient(90deg, #00c268, #00e878);
+    padding: 18px;
+    background: linear-gradient(90deg, #00c86e, #00ee7a);
     border: none;
-    border-radius: 10px;
+    border-radius: 14px;
     color: #003322;
     font-weight: bold;
-    font-size: 17px;
-    margin-top: 10px;
+    font-size: 20px;
+    margin-top: 16px;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
 }
 button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 220, 120, 0.3);
+    box-shadow: 0 8px 25px rgba(0, 220, 120, 0.35);
 }
-
 .err {
     color: #ff7777;
     text-align: center;
-    margin-top: 14px;
-    font-size: 14px;
-    padding: 8px;
+    margin-top: 18px;
+    font-size: 15px;
+    padding: 12px;
     background: rgba(255, 60, 60, 0.08);
-    border-radius: 6px;
+    border-radius: 10px;
 }
 </style>
 </head>
 <body>
 
 <div class="circuit-dots">
-    <span style="top: 12%; left: 8%;"></span>
-    <span style="top: 22%; left: 88%;"></span>
-    <span style="top: 42%; left: 4%;"></span>
-    <span style="top: 52%; left: 92%;"></span>
-    <span style="top: 72%; left: 12%;"></span>
-    <span style="top: 82%; left: 82%;"></span>
+    <span style="top: 8%; left: 8%;"></span>
+    <span style="top: 12%; left: 88%;"></span>
+    <span style="top: 22%; left: 18%;"></span>
+    <span style="top: 28%; left: 82%;"></span>
+    <span style="top: 45%; left: 6%;"></span>
+    <span style="top: 50%; left: 92%;"></span>
+    <span style="top: 65%; left: 22%;"></span>
+    <span style="top: 70%; left: 78%;"></span>
+    <span style="top: 85%; left: 50%;"></span>
     <span style="top: 6%; left: 50%;"></span>
-    <span style="top: 94%; left: 50%;"></span>
 </div>
 
 <div class="wrapper">
     <div class="logo-card">
-        <img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/119B2CA8-7BC5-4D30-9735-5200A647A172.png" alt="PNS" class="logo-img">
+        <img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" alt="PNS" class="logo-img">
+        <div class="company-th">บริษัท เพชรนาคา ซิสเต็มเวิร์ก จำกัด</div>
+        <div class="company-en">PETCHNAKA SYSTEM WORK CO.,LTD.</div>
     </div>
 
     <h2>🔐 เข้าสู่ระบบ SAFE-ELEC</h2>
