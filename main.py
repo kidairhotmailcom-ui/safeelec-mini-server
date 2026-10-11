@@ -558,16 +558,14 @@ html, body {
     width: 100%;
     height: 100%;
     min-height: 100vh;
-    overflow: hidden;
 }
 body {
     background: linear-gradient(180deg, #002b5c 0%, #0052aa 50%, #002b5c 100%);
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
     align-items: center;
-    padding: 8% 5% 12% 5%;
+    justify-content: center;
+    padding: 5%;
     position: relative;
 }
 .circuit-bg {
@@ -597,14 +595,13 @@ body {
     width: 100%;
     max-width: 340px;
     text-align: center;
-    margin-top: 15vh;
 }
 .logo-card {
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(8px);
     border: 1px solid rgba(0, 200, 255, 0.15);
     border-radius: 12px;
-    padding: 20px;
+    padding: 16px;
     margin-bottom: 28px;
     display: flex;
     align-items: center;
@@ -713,7 +710,6 @@ button:active { transform: scale(0.97); }
 </body>
 </html>
 """, err=err)
-
 @app.route("/do_login", methods=["POST"])
 def do_login():
     username = request.form.get("username", "").strip()
