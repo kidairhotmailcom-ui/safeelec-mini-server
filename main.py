@@ -720,51 +720,6 @@ button:hover {
 </body>
 </html>
 """, err=err)
-    color: #ff7777;
-    text-align: center;
-    margin-top: 18px;
-    font-size: 15px;
-    padding: 10px;
-    background: rgba(255, 60, 60, 0.08);
-    border-radius: 8px;
-}
-</style>
-</head>
-<body>
-
-<!-- จุดเรืองแสงวงจร -->
-<div class="circuit-dots">
-    <span style="top: 15%; left: 10%;"></span>
-    <span style="top: 25%; left: 85%;"></span>
-    <span style="top: 45%; left: 5%;"></span>
-    <span style="top: 55%; left: 90%;"></span>
-    <span style="top: 75%; left: 15%;"></span>
-    <span style="top: 85%; left: 80%;"></span>
-    <span style="top: 8%; left: 48%;"></span>
-    <span style="top: 92%; left: 48%;"></span>
-</div>
-
-<div class="wrapper">
-    <!-- กล่องโลโก้โปร่งแสง -->
-    <div class="logo-card">
-        <img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" alt="PNS" class="logo-img">
-        <div class="company-th">บริษัท เพชรนาคา ซิสเต็มเวิร์ก จำกัด</div>
-        <div class="company-en">PETCHNAKA SYSTEM WORK CO.,LTD.</div>
-    </div>
-
-    <h2>🔐 เข้าสู่ระบบ SAFE-ELEC</h2>
-
-    <form method="post" action="/do_login">
-        <input type="text" name="username" placeholder="ชื่อผู้ใช้" required>
-        <input type="password" name="password" placeholder="รหัสผ่าน" required>
-        <button type="submit">เข้าสู่ระบบ</button>
-        {% if err %}<div class="err">{{err}}</div>{% endif %}
-    </form>
-</div>
-
-</body>
-</html>
-""", err=err)
 
 @app.route("/do_login", methods=["POST"])
 def do_login():
