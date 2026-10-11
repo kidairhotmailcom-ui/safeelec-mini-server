@@ -748,3 +748,8 @@ def login():
             <div class="header">
                 <h1>🔐 เข้าสู่ระบบ SAFE-ELEC</h1>
                 <p>กรุณากรอกข้อมูลเพื่อเข้าใช้งานระบบ</p>
+            </div>
+            {% if err %}<div class="error-box">{{ err }}</div>{% endif %}
+            <form method="post" action="/do_login">
+                <div class="form-group">
+ 
