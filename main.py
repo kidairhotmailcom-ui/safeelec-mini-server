@@ -555,8 +555,8 @@ def login():
 <style>
 * {margin: 0; padding: 0; box-sizing: border-box;}
 body {
-    background: url("https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=1200") no-repeat center center fixed;
-    background-size: cover;
+    /* 🎨 พื้นหลังวงจรไฟฟ้า */
+    background: linear-gradient(135deg, #051428 0%, #0a2a4f 50%, #051428 100%);
     color: #fff;
     font-family: 'Segoe UI', Tahoma, sans-serif;
     min-height: 100vh;
@@ -565,106 +565,172 @@ body {
     align-items: center;
     padding: 20px;
     position: relative;
+    overflow: hidden;
 }
-body::before {
+
+/* ⚡ เส้นวงจรไฟฟ้า พื้นหลัง */
+body::before, body::after {
     content: '';
     position: absolute;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    background: linear-gradient(135deg, rgba(5, 15, 40, 0.75), rgba(10, 40, 80, 0.65));
+    pointer-events: none;
     z-index: 0;
 }
-.box {
+
+body::before {
+    background-image: 
+        radial-gradient(circle at 15% 20%, rgba(0, 200, 255, 0.08) 0%, transparent 25%),
+        radial-gradient(circle at 85% 15%, rgba(0, 180, 255, 0.06) 0%, transparent 30%),
+        radial-gradient(circle at 10% 85%, rgba(0, 200, 255, 0.05) 0%, transparent 20%),
+        radial-gradient(circle at 90% 80%, rgba(0, 150, 255, 0.05) 0%, transparent 25%);
+}
+
+body::after {
+    background-image:
+        /* แนวนอน */
+        linear-gradient(90deg, transparent 48%, rgba(0, 200, 255, 0.12) 49%, rgba(0, 200, 255, 0.12) 51%, transparent 52%),
+        linear-gradient(90deg, transparent 28%, rgba(0, 180, 255, 0.08) 29%, rgba(0, 180, 255, 0.08) 31%, transparent 32%),
+        linear-gradient(90deg, transparent 68%, rgba(0, 180, 255, 0.08) 69%, rgba(0, 180, 255, 0.08) 71%, transparent 72%),
+        /* แนวตั้ง */
+        linear-gradient(0deg, transparent 48%, rgba(0, 200, 255, 0.12) 49%, rgba(0, 200, 255, 0.12) 51%, transparent 52%),
+        linear-gradient(0deg, transparent 18%, rgba(0, 180, 255, 0.08) 19%, rgba(0, 180, 255, 0.08) 21%, transparent 22%),
+        linear-gradient(0deg, transparent 78%, rgba(0, 180, 255, 0.08) 79%, rgba(0, 180, 255, 0.08) 81%, transparent 82%);
+    background-size: 120px 120px;
+}
+
+/* 💡 จุดเรืองแสง */
+.circuit-dots {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+}
+.circuit-dots span {
+    position: absolute;
+    width: 12px; height: 12px;
+    background: rgba(0, 220, 255, 0.6);
+    border-radius: 50%;
+    box-shadow: 0 0 10px 4px rgba(0, 220, 255, 0.35);
+}
+
+/* 🔲 กล่องเนื้อหา */
+.wrapper {
     position: relative;
     z-index: 1;
-    background: rgba(8, 25, 55, 0.55);
-    backdrop-filter: blur(10px);
-    padding: 35px 30px;
-    border-radius: 20px;
     width: 100%;
-    max-width: 420px;
-    border: 1px solid rgba(80, 180, 255, 0.25);
-    box-shadow: 0 8px 40px rgba(0, 60, 120, 0.3);
+    max-width: 440px;
 }
-.logo {
-    max-width: 260px;
-    margin: 0 auto 15px;
+
+/* กล่องโลโก้โปร่งแสง */
+.logo-card {
+    background: rgba(80, 160, 255, 0.08);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(100, 200, 255, 0.2);
+    border-radius: 16px;
+    padding: 30px 25px;
+    text-align: center;
+    margin-bottom: 25px;
+    box-shadow: 0 0 30px rgba(0, 150, 255, 0.1);
+}
+
+.logo-img {
+    max-width: 220px;
+    margin: 0 auto 12px;
     display: block;
 }
-.company-name {
-    text-align: center;
-    color: #b0e0ff;
-    font-size: 15px;
-    margin-bottom: 5px;
+
+.company-th {
+    font-size: 20px;
+    color: #e0f0ff;
+    font-weight: 600;
+    margin-bottom: 6px;
 }
 .company-en {
-    text-align: center;
-    color: #7aaacc;
-    font-size: 11px;
-    margin-bottom: 25px;
+    font-size: 12px;
+    color: #88bbd6;
     letter-spacing: 1px;
 }
+
 h2 {
-    text-align: center;
-    color: #99ddff;
-    margin-bottom: 28px;
-    font-size: 20px;
-    text-shadow: 0 0 10px rgba(100, 200, 255, 0.2);
+    font-size: 24px;
+    color: #b0e0ff;
+    margin: 20px 0;
+    text-shadow: 0 0 15px rgba(0, 200, 255, 0.25);
 }
+
 input {
     width: 100%;
-    padding: 14px 16px;
-    margin: 8px 0;
-    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 10px 0;
+    border-radius: 12px;
     border: 1px solid rgba(80, 160, 240, 0.2);
-    background: rgba(0, 20, 50, 0.5);
+    background: rgba(10, 35, 70, 0.5);
     color: #fff;
-    font-size: 16px;
+    font-size: 18px;
     outline: none;
     transition: all 0.3s;
 }
-input::placeholder {color: #6090c0;}
+input::placeholder {color: #6098c0;}
 input:focus {
-    border-color: #44aaff;
-    box-shadow: 0 0 0 3px rgba(68, 170, 255, 0.15);
+    border-color: #00ccff;
+    box-shadow: 0 0 0 3px rgba(0, 200, 255, 0.1);
 }
+
 button {
     width: 100%;
-    padding: 14px;
-    background: linear-gradient(90deg, #00d070, #00ee88);
+    padding: 16px;
+    background: linear-gradient(90deg, #00c268, #00e878);
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
     color: #003322;
     font-weight: bold;
-    font-size: 17px;
-    margin-top: 12px;
+    font-size: 19px;
+    margin-top: 14px;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
 }
 button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 200, 120, 0.35);
+    box-shadow: 0 8px 24px rgba(0, 220, 120, 0.3);
 }
+
 .err {
-    color: #ff6666;
+    color: #ff7777;
     text-align: center;
     margin-top: 18px;
-    font-size: 14px;
-    padding: 8px;
-    background: rgba(255, 60, 60, 0.1);
-    border-radius: 6px;
+    font-size: 15px;
+    padding: 10px;
+    background: rgba(255, 60, 60, 0.08);
+    border-radius: 8px;
 }
 </style>
 </head>
 <body>
-<div class="box">
-    <!-- 🖼️ โลโก้ + ชื่อบริษัท -->
-    <img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" alt="PNS" class="logo">
-    <div class="company-name">บริษัท เพชรนาคา ซิสเต็มเวิร์ก จำกัด</div>
-    <div class="company-en">PETCHNAKA SYSTEM WORK CO., LTD.</div>
-    
+
+<!-- จุดเรืองแสงวงจร -->
+<div class="circuit-dots">
+    <span style="top: 15%; left: 10%;"></span>
+    <span style="top: 25%; left: 85%;"></span>
+    <span style="top: 45%; left: 5%;"></span>
+    <span style="top: 55%; left: 90%;"></span>
+    <span style="top: 75%; left: 15%;"></span>
+    <span style="top: 85%; left: 80%;"></span>
+    <span style="top: 8%; left: 48%;"></span>
+    <span style="top: 92%; left: 48%;"></span>
+</div>
+
+<div class="wrapper">
+    <!-- กล่องโลโก้โปร่งแสง -->
+    <div class="logo-card">
+        <img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" alt="PNS" class="logo-img">
+        <div class="company-th">บริษัท เพชรนาคา ซิสเต็มเวิร์ก จำกัด</div>
+        <div class="company-en">PETCHNAKA SYSTEM WORK CO.,LTD.</div>
+    </div>
+
     <h2>🔐 เข้าสู่ระบบ SAFE-ELEC</h2>
-    
+
     <form method="post" action="/do_login">
         <input type="text" name="username" placeholder="ชื่อผู้ใช้" required>
         <input type="password" name="password" placeholder="รหัสผ่าน" required>
@@ -672,6 +738,7 @@ button:hover {
         {% if err %}<div class="err">{{err}}</div>{% endif %}
     </form>
 </div>
+
 </body>
 </html>
 """, err=err)
