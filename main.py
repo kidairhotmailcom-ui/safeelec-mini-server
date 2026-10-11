@@ -555,7 +555,6 @@ def login():
 <style>
 * {margin: 0; padding: 0; box-sizing: border-box;}
 body {
-    /* 🎨 พื้นหลังวงจรไฟฟ้า */
     background: linear-gradient(135deg, #051428 0%, #0a2a4f 50%, #051428 100%);
     color: #fff;
     font-family: 'Segoe UI', Tahoma, sans-serif;
@@ -563,12 +562,11 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 20px;
+    padding: 16px;
     position: relative;
     overflow: hidden;
 }
 
-/* ⚡ เส้นวงจรไฟฟ้า พื้นหลัง */
 body::before, body::after {
     content: '';
     position: absolute;
@@ -580,26 +578,23 @@ body::before, body::after {
 
 body::before {
     background-image: 
-        radial-gradient(circle at 15% 20%, rgba(0, 200, 255, 0.08) 0%, transparent 25%),
-        radial-gradient(circle at 85% 15%, rgba(0, 180, 255, 0.06) 0%, transparent 30%),
-        radial-gradient(circle at 10% 85%, rgba(0, 200, 255, 0.05) 0%, transparent 20%),
-        radial-gradient(circle at 90% 80%, rgba(0, 150, 255, 0.05) 0%, transparent 25%);
+        radial-gradient(circle at 15% 20%, rgba(0, 200, 255, 0.12) 0%, transparent 25%),
+        radial-gradient(circle at 85% 15%, rgba(0, 180, 255, 0.08) 0%, transparent 30%),
+        radial-gradient(circle at 10% 85%, rgba(0, 200, 255, 0.06) 0%, transparent 20%),
+        radial-gradient(circle at 90% 80%, rgba(0, 150, 255, 0.06) 0%, transparent 25%);
 }
 
 body::after {
     background-image:
-        /* แนวนอน */
-        linear-gradient(90deg, transparent 48%, rgba(0, 200, 255, 0.12) 49%, rgba(0, 200, 255, 0.12) 51%, transparent 52%),
-        linear-gradient(90deg, transparent 28%, rgba(0, 180, 255, 0.08) 29%, rgba(0, 180, 255, 0.08) 31%, transparent 32%),
-        linear-gradient(90deg, transparent 68%, rgba(0, 180, 255, 0.08) 69%, rgba(0, 180, 255, 0.08) 71%, transparent 72%),
-        /* แนวตั้ง */
-        linear-gradient(0deg, transparent 48%, rgba(0, 200, 255, 0.12) 49%, rgba(0, 200, 255, 0.12) 51%, transparent 52%),
-        linear-gradient(0deg, transparent 18%, rgba(0, 180, 255, 0.08) 19%, rgba(0, 180, 255, 0.08) 21%, transparent 22%),
-        linear-gradient(0deg, transparent 78%, rgba(0, 180, 255, 0.08) 79%, rgba(0, 180, 255, 0.08) 81%, transparent 82%);
-    background-size: 120px 120px;
+        linear-gradient(90deg, transparent 45%, rgba(0, 210, 255, 0.15) 46%, rgba(0, 210, 255, 0.15) 54%, transparent 55%),
+        linear-gradient(0deg, transparent 45%, rgba(0, 210, 255, 0.15) 46%, rgba(0, 210, 255, 0.15) 54%, transparent 55%),
+        linear-gradient(90deg, transparent 25%, rgba(0, 180, 255, 0.08) 26%, rgba(0, 180, 255, 0.08) 34%, transparent 35%),
+        linear-gradient(90deg, transparent 65%, rgba(0, 180, 255, 0.08) 66%, rgba(0, 180, 255, 0.08) 74%, transparent 75%),
+        linear-gradient(0deg, transparent 15%, rgba(0, 180, 255, 0.08) 16%, rgba(0, 180, 255, 0.08) 24%, transparent 25%),
+        linear-gradient(0deg, transparent 75%, rgba(0, 180, 255, 0.08) 76%, rgba(0, 180, 255, 0.08) 84%, transparent 85%);
+    background-size: 140px 140px;
 }
 
-/* 💡 จุดเรืองแสง */
 .circuit-dots {
     position: absolute;
     top: 0; left: 0;
@@ -609,66 +604,53 @@ body::after {
 }
 .circuit-dots span {
     position: absolute;
-    width: 12px; height: 12px;
-    background: rgba(0, 220, 255, 0.6);
+    width: 10px; height: 10px;
+    background: rgba(0, 230, 255, 0.7);
     border-radius: 50%;
-    box-shadow: 0 0 10px 4px rgba(0, 220, 255, 0.35);
+    box-shadow: 0 0 10px 4px rgba(0, 230, 255, 0.4);
 }
 
-/* 🔲 กล่องเนื้อหา */
 .wrapper {
     position: relative;
     z-index: 1;
     width: 100%;
-    max-width: 440px;
+    max-width: 360px;
 }
 
-/* กล่องโลโก้โปร่งแสง */
 .logo-card {
-    background: rgba(80, 160, 255, 0.08);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(100, 200, 255, 0.2);
+    background: rgba(80, 160, 255, 0.06);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(100, 200, 255, 0.25);
     border-radius: 16px;
-    padding: 30px 25px;
+    padding: 24px 20px;
     text-align: center;
-    margin-bottom: 25px;
-    box-shadow: 0 0 30px rgba(0, 150, 255, 0.1);
+    margin-bottom: 20px;
+    box-shadow: 0 0 40px rgba(0, 150, 255, 0.12);
 }
 
 .logo-img {
-    max-width: 220px;
-    margin: 0 auto 12px;
+    max-width: 180px;
+    margin: 0 auto;
     display: block;
 }
 
-.company-th {
-    font-size: 20px;
-    color: #e0f0ff;
-    font-weight: 600;
-    margin-bottom: 6px;
-}
-.company-en {
-    font-size: 12px;
-    color: #88bbd6;
-    letter-spacing: 1px;
-}
-
 h2 {
-    font-size: 24px;
+    font-size: 20px;
     color: #b0e0ff;
-    margin: 20px 0;
+    margin: 10px 0 24px;
     text-shadow: 0 0 15px rgba(0, 200, 255, 0.25);
+    text-align: center;
 }
 
 input {
     width: 100%;
-    padding: 16px 20px;
-    margin: 10px 0;
-    border-radius: 12px;
+    padding: 14px 18px;
+    margin: 8px 0;
+    border-radius: 10px;
     border: 1px solid rgba(80, 160, 240, 0.2);
     background: rgba(10, 35, 70, 0.5);
     color: #fff;
-    font-size: 18px;
+    font-size: 16px;
     outline: none;
     transition: all 0.3s;
 }
@@ -680,23 +662,64 @@ input:focus {
 
 button {
     width: 100%;
-    padding: 16px;
+    padding: 14px;
     background: linear-gradient(90deg, #00c268, #00e878);
     border: none;
-    border-radius: 12px;
+    border-radius: 10px;
     color: #003322;
     font-weight: bold;
-    font-size: 19px;
-    margin-top: 14px;
+    font-size: 17px;
+    margin-top: 10px;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
 }
 button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 220, 120, 0.3);
+    box-shadow: 0 6px 20px rgba(0, 220, 120, 0.3);
 }
 
 .err {
+    color: #ff7777;
+    text-align: center;
+    margin-top: 14px;
+    font-size: 14px;
+    padding: 8px;
+    background: rgba(255, 60, 60, 0.08);
+    border-radius: 6px;
+}
+</style>
+</head>
+<body>
+
+<div class="circuit-dots">
+    <span style="top: 12%; left: 8%;"></span>
+    <span style="top: 22%; left: 88%;"></span>
+    <span style="top: 42%; left: 4%;"></span>
+    <span style="top: 52%; left: 92%;"></span>
+    <span style="top: 72%; left: 12%;"></span>
+    <span style="top: 82%; left: 82%;"></span>
+    <span style="top: 6%; left: 50%;"></span>
+    <span style="top: 94%; left: 50%;"></span>
+</div>
+
+<div class="wrapper">
+    <div class="logo-card">
+        <img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/119B2CA8-7BC5-4D30-9735-5200A647A172.png" alt="PNS" class="logo-img">
+    </div>
+
+    <h2>🔐 เข้าสู่ระบบ SAFE-ELEC</h2>
+
+    <form method="post" action="/do_login">
+        <input type="text" name="username" placeholder="ชื่อผู้ใช้" required>
+        <input type="password" name="password" placeholder="รหัสผ่าน" required>
+        <button type="submit">เข้าสู่ระบบ</button>
+        {% if err %}<div class="err">{{err}}</div>{% endif %}
+    </form>
+</div>
+
+</body>
+</html>
+""", err=err)
     color: #ff7777;
     text-align: center;
     margin-top: 18px;
