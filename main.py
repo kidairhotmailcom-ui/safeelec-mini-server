@@ -145,7 +145,6 @@ TEMPLATE = {
         "sens_volt": {"name": "เซ็นเซอร์แรงดัน", "value": "รอข้อมูล", "ok": None},
         "sens_heat": {"name": "เซ็นเซอร์ความร้อน", "value": "รอข้อมูล", "ok": None},
         "sens_ground": {"name": "เซ็นเซอร์กราวด์", "value": "รอข้อมูล", "ok": None},
-    
     },
     "fault_list": [], "alert_level": "normal",
 }
@@ -564,7 +563,7 @@ button{width:100%;padding:12px;background:#2f9;border:none;border-radius:8px;col
 </head>
 <body>
 <div class="box">
-<img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" alt="PANS" class="logo">
+<img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" alt="SAFE-ELEC" class="logo">
 <h2>🔐 เข้าสู่ระบบ SAFE-ELEC</h2>
 <form method="post" action="/do_login">
 <input type="text" name="username" placeholder="ชื่อผู้ใช้" required>
@@ -749,5 +748,17 @@ function render(list){
               ).join('')}
           </div>
         </div>
+      </div>
+    </div>
+  `).join('');
+}
+load();
+document.getElementById('q').addEventListener('input', applyFilterAndRender);
+</script>
+</body>
+</html>
+""")
 
-          <b>🌡
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
