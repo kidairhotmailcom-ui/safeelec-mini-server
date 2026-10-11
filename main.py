@@ -725,7 +725,8 @@ button:active {
 <div class="wrapper">
     <!-- กล่องโลโก้ -->
     <div class="logo-card">
-        <img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" alt="PNS" class="logo-img">
+     >
+        <img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" alt="PNS" class="logo-img"
         <div class="company-th">บริษัท เพชรนาคา ซิสเต็มเวิร์ก จำกัด</div>
         <div class="company-en">PETCHNAKA SYSTEM WORK CO.,LTD.</div>
     </div>
