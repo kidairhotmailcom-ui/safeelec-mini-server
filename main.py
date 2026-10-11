@@ -165,23 +165,40 @@ for dev_id, site, cust, prov, stype in DEVICE_LIST:
     d["site_type"] = stype
     devices.append(d)
 
-# ==================== ฟังก์ชันส่งแจ้งเตือน ====================
+# ==================== ฟังก์ชันส่งแจ้งเตือน — แก้ไขแล้ว ====================
 def send_line_alert(message):
     token = CONFIG["ALERT"]["LINE_TOKEN"]
     if not token or not CONFIG["ALERT"]["ENABLED"]:
         print("[LINE] ข้ามส่ง: ยังไม่ได้ตั้งค่า Token หรือปิดใช้งาน")
         return False
+    
+    url = "https://notify-api.line.me/api/notify"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "User-Agent": "SAFE-ELEC/3.0.0 (Petchnaka-System)"
+    }
+    data = {"message": f"\n{message}"}
+    
     try:
-        url = "https://notify-api.line.me/api/notify"
-        headers = {"Authorization": f"Bearer {token}"}
-        data = {"message": f"\n{message}"}
         res = requests.post(url, headers=headers, data=data, timeout=15)
         if res.status_code == 200:
             print("[LINE] ส่งสำเร็จ ✅")
             return True
+        elif res.status_code == 401:
+            print("[LINE] ❌ Token ไม่ถูกต้อง หรือ Token หมดอายุ")
+            return False
+        elif res.status_code == 429:
+            print("[LINE] ⏳ ส่งบ่อยเกินไป โปรดรอสักครู่")
+            return False
         else:
             print(f"[LINE] ส่งไม่สำเร็จ: รหัส {res.status_code} — {res.text}")
             return False
+    except requests.exceptions.Timeout:
+        print("[LINE] ⏱️ เชื่อมต่อหมดเวลา — ตรวจสอบอินเทอร์เน็ต")
+        return False
+    except requests.exceptions.ConnectionError:
+        print("[LINE] 🔌 ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ LINE Notify")
+        return False
     except Exception as e:
         print(f"[LINE] ผิดพลาด: {type(e).__name__} — {e}")
         return False
@@ -731,44 +748,3 @@ def login():
             <div class="header">
                 <h1>🔐 เข้าสู่ระบบ SAFE-ELEC</h1>
                 <p>กรุณากรอกข้อมูลเพื่อเข้าใช้งานระบบ</p>
-            </div>
-            {% if err %}<div class="error-box">{{ err }}</div>{% endif %}
-            <form method="post" action="/do_login">
-                <div class="form-group">
-                    <div class="input-wrapper">
-                        <span class="input-icon">👤</span>
-                        <input type="text" name="user" placeholder="ชื่อผู้ใช้" required autofocus>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <div class="input-wrapper">
-                        <span class="input-icon">🔒</span>
-                        <input type="password" name="pwd" placeholder="รหัสผ่าน" required>
-                    </div>
-                </div>
-                <button type="submit" class="btn-login">เข้าสู่ระบบ</button>
-            </form>
-        </div>
-    </div>
-</body>
-</html>
-    """)
-
-# ==================== ตรวจสอบเข้าสู่ระบบ ====================
-@app.route("/do_login", methods=["POST"])
-def do_login():
-    user = request.form.get("user", "").strip()
-    pwd = request.form.get("pwd", "")
-    
-    if not user or not pwd:
-        return redirect("/login?err=กรุณากรอกชื่อผู้ใช้และรหัสผ่าน")
-    
-    if user in USER_DB and USER_DB[user]["password"] == pwd:
-        session["username"] = user
-        session["cust_id"] = USER_DB[user]["customer_id"]
-        return redirect("/dashboard")
-    else:
-        return redirect("/login?err=ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
-
-# ==================== หน้าแดชบอร์ด ====================
-@app
