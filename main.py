@@ -8,6 +8,7 @@ from email.mime.multipart import MIMEMultipart
 import xlsxwriter
 import io
 import os
+import json  
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "SAFE-ELEC-2026-SECRET-KEY-CHANGE-ME-PLEASE")
