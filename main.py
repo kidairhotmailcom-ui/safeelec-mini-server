@@ -550,7 +550,7 @@ def login():
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>เข้าสู่ระบบ — SAFE-ELEC</title>
 <style>
 * {margin: 0; padding: 0; box-sizing: border-box;}
@@ -558,191 +558,172 @@ html, body {
     width: 100%;
     height: 100%;
     min-height: 100vh;
-    min-height: 100dvh;
     overflow: hidden;
 }
 body {
     background: linear-gradient(135deg, #051630 0%, #0a2a5c 50%, #051630 100%);
-    color: #fff;
-    font-family: 'Segoe UI', Tahoma, sans-serif;
+    font-family: sans-serif;
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 20px;
+    padding: 16px;
     position: relative;
 }
-/* ลายวงจรไฟฟ้า พื้นหลัง */
-body::after {
-    content: '';
+/* เส้นวงจรไฟฟ้า พื้นหลัง */
+.circuit-lines {
     position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background-image: 
-        radial-gradient(circle at 20% 30%, rgba(0, 200, 255, 0.08) 0%, transparent 40%),
-        radial-gradient(circle at 80% 70%, rgba(0, 200, 255, 0.08) 0%, transparent 40%);
-    z-index: 0;
-    pointer-events: none;
-}
-/* เส้นวงจรเรืองแสง */
-.circuit-bg {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: 0;
+    inset: 0;
     overflow: hidden;
     pointer-events: none;
+    z-index: 0;
 }
-.circuit-line {
+.circuit-h, .circuit-v {
     position: absolute;
-    background: linear-gradient(90deg, transparent, rgba(0, 210, 255, 0.4), transparent);
+    background: linear-gradient(90deg, transparent, rgba(0, 210, 255, 0.15), transparent);
 }
+.circuit-h { width: 100%; height: 1px; }
+.circuit-v { width: 1px; height: 100%; }
+.circuit-h:nth-child(1) { top: 15%; }
+.circuit-h:nth-child(2) { top: 35%; }
+.circuit-h:nth-child(3) { top: 55%; }
+.circuit-h:nth-child(4) { top: 75%; }
+.circuit-h:nth-child(5) { top: 90%; }
+.circuit-v:nth-child(6) { left: 10%; }
+.circuit-v:nth-child(7) { left: 25%; }
+.circuit-v:nth-child(8) { left: 50%; }
+.circuit-v:nth-child(9) { left: 75%; }
+.circuit-v:nth-child(10) { left: 90%; }
+/* จุดเชื่อมต่อวงจร */
 .circuit-dot {
     position: absolute;
-    width: 14px; height: 14px;
-    background: rgba(0, 220, 255, 0.9);
+    width: 12px; height: 12px;
+    background: rgba(0, 220, 255, 0.95);
     border-radius: 50%;
-    box-shadow: 0 0 20px 8px rgba(0, 220, 255, 0.4);
+    box-shadow: 0 0 15px 6px rgba(0, 220, 255, 0.4);
     animation: pulse 2.5s infinite alternate;
+    z-index: 1;
 }
 @keyframes pulse {
     from { opacity: 0.3; transform: scale(0.8); }
-    to { opacity: 1; transform: scale(1.2); }
+    to { opacity: 1; transform: scale(1.15); }
 }
 .wrapper {
     position: relative;
     z-index: 2;
     width: 100%;
-    max-width: 360px;
+    max-width: 320px;
 }
-/* กล่องโลโก้ โปร่งแสง */
 .logo-card {
-    background: rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(0, 210, 255, 0.25);
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(0,210,255,0.18);
     border-radius: 16px;
-    padding: 28px 20px;
+    padding: 24px 16px;
     text-align: center;
-    margin-bottom: 32px;
-    box-shadow: 0 0 40px rgba(0, 200, 255, 0.1);
+    margin-bottom: 24px;
 }
 .logo-img {
     max-width: 160px;
-    margin: 0 auto 16px;
+    margin: 0 auto;
     display: block;
 }
-.company-th {
-    font-size: 20px;
-    color: #e6f4ff;
-    font-weight: 600;
-    letter-spacing: 1px;
-}
-.company-en {
-    font-size: 13px;
-    color: #94d4ff;
-    margin-top: 6px;
-    letter-spacing: 0.5px;
-}
-/* หัวข้อ */
 h2 {
-    font-size: 26px;
-    color: #ffffff;
-    margin-bottom: 36px;
+    font-size: 20px;
+    color: #fff;
+    margin-bottom: 24px;
     text-align: center;
-    text-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
 }
-h2::before {
-    content: '🔒';
-    margin-right: 8px;
-}
-/* ช่องกรอกข้อมูล */
+h2::before { content: '🔒 '; }
 input {
     width: 100%;
-    padding: 18px 20px;
-    margin: 10px 0;
-    border-radius: 12px;
+    padding: 14px 16px;
+    margin: 8px 0;
+    border-radius: 10px;
     border: none;
-    background: rgba(20, 50, 90, 0.5);
-    color: #ffffff;
-    font-size: 18px;
+    background: rgba(20,50,90,0.5);
+    color: #fff;
+    font-size: 15px;
     outline: none;
-    transition: all 0.3s;
 }
-input::placeholder {
-    color: #94c8f0;
-}
-input:focus {
-    background: rgba(20, 60, 110, 0.7);
-    box-shadow: 0 0 0 2px rgba(0, 210, 255, 0.5), 0 0 20px rgba(0, 210, 255, 0.15);
-}
-/* ปุ่มเข้าสู่ระบบ */
+input::placeholder { color: #94c8f0; }
+input:focus { box-shadow: 0 0 0 2px rgba(0,210,255,0.4); }
 button {
     width: 100%;
-    padding: 18px;
+    padding: 14px;
     background: linear-gradient(90deg, #00c970, #00e880);
     border: none;
-    border-radius: 12px;
+    border-radius: 10px;
     color: #003322;
+    font-size: 17px;
     font-weight: bold;
-    font-size: 20px;
-    margin-top: 16px;
+    margin-top: 8px;
     cursor: pointer;
-    transition: all 0.3s;
-    box-shadow: 0 4px 15px rgba(0, 200, 100, 0.3);
 }
-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 200, 100, 0.4);
-}
-button:active {
-    transform: translateY(0);
-}
+button:active { transform: scale(0.98); }
 .err {
     color: #ff8888;
     text-align: center;
-    margin-top: 16px;
-    font-size: 15px;
-    padding: 10px;
-    background: rgba(255, 60, 60, 0.1);
-    border-radius: 8px;
+    margin-top: 12px;
+    font-size: 13px;
 }
 </style>
 </head>
 <body>
-
-<!-- จุดเรืองแสง -->
-<div class="circuit-bg">
-    <div class="circuit-dot" style="top: 10%; left: 5%;"></div>
-    <div class="circuit-dot" style="top: 15%; left: 90%;"></div>
-    <div class="circuit-dot" style="top: 35%; left: 3%;"></div>
-    <div class="circuit-dot" style="top: 40%; left: 92%;"></div>
-    <div class="circuit-dot" style="top: 60%; left: 8%;"></div>
-    <div class="circuit-dot" style="top: 65%; left: 88%;"></div>
-    <div class="circuit-dot" style="top: 85%; left: 12%;"></div>
-    <div class="circuit-dot" style="top: 90%; left: 85%;"></div>
-</div>
-
-<div class="wrapper">
-    <!-- กล่องโลโก้ -->
-    <div class="logo-card">
-     >
-        <img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" alt="PNS" class="logo-img"
-        <div class="company-th">บริษัท เพชรนาคา ซิสเต็มเวิร์ก จำกัด</div>
-        <div class="company-en">PETCHNAKA SYSTEM WORK CO.,LTD.</div>
+    <!-- เส้นวงจรไฟฟ้า -->
+    <div class="circuit-lines">
+        <div class="circuit-h"></div>
+        <div class="circuit-h"></div>
+        <div class="circuit-h"></div>
+        <div class="circuit-h"></div>
+        <div class="circuit-h"></div>
+        <div class="circuit-v"></div>
+        <div class="circuit-v"></div>
+        <div class="circuit-v"></div>
+        <div class="circuit-v"></div>
+        <div class="circuit-v"></div>
     </div>
 
-    <!-- หัวข้อ -->
-    <h2>เข้าสู่ระบบ SAFE-ELEC</h2>
+    <!-- จุดเชื่อมต่อวงจร -->
+    <div class="circuit-dot" style="top: 15%; left: 10%;"></div>
+    <div class="circuit-dot" style="top: 15%; left: 25%;"></div>
+    <div class="circuit-dot" style="top: 15%; left: 50%;"></div>
+    <div class="circuit-dot" style="top: 15%; left: 75%;"></div>
+    <div class="circuit-dot" style="top: 15%; left: 90%;"></div>
+    <div class="circuit-dot" style="top: 35%; left: 10%;"></div>
+    <div class="circuit-dot" style="top: 35%; left: 25%;"></div>
+    <div class="circuit-dot" style="top: 35%; left: 50%;"></div>
+    <div class="circuit-dot" style="top: 35%; left: 75%;"></div>
+    <div class="circuit-dot" style="top: 35%; left: 90%;"></div>
+    <div class="circuit-dot" style="top: 55%; left: 10%;"></div>
+    <div class="circuit-dot" style="top: 55%; left: 25%;"></div>
+    <div class="circuit-dot" style="top: 55%; left: 50%;"></div>
+    <div class="circuit-dot" style="top: 55%; left: 75%;"></div>
+    <div class="circuit-dot" style="top: 55%; left: 90%;"></div>
+    <div class="circuit-dot" style="top: 75%; left: 10%;"></div>
+    <div class="circuit-dot" style="top: 75%; left: 25%;"></div>
+    <div class="circuit-dot" style="top: 75%; left: 50%;"></div>
+    <div class="circuit-dot" style="top: 75%; left: 75%;"></div>
+    <div class="circuit-dot" style="top: 75%; left: 90%;"></div>
+    <div class="circuit-dot" style="top: 90%; left: 10%;"></div>
+    <div class="circuit-dot" style="top: 90%; left: 25%;"></div>
+    <div class="circuit-dot" style="top: 90%; left: 50%;"></div>
+    <div class="circuit-dot" style="top: 90%; left: 75%;"></div>
+    <div class="circuit-dot" style="top: 90%; left: 90%;"></div>
 
-    <!-- ฟอร์ม -->
-    <form method="post" action="/do_login">
-        <input type="text" name="username" placeholder="ชื่อผู้ใช้" required>
-        <input type="password" name="password" placeholder="รหัสผ่าน" required>
-        <button type="submit">เข้าสู่ระบบ</button>
-        {% if err %}<div class="err">{{err}}</div>{% endif %}
-    </form>
-</div>
+    <div class="wrapper">
+        <div class="logo-card">
+            <img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/119B2CA8-7BC5-4D30-9735-5200A647A172.png" alt="PNS" class="logo-img">
+        </div>
 
+        <h2>เข้าสู่ระบบ SAFE-ELEC</h2>
+
+        <form method="post" action="/do_login">
+            <input type="text" name="username" placeholder="ชื่อผู้ใช้" required>
+            <input type="password" name="password" placeholder="รหัสผ่าน" required>
+            <button type="submit">เข้าสู่ระบบ</button>
+            {% if err %}<div class="err">{{err}}</div>{% endif %}
+        </form>
+    </div>
 </body>
 </html>
 """, err=err)
