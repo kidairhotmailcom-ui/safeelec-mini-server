@@ -646,110 +646,53 @@ def download_report():
     )
 
 # ==================== หน้าเข้าสู่ระบบ ====================
-@app.route("/login")
-def login():
-    err = request.args.get("err", "")
+@app.route("/do_login", methods=["POST"])
+def do_login():
+    username = request.form.get("username", "")
+    password = request.form.get("password", "")
+    user = USER_DB.get(username)
+    if user and user["password"] == password:
+        session["username"] = username
+        session["cust_id"] = user["customer_id"]
+        return redirect("/dashboard")
+    return redirect("/login?err=ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/login")
+
+@app.route("/dashboard")
+def dashboard():
+    if "username" not in session:
+        return redirect("/login")
     return render_template_string("""
 <!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>เข้าสู่ระบบ — SAFE-ELEC</title>
+<title>แดชบอร์ด — SAFE-ELEC</title>
 <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif;
-        color: #fff;
-        background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%);
-        position: relative;
-        overflow-x: hidden;
-    }
-    .circuit-bg {
-        position: fixed; inset: 0;
-        background-image: radial-gradient(circle at 20% 30%, rgba(6,182,212,.08) 0%, transparent 40%),
-        radial-gradient(circle at 80% 70%, rgba(16,185,129,.08) 0%, transparent 40%);
-        z-index: -2;
-    }
-    .circuit-lines {
-        position: fixed; inset: 0; z-index: -1; opacity: 0.4;
-        background-image: linear-gradient(90deg, rgba(6,182,212,.3) 1px, transparent 1px),
-        linear-gradient(rgba(6,182,212,.3) 1px, transparent 1px);
-        background-size: 60px 60px;
-        mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
-        -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
-    }
-    .container { width: 100%; max-width: 440px; padding: 24px; position: relative; z-index: 1; }
-    .login-card {
-        background: linear-gradient(135deg, rgba(30,41,59,.75), rgba(15,23,42,.8));
-        border-radius: 24px; padding: 36px 28px;
-        box-shadow: 0 0 0 1px rgba(6,182,212,.15), 0 20px 60px rgba(0,0,0,.4);
-        backdrop-filter: blur(12px);
-    }
-    .logo-box {
-        background: linear-gradient(145deg, #1E293B, #0F172A);
-        border-radius: 16px; padding: 28px 20px; text-align: center; margin-bottom: 32px;
-    }
-    .logo-img { width: 180px; margin-bottom: 16px; }
-    .company-name { font-size: 22px; font-weight: 600; color: #F1F5F9; margin-bottom: 6px; }
-    .company-en { font-size: 13px; color: #94A3B8; letter-spacing: 1px; }
-    .header { text-align: center; margin-bottom: 32px; }
-    .header h1 {
-        font-size: 26px; background: linear-gradient(90deg, #22D3EE, #34D399);
-        -webkit-background-clip: text; color: transparent;
-    }
-    .header p { color: #94A3B8; font-size: 15px; margin-top: 8px; }
-    .form-group { margin-bottom: 20px; }
-    .input-wrapper {
-        display: flex; align-items: center; background: rgba(15,23,42,.6);
-        border-radius: 12px; border: 1px solid rgba(6,182,212,.25); padding: 0 18px;
-    }
-    .input-wrapper:focus-within { border-color: rgba(6,182,212,.7); }
-    .input-icon { color: #22D3EE; font-size: 18px; }
-    input {
-        width: 100%; padding: 16px 12px; background: transparent; border: none;
-        outline: none; color: #F1F5F9; font-size: 16px;
-    }
-    input::placeholder { color: #64748B; }
-    .btn-login {
-        width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 18px;
-        font-weight: 600; color: #0F172A;
-        background: linear-gradient(90deg, #34D399, #22D3EE); cursor: pointer;
-        transition: transform .2s; margin-top: 8px;
-    }
-    .btn-login:hover { transform: translateY(-2px); }
-    .error-box {
-        background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3);
-        color: #FCA5A5; padding: 12px; border-radius: 8px; text-align: center;
-        margin-bottom: 20px; font-size: 14px;
-    }
-    @media (max-width: 480px) {
-        .container { padding: 16px; }
-        .login-card { padding: 28px 20px; }
-        .header h1 { font-size: 22px; }
-    }
+    body { font-family: sans-serif; background: #0F172A; color: white; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; }
+    .btn { padding: 8px 16px; background: #34D399; color: #0F172A; border-radius: 6px; text-decoration: none; font-weight: bold; }
 </style>
 </head>
 <body>
-    <div class="circuit-bg"></div>
-    <div class="circuit-lines"></div>
-    <div class="container">
-        <div class="login-card">
-            <div class="logo-box">
-                <img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" 
-                     alt="Logo" class="logo-img" onerror="this.style.display='none'">
-                <div class="company-name">บริษัท เพชรนาคา</div>
-                <div class="company-en">PETCHNAKA SYSTEM WORK CO.,LTD.</div>
-            </div>
-            <div class="header">
-                <h1>🔐 เข้าสู่ระบบ SAFE-ELEC</h1>
-                <p>กรุณากรอกข้อมูลเพื่อเข้าใช้งานระบบ</p>
-            </div>
-            {% if err %}<div class="error-box">{{ err }}</div>{% endif %}
-            <form method="post" action="/do_login">
-                <div class="form-group">
- 
+    <div class="header">
+        <h1>📊 แดชบอร์ด SAFE-ELEC</h1>
+        <div>
+            <span>ยินดีต้อนรับ, """ + session["username"] + """</span>
+            <a href="/logout" class="btn" style="margin-left:12px; background:#F87171;">ออกจากระบบ</a>
+        </div>
+    </div>
+    <p>ระบบทำงานปกติ ✅</p>
+    <a href="/api/devices" class="btn">ดูข้อมูลอุปกรณ์</a>
+    <a href="/api/report-excel" class="btn" style="margin-left:12px;">ดาวน์โหลดรายงาน Excel</a>
+</body>
+</html>
+""")
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
