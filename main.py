@@ -565,9 +565,9 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
-    padding: 5%;
+    padding: 8% 5% 12% 5%;
     position: relative;
 }
 .circuit-bg {
@@ -597,14 +597,15 @@ body {
     width: 100%;
     max-width: 340px;
     text-align: center;
+    margin-top: 15vh;
 }
 .logo-card {
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(8px);
     border: 1px solid rgba(0, 200, 255, 0.15);
     border-radius: 12px;
-    padding: 24px 20px;
-    margin-bottom: 24px;
+    padding: 20px;
+    margin-bottom: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -619,7 +620,7 @@ body {
 .login-title {
     font-size: 22px;
     color: #fff;
-    margin-bottom: 26px;
+    margin-bottom: 28px;
     line-height: 1.35;
 }
 .safe-blue { color: #94d4ff; }
