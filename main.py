@@ -553,25 +553,146 @@ def login():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>เข้าสู่ระบบ — SAFE-ELEC</title>
 <style>
-body{background:#0f1629;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px}
-.box{background:#1a2342;padding:30px;border-radius:16px;width:100%;max-width:400px;border:1px solid #2a3b63}
-.logo{max-width:220px;margin:0 auto 20px;display:block}  
-h2{text-align:center;color:#6cf;margin-bottom:25px}
-input{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:none;background:#0f1f3f;color:#fff;font-size:16px}
-button{width:100%;padding:12px;background:#2f9;border:none;border-radius:8px;color:#032;font-weight:bold;font-size:16px;margin-top:10px;cursor:pointer}
-.err{color:#f44;text-align:center;margin-top:15px}
+* {margin: 0; padding: 0; box-sizing: border-box;}
+body {
+    /* 🎨 พื้นหลังใหม่: สีน้ำเงินเข้ม + เส้นวงจรไฟฟ้า + การไล่สี */
+    background: linear-gradient(135deg, #0a1629 0%, #0f2a4a 50%, #0a1629 100%);
+    color: #fff;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* ✨ เส้นวงจรไฟฟ้า พื้นหลัง */
+body::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-image: 
+        radial-gradient(circle at 20% 30%, rgba(0, 180, 255, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 80% 70%, rgba(0, 200, 150, 0.06) 0%, transparent 40%);
+    pointer-events: none;
+}
+
+/* 🔷 กล่องฟอร์ม */
+.box {
+    background: rgba(15, 30, 60, 0.85);
+    backdrop-filter: blur(12px);
+    padding: 40px 30px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 420px;
+    border: 1px solid rgba(100, 180, 255, 0.2);
+    box-shadow: 
+        0 8px 40px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(100, 180, 255, 0.1) inset;
+    position: relative;
+    z-index: 1;
+}
+
+/* ✍️ โลโก้แบบข้อความ — ไม่ต้องใช้รูป */
+.logo-text {
+    text-align: center;
+    margin-bottom: 30px;
+}
+.logo-main {
+    font-size: 42px;
+    font-weight: 800;
+    color: #66ccff;
+    letter-spacing: 8px;
+    text-shadow: 0 0 20px rgba(100, 200, 255, 0.4);
+}
+.logo-th {
+    font-size: 16px;
+    color: #a0d0f0;
+    margin-top: 6px;
+    letter-spacing: 2px;
+}
+.logo-en {
+    font-size: 11px;
+    color: #7090b0;
+    margin-top: 4px;
+}
+
+h2 {
+    text-align: center;
+    color: #99ddff;
+    margin-bottom: 28px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+input {
+    width: 100%;
+    padding: 14px 16px;
+    margin: 8px 0;
+    border-radius: 10px;
+    border: 1px solid rgba(80, 150, 220, 0.25);
+    background: rgba(10, 30, 60, 0.6);
+    color: #fff;
+    font-size: 16px;
+    outline: none;
+    transition: all 0.3s ease;
+}
+input::placeholder {color: #6080a0;}
+input:focus {
+    border-color: #44aaff;
+    box-shadow: 0 0 0 3px rgba(68, 170, 255, 0.15);
+}
+
+button {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(90deg, #00cc77, #00ee88);
+    border: none;
+    border-radius: 10px;
+    color: #003322;
+    font-weight: bold;
+    font-size: 17px;
+    margin-top: 12px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 200, 120, 0.35);
+}
+button:active {transform: translateY(0);}
+
+.err {
+    color: #ff6666;
+    text-align: center;
+    margin-top: 18px;
+    font-size: 14px;
+    padding: 8px;
+    background: rgba(255, 60, 60, 0.1);
+    border-radius: 6px;
+}
 </style>
 </head>
 <body>
 <div class="box">
-<img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" alt="SAFE-ELEC" class="logo">
-<h2>🔐 เข้าสู่ระบบ SAFE-ELEC</h2>
-<form method="post" action="/do_login">
-<input type="text" name="username" placeholder="ชื่อผู้ใช้" required>
-<input type="password" name="password" placeholder="รหัสผ่าน" required>
-<button type="submit">เข้าสู่ระบบ</button>
-{% if err %}<div class="err">{{err}}</div>{% endif %}
-</form>
+    <!-- ✍️ โลโก้ข้อความ แทนรูปภาพ -->
+    <div class="logo-text">
+        <div class="logo-main">PNS</div>
+        <div class="logo-th">เพชรนาคา ซิสเต็มเวิร์ก</div>
+        <div class="logo-en">PETCHNAKA SYSTEM WORK CO.,LTD.</div>
+    </div>
+
+    <h2>🔐 เข้าสู่ระบบ SAFE-ELEC</h2>
+
+    <form method="post" action="/do_login">
+        <input type="text" name="username" placeholder="ชื่อผู้ใช้" required>
+        <input type="password" name="password" placeholder="รหัสผ่าน" required>
+        <button type="submit">เข้าสู่ระบบ</button>
+        {% if err %}<div class="err">{{err}}</div>{% endif %}
+    </form>
 </div>
 </body>
 </html>
