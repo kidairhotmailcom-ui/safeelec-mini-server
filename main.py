@@ -13,7 +13,6 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "SAFE-ELEC-2026-SECRET-KEY-CHANGE-ME-PLEASE")
 CORS(app, supports_credentials=True)
 
-# ==================== ข้อมูลผู้ใช้ ====================
 USER_DB = {
     "admin": {"password": "123456", "name": "ผู้ดูแลระบบ", "customer_id": "ALL"},
     "cust0891": {"password": "123456", "name": "อาคารหลัก ขอนแก่น", "customer_id": "CUST-0891"},
@@ -21,7 +20,6 @@ USER_DB = {
     "cust0004": {"password": "123456", "name": "โรงงานผลิต ระยอง", "customer_id": "CUST-0004"},
 }
 
-# ==================== การตั้งค่าระบบ ====================
 CONFIG = {
     "SYSTEM_NAME": "SAFE-ELEC",
     "VERSION": "3.0.0-FULL-DEPLOY",
@@ -57,7 +55,6 @@ CONFIG = {
     }
 }
 
-# ==================== แมปชื่อฟิลด์ ====================
 FIELD_MAP = {
     "id": "device_id", "esp_id": "device_id", "esp": "device_id",
     "site": "site_name", "cust": "customer_id", "role": "role",
@@ -98,13 +95,11 @@ FIELD_MAP = {
     "sens_ground": "sens_ground",
 }
 
-# ==================== ข้อมูลอุปกรณ์ ====================
 DEVICE_LIST = [
     ("SAFE-001", "แผงหลัก+ย่อย อาคารหลัก", "CUST-0891", "ขอนแก่น", "office"),
     ("SAFE-001-BAK", "สำรอง — แผงหลัก อาคารหลัก", "CUST-0891", "ขอนแก่น", "office"),
 ]
 
-# ==================== แม่แบบข้อมูลอุปกรณ์ ====================
 TEMPLATE = {
     "device_id": "", "site_name": "", "customer_id": "",
     "province": "", "site_type": "",
@@ -150,11 +145,11 @@ TEMPLATE = {
         "sens_volt": {"name": "เซ็นเซอร์แรงดัน", "value": "รอข้อมูล", "ok": None},
         "sens_heat": {"name": "เซ็นเซอร์ความร้อน", "value": "รอข้อมูล", "ok": None},
         "sens_ground": {"name": "เซ็นเซอร์กราวด์", "value": "รอข้อมูล", "ok": None},
+    
     },
     "fault_list": [], "alert_level": "normal",
 }
 
-# สร้างรายการอุปกรณ์
 devices = []
 for dev_id, site, cust, prov, stype in DEVICE_LIST:
     d = TEMPLATE.copy()
@@ -165,40 +160,22 @@ for dev_id, site, cust, prov, stype in DEVICE_LIST:
     d["site_type"] = stype
     devices.append(d)
 
-# ==================== ฟังก์ชันส่งแจ้งเตือน — แก้ไขแล้ว ====================
 def send_line_alert(message):
     token = CONFIG["ALERT"]["LINE_TOKEN"]
     if not token or not CONFIG["ALERT"]["ENABLED"]:
         print("[LINE] ข้ามส่ง: ยังไม่ได้ตั้งค่า Token หรือปิดใช้งาน")
         return False
-    
-    url = "https://notify-api.line.me/api/notify"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "User-Agent": "SAFE-ELEC/3.0.0 (Petchnaka-System)"
-    }
-    data = {"message": f"\n{message}"}
-    
     try:
+        url = "https://notify-api.line.me/api/notify"
+        headers = {"Authorization": f"Bearer {token}"}
+        data = {"message": f"\n{message}"}
         res = requests.post(url, headers=headers, data=data, timeout=15)
         if res.status_code == 200:
             print("[LINE] ส่งสำเร็จ ✅")
             return True
-        elif res.status_code == 401:
-            print("[LINE] ❌ Token ไม่ถูกต้อง หรือ Token หมดอายุ")
-            return False
-        elif res.status_code == 429:
-            print("[LINE] ⏳ ส่งบ่อยเกินไป โปรดรอสักครู่")
-            return False
         else:
             print(f"[LINE] ส่งไม่สำเร็จ: รหัส {res.status_code} — {res.text}")
             return False
-    except requests.exceptions.Timeout:
-        print("[LINE] ⏱️ เชื่อมต่อหมดเวลา — ตรวจสอบอินเทอร์เน็ต")
-        return False
-    except requests.exceptions.ConnectionError:
-        print("[LINE] 🔌 ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ LINE Notify")
-        return False
     except Exception as e:
         print(f"[LINE] ผิดพลาด: {type(e).__name__} — {e}")
         return False
@@ -278,124 +255,32 @@ def trigger_alert(dev):
         dev["last_alert_sent"] = datetime.now()
         print(f"✅ ส่งแจ้งเตือนสำเร็จ: {dev['device_id']}")
 
-# ==================== สร้างรายงาน Excel ====================
 def generate_excel_report():
     output = io.BytesIO()
     workbook = xlsxwriter.Workbook(output)
     ws = workbook.add_worksheet("สรุปภาพรวม")
-    
-    header_format = workbook.add_format({'bold': True, 'bg_color': '#1e40af', 'color': '#FFFFFF', 'align': 'center', 'valign': 'vcenter'})
-    header_format.set_text_wrap()
-    normal = workbook.add_format({'text_wrap': True, 'align': 'center', 'valign': 'vcenter'})
-    left_align = workbook.add_format({'text_wrap': True, 'align': 'left', 'valign': 'vcenter'})
-    red_text = workbook.add_format({'font_color': '#dc2626', 'bold': True, 'align': 'center'})
-    orange_text = workbook.add_format({'font_color': '#f97316', 'bold': True, 'align': 'center'})
-    green_text = workbook.add_format({'font_color': '#16a34a', 'bold': True, 'align': 'center'})
-    gray_text = workbook.add_format({'font_color': '#6b7280', 'align': 'center'})
-
-    headers = [
-        "รหัสอุปกรณ์", "ชื่อสถานที่", "รหัสลูกค้า", "จังหวัด", "ประเภทสถานที่",
-        "บทบาท", "สถานะออนไลน์", "ระดับแจ้งเตือน", "เวลาอัปเดตล่าสุด",
-        "อุณหภูมิ (°C)", "ความชื้น (%)", "สถานะแหล่งจ่าย",
-        "V L1-L2 (V)", "V L2-L3 (V)", "V L3-L1 (V)",
-        "A L1 (A)", "A L2 (A)", "A L3 (A)", "A N (A)",
-        "กำลังไฟฟ้า (kW)", "ความสมดุล 3เฟส",
-        "โซน1 V(V)", "โซน1 A(A)", "โซน1 kW",
-        "โซน2 V(V)", "โซน2 A(A)", "โซน2 kW",
-        "โซน3 V(V)", "โซน3 A(A)", "โซน3 kW",
-        "กราวด์ ความต้านทาน (Ω)", "กราวด์ แรงดันรั่ว (V)", "สถานะกราวด์",
-        "จำนวนปัญหา", "รายการปัญหา"
-    ]
-    
+    header = workbook.add_format({'bold': True, 'bg_color': '#2f9', 'color': '#032', 'align': 'center'})
+    normal = workbook.add_format({'text_wrap': True})
+    red = workbook.add_format({'font_color': '#f44', 'bold': True})
+    green = workbook.add_format({'font_color': '#4f9'})
+    headers = ["รหัส", "สถานที่", "บทบาท", "ออนไลน์", "สถานะ", "อุณหภูมิ", "กราวด์ R(Ω)", "กราวด์ V(V)", "ปัญหา"]
     for col, h in enumerate(headers):
-        ws.write(0, col, h, header_format)
-
+        ws.write(0, col, h, header)
     for row, d in enumerate(devices, start=1):
+        status_fmt = green if d["alert_level"]=="normal" else red
         role_label = d.get("role", "-")
-        if role_label == "MASTER":
-            role_label = "ตัวหลัก"
-        elif role_label == "BACKUP":
-            role_label = "ตัวสำรอง"
         if d.get("backup_active"):
             role_label += " (ทำงานแทน)"
-        
-        online_text = "✅ ออนไลน์" if d["is_online"] else "❌ ขาดการติดต่อ"
-        online_fmt = green_text if d["is_online"] else red_text
-        
-        alert_text = {
-            "normal": "ปกติ",
-            "warning": "เฝ้าระวัง",
-            "critical": "อันตราย",
-            "offline": "ขาดการติดต่อ"
-        }.get(d["alert_level"], "-")
-        alert_fmt = {
-            "normal": green_text,
-            "warning": orange_text,
-            "critical": red_text,
-            "offline": gray_text
-        }.get(d["alert_level"], normal)
-        
-        balance_ok = d.get("balance_3ph_ok", True)
-        balance_text = "ปกติ" if balance_ok else "ไม่สมดุล"
-        balance_fmt = green_text if balance_ok else orange_text
-        
-        gnd_ok = d.get("gnd_system_ok", True)
-        gnd_val = d.get("gnd_resistance_ohm", 0)
-        if gnd_val <= 0:
-            gnd_status = "รอข้อมูล"
-            gnd_fmt = gray_text
-        elif gnd_ok:
-            gnd_status = "ปกติ"
-            gnd_fmt = green_text
-        else:
-            gnd_status = "ผิดปกติ"
-            gnd_fmt = red_text
-
-        fault_count = len(d.get('fault_list', []))
-        fault_text = "; ".join(d.get('fault_list', [])) if fault_count > 0 else "-"
-
-        ws.write(row, 0, d["device_id"], left_align)
-        ws.write(row, 1, d["site_name"], left_align)
-        ws.write(row, 2, d["customer_id"], normal)
-        ws.write(row, 3, d.get("province", "-"), normal)
-        ws.write(row, 4, CONFIG["SITE_TYPES"].get(d.get("site_type",""), d.get("site_type","")), normal)
-        ws.write(row, 5, role_label, normal)
-        ws.write(row, 6, online_text, online_fmt)
-        ws.write(row, 7, alert_text, alert_fmt)
-        ws.write(row, 8, d.get("last_updated", "-"), normal)
-        ws.write(row, 9, d.get("current_temp", 0), normal)
-        ws.write(row, 10, d.get("humidity", 0), normal)
-        ws.write(row, 11, d.get("power_status", "-"), normal)
-        ws.write(row, 12, d.get("v_l1_l2", 0), normal)
-        ws.write(row, 13, d.get("v_l2_l3", 0), normal)
-        ws.write(row, 14, d.get("v_l3_l1", 0), normal)
-        ws.write(row, 15, d.get("a_l1", 0), normal)
-        ws.write(row, 16, d.get("a_l2", 0), normal)
-        ws.write(row, 17, d.get("a_l3", 0), normal)
-        ws.write(row, 18, d.get("a_n", 0), normal)
-        ws.write(row, 19, d.get("power_kw", 0), normal)
-        ws.write(row, 20, balance_text, balance_fmt)
-        ws.write(row, 21, d.get("z1_v", 0), normal)
-        ws.write(row, 22, d.get("z1_a", 0), normal)
-        ws.write(row, 23, d.get("z1_w", 0), normal)
-        ws.write(row, 24, d.get("z2_v", 0), normal)
-        ws.write(row, 25, d.get("z2_a", 0), normal)
-        ws.write(row, 26, d.get("z2_w", 0), normal)
-        ws.write(row, 27, d.get("z3_v", 0), normal)
-        ws.write(row, 28, d.get("z3_a", 0), normal)
-        ws.write(row, 29, d.get("z3_w", 0), normal)
-        ws.write(row, 30, d.get("gnd_resistance_ohm", 0), normal)
-        ws.write(row, 31, d.get("gnd_voltage_v", 0), normal)
-        ws.write(row, 32, gnd_status, gnd_fmt)
-        ws.write(row, 33, fault_count, normal)
-        ws.write(row, 34, fault_text, left_align)
-    
-    col_widths = [16, 28, 14, 12, 14, 16, 14, 12, 18, 12, 12, 14,
-                  12, 12, 12, 10, 10, 10, 10, 12, 14, 10, 10, 10,
-                  10, 10, 10, 10, 10, 10, 16, 14, 12, 14, 40]
-    for i, w in enumerate(col_widths):
-        ws.set_column(i, i, w)
-    
+        ws.write(row, 0, d["device_id"], normal)
+        ws.write(row, 1, d["site_name"], normal)
+        ws.write(row, 2, role_label, normal)
+        ws.write(row, 3, "✅ ใช่" if d["is_online"] else "❌ ไม่", green if d["is_online"] else red)
+        ws.write(row, 4, d["status_summary"], status_fmt)
+        ws.write(row, 5, d["current_temp"], normal)
+        ws.write(row, 6, d["gnd_resistance_ohm"], normal)
+        ws.write(row, 7, d["gnd_voltage_v"], normal)
+        ws.write(row, 8, f"{len(d['fault_list'])} รายการ", normal)
+    ws.set_column(0, 8, 18)
     workbook.close()
     output.seek(0)
     return {
@@ -403,7 +288,6 @@ def generate_excel_report():
         "name": f"SAFE-ELEC-Report-{datetime.now().strftime('%Y%m%d-%H%M%S')}.xlsx"
     }
 
-# ==================== ฟังก์ชันตรวจสอบระบบ ====================
 def check_ground(dev):
     S = CONFIG["STANDARD"]
     faults = []
@@ -488,7 +372,6 @@ def check_all(dev):
         else:
             dev["sensors"][key]["ok"] = None
             dev["sensors"][key]["value"] = "รอข้อมูล"
-    
     if dev["is_online"]:
         dev["sensors"]["esp"]["value"] = "เชื่อมต่อปกติ"
         dev["sensors"]["esp"]["ok"] = True
@@ -503,7 +386,6 @@ def check_all(dev):
         dev["sensors"]["comm"]["ok"] = None
         dev["sensors"]["psu"]["value"] = "ตรวจสอบ"
         dev["sensors"]["psu"]["ok"] = None
-    
     t = dev["current_temp"]
     dev["sensors"]["temp"]["value"] = t
     if not dev["is_online"]:
@@ -516,45 +398,37 @@ def check_all(dev):
         faults.append(f"⚠️ อุณหภูมิสูง: {t}°C")
     else:
         dev["sensors"]["temp"]["ok"] = True
-    
     h = dev["humidity"]
     dev["sensors"]["humidity"]["value"] = h
     if not dev["is_online"] or h == 0:
         dev["sensors"]["humidity"]["ok"] = None
     else:
         dev["sensors"]["humidity"]["ok"] = S["HUMI_MIN"] <= h <= S["HUMI_MAX"]
-    
     for k, v in [("v_l1_l2", dev["v_l1_l2"]), ("v_l2_l3", dev["v_l2_l3"]), ("v_l3_l1", dev["v_l3_l1"])]:
         dev["sensors"][k]["value"] = v
         if not dev["is_online"] or v == 0:
             dev["sensors"][k]["ok"] = None
         else:
             dev["sensors"][k]["ok"] = S["V3_MIN"] <= v <= S["V3_MAX"]
-    
     for k, v in [("a_l1", dev["a_l1"]), ("a_l2", dev["a_l2"]), ("a_l3", dev["a_l3"])]:
         dev["sensors"][k]["value"] = v
         dev["sensors"][k]["ok"] = None if not dev["is_online"] or v == 0 else True
-    
     for k, v in [("z1_v", dev["z1_v"]), ("z2_v", dev["z2_v"]), ("z3_v", dev["z3_v"])]:
         dev["sensors"][k]["value"] = v
         if not dev["is_online"] or v == 0:
             dev["sensors"][k]["ok"] = None
         else:
             dev["sensors"][k]["ok"] = S["V1_MIN"] <= v <= S["V1_MAX"]
-    
     for k, v in [("z1_a", dev["z1_a"]), ("z2_a", dev["z2_a"]), ("z3_a", dev["z3_a"])]:
         dev["sensors"][k]["value"] = v
         dev["sensors"][k]["ok"] = None if not dev["is_online"] or v == 0 else True
-    
     dev["balance_3ph_ok"] = check_balance(dev["a_l1"], dev["a_l2"], dev["a_l3"])
     dev["z_total_a"] = round(dev["z1_a"] + dev["z2_a"] + dev["z3_a"], 2)
     dev["z_balance_ok"] = check_balance(dev["z1_a"], dev["z2_a"], dev["z3_a"])
-    
     if dev["is_online"] and not dev["balance_3ph_ok"]:
         faults.append("⚠️ ระบบ 380V ไม่สมดุล")
     if dev["is_online"] and not dev["z_balance_ok"] and dev["z_total_a"] > 0:
         faults.append("⚠️ ระบบ 220V ไม่สมดุล")
-    
     critical = any("🔴" in f for f in faults)
     warning = any("⚠️" in f for f in faults)
     if not dev["is_online"]:
@@ -569,12 +443,17 @@ def check_all(dev):
     else:
         dev["status_summary"] = "online"
         dev["alert_level"] = "normal"
-    
     dev["fault_list"] = faults
     trigger_alert(dev)
     return dev
 
-# ==================== Middleware ====================
+@app.before_request
+def check_login():
+    if request.path in ["/", "/login", "/do_login", "/logout", "/api/data", "/api/devices", "/api/report-excel"]:
+        return
+    if "username" not in session:
+        return redirect("/login")
+
 @app.before_request
 def update_online():
     now = datetime.now()
@@ -586,13 +465,29 @@ def update_online():
             d["is_online"] = False
         check_all(d)
 
-# ==================== API Routes ====================
+# ===== หน้าแรก =====
+@app.route("/")
+def home():
+    if "username" in session:
+        return redirect("/dashboard")
+    return redirect("/login")
+
 @app.route("/api/data", methods=["GET"])
 def get_data():
     dev_id = request.args.get("device_id", "SAFE-001")
     for d in devices:
         if d["device_id"] == dev_id:
-            return jsonify(d)
+            return jsonify({
+                "device_id": d["device_id"],
+                "role": d["role"],
+                "backup_active": d["backup_active"],
+                "partner_online": d["partner_online"],
+                "current_temp": d["current_temp"],
+                "humidity": d["humidity"],
+                "is_online": d["is_online"],
+                "relay_state": d["relay_state"],
+                "safety_lock": d["safety_lock"]
+            })
     return jsonify({"error": "Not found"}), 404
 
 @app.route("/api/data", methods=["POST"])
@@ -629,7 +524,7 @@ def receive():
 @app.route("/api/devices")
 def get_devices():
     my_cust = session.get("cust_id", "")
-    if my_cust == "ALL" or not my_cust:
+    if my_cust == "ALL":
         return jsonify(devices)
     return jsonify([d for d in devices if d["customer_id"] == my_cust])
 
@@ -638,22 +533,58 @@ def download_report():
     if "username" not in session:
         return redirect("/login")
     report = generate_excel_report()
+    output = io.BytesIO(report["data"])
+    output.seek(0)
     return send_file(
-        io.BytesIO(report["data"]),
+        output,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         as_attachment=True,
         download_name=report["name"]
     )
 
-# ==================== หน้าเข้าสู่ระบบ ====================
+@app.route("/login")
+def login():
+    err = request.args.get("err", "")
+    return render_template_string("""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เข้าสู่ระบบ — SAFE-ELEC</title>
+<style>
+body{background:#0f1629;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px}
+.box{background:#1a2342;padding:30px;border-radius:16px;width:100%;max-width:400px;border:1px solid #2a3b63}
+.logo{max-width:220px;margin:0 auto 20px;display:block}  
+h2{text-align:center;color:#6cf;margin-bottom:25px}
+input{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:none;background:#0f1f3f;color:#fff;font-size:16px}
+button{width:100%;padding:12px;background:#2f9;border:none;border-radius:8px;color:#032;font-weight:bold;font-size:16px;margin-top:10px;cursor:pointer}
+.err{color:#f44;text-align:center;margin-top:15px}
+</style>
+</head>
+<body>
+<div class="box">
+<img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/865611D1-AE49-4F4F-9460-CA01F09BDD8E.png" alt="PANS" class="logo">
+<h2>🔐 เข้าสู่ระบบ SAFE-ELEC</h2>
+<form method="post" action="/do_login">
+<input type="text" name="username" placeholder="ชื่อผู้ใช้" required>
+<input type="password" name="password" placeholder="รหัสผ่าน" required>
+<button type="submit">เข้าสู่ระบบ</button>
+{% if err %}<div class="err">{{err}}</div>{% endif %}
+</form>
+</div>
+</body>
+</html>
+""", err=err)
+
 @app.route("/do_login", methods=["POST"])
 def do_login():
-    username = request.form.get("username", "")
+    username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
-    user = USER_DB.get(username)
-    if user and user["password"] == password:
+    if username in USER_DB and USER_DB[username]["password"] == password:
         session["username"] = username
-        session["cust_id"] = user["customer_id"]
+        session["cust_id"] = USER_DB[username]["customer_id"]
+        session["name"] = USER_DB[username]["name"]
         return redirect("/dashboard")
     return redirect("/login?err=ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
 
@@ -672,27 +603,151 @@ def dashboard():
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>แดชบอร์ด — SAFE-ELEC</title>
+<title>SAFE-ELEC PLATFORM</title>
 <style>
-    body { font-family: sans-serif; background: #0F172A; color: white; padding: 20px; }
-    .header { display: flex; justify-content: space-between; align-items: center; }
-    .btn { padding: 8px 16px; background: #34D399; color: #0F172A; border-radius: 6px; text-decoration: none; font-weight: bold; }
+*{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif}
+body{background:#0f1629;color:#fff;padding:16px}
+h1{text-align:center;color:#6cf;margin-bottom:4px}
+.ver{text-align:center;color:#8ac;margin-bottom:8px}
+.user-bar{text-align:right;margin-bottom:12px;padding:8px 12px;background:#1a2342;border-radius:8px;font-size:14px}
+.user-bar a{color:#f66;text-decoration:none;margin-left:12px}
+.tabs{display:flex;max-width:450px;margin:0 auto 12px;border-radius:10px;background:#1a2342;padding:4px}
+.tab{flex:1;padding:10px 0;text-align:center;border-radius:8px;cursor:pointer;font-weight:bold;transition:all .2s}
+.tab.inactive{background:transparent;color:#8ac}
+.tab.active.mini{background:#2f9;color:#032}
+.tab.active.full{background:#48f;color:#fff}
+.search-box{max-width:520px;margin:0 auto 12px}
+.search-input-wrap{position:relative}
+.search-input-wrap input{width:100%;padding:12px 12px 12px 40px;border-radius:10px;border:none;background:#1a2342;color:#fff;font-size:15px}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#8ac}
+.result-info{margin:8px 4px;color:#8ac;font-size:13px}
+.result-info b{color:#fff}
+.card{background:#1a2342;border-radius:16px;padding:16px;margin-bottom:16px;border:1px solid #2a3b63}
+.card.online{border-left:4px solid #4f9}
+.card.warning{border-left:4px solid #fa4}
+.card.critical{border-left:4px solid #f44;background:#251a30}
+.card.offline{border-left:4px solid #666;opacity:0.85}
+.name{font-size:17px;font-weight:bold;color:#c9f;margin-bottom:8px}
+.meta{font-size:13px;color:#aaa;margin-bottom:10px}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;margin-left:8px;font-weight:bold}
+.badge-master{background:#2f9;color:#032}
+.badge-backup{background:#48f;color:#fff}
+.badge-active{background:#f44;color:#fff}
+.section{margin:12px 0;padding:12px;border-radius:10px;background:#0f1f3f}
+.row{margin:5px 0;font-size:14px;line-height:1.5}
+.ok{color:#4f9}
+.warn{color:#fa4}
+.dang{color:#f44}
+.fbox{border:1px solid #f44;background:#2e1515;padding:12px;border-radius:8px;margin:10px 0}
+.gnd-ok{border-left:3px solid #4f9;padding-left:10px}
+.gnd-warn{border-left:3px solid #fa4;padding-left:10px}
+.gnd-fail{border-left:3px solid #f44;padding-left:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:10px}
+.item{padding:8px 10px;border-radius:6px;background:#1e2b4d;font-size:13px}
+.hidden{display:none !important}
+.no-result{text-align:center;padding:40px 20px;color:#8ac}
+.btn-report{display:inline-block;margin-left:10px;padding:6px 12px;background:#2f9;color:#032;border-radius:6px;text-decoration:none;font-weight:bold;font-size:13px}
 </style>
 </head>
 <body>
-    <div class="header">
-        <h1>📊 แดชบอร์ด SAFE-ELEC</h1>
-        <div>
-            <span>ยินดีต้อนรับ, """ + session["username"] + """</span>
-            <a href="/logout" class="btn" style="margin-left:12px; background:#F87171;">ออกจากระบบ</a>
-        </div>
-    </div>
-    <p>ระบบทำงานปกติ ✅</p>
-    <a href="/api/devices" class="btn">ดูข้อมูลอุปกรณ์</a>
-    <a href="/api/report-excel" class="btn" style="margin-left:12px;">ดาวน์โหลดรายงาน Excel</a>
-</body>
-</html>
-""")
+<h1>⚡ SAFE-ELEC PLATFORM</h1>
+<div class="ver">รองรับระบบคู่ขนาน ESP — ตัวหลักเสีย สำรองทำงานแทนทันที ✅</div>
+<div class="user-bar">
+  👤 {{session['name']}}
+  <a href="/api/report-excel" class="btn-report">📊 ดาวน์โหลดรายงาน</a>
+  <a href="/logout">ออกจากระบบ</a>
+</div>
+<div class="tabs">
+  <div class="tab active mini" id="tab-mini" onclick="setView('mini')">🟢 มินิ</div>
+  <div class="tab inactive full" id="tab-full" onclick="setView('full')">🔵 เต็มระบบ</div>
+</div>
+<div class="search-box">
+  <div class="search-input-wrap">
+    <span class="search-icon">🔍</span>
+    <input id="q" placeholder="ค้นหา...">
+  </div>
+  <div id="result-info" class="result-info"></div>
+</div>
+<div id="list"></div>
+<script>
+let all = [];
+let currentView = 'mini';
+const CONFIG_SITE_TYPES = """ + json.dumps(CONFIG["SITE_TYPES"], ensure_ascii=False) + """;
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+async function load(){
+  const res = await fetch('/api/devices');
+  all = await res.json();
+  applyFilterAndRender();
+}
+function setView(view){
+  currentView = view;
+  document.getElementById('tab-mini').className = view==='mini'?'tab active mini':'tab inactive';
+  document.getElementById('tab-full').className = view==='full'?'tab active full':'tab inactive';
+  applyFilterAndRender();
+}
+function getIcon(d){
+  const m={online:'🟢',warning:'🟡',critical:'🔴',offline:'⚫'};
+  return m[d.status_summary]||'❓';
+}
+function getBadge(d){
+  if(d.backup_active) return '<span class="badge badge-active">⚡ ทำงานแทน</span>';
+  if(d.role==='MASTER') return '<span class="badge badge-master">ตัวหลัก</span>';
+  if(d.role==='BACKUP') return '<span class="badge badge-backup">สำรอง</span>';
+  return '';
+}
+function getSensorIcon(s){
+  if(s.ok===true) return '✅';
+  if(s.ok===false) return '❌';
+  return '⏳';
+}
+function matchDevice(d, kw){
+  if(!kw) return true;
+  const typeLabel = CONFIG_SITE_TYPES[d.site_type] || d.site_type;
+  const searchText = [
+    d.device_id, d.site_name, d.customer_id, d.province, typeLabel,
+    d.status_summary, d.is_online ? 'ออนไลน์' : 'ออฟไลน์',
+    d.current_temp+'', d.humidity+'', d.role||''
+  ].join(' ').toLowerCase();
+  return searchText.includes(kw);
+}
+function applyFilterAndRender(){
+  const kw = document.getElementById('q').value.trim().toLowerCase();
+  let filtered = all.filter(d => matchDevice(d, kw));
+  if (!kw) {
+    filtered = filtered.filter(d => d.is_online);
+    document.getElementById('result-info').innerHTML = 
+      `แสดง <b>${filtered.length}</b> ออนไลน์ จากทั้งหมด <b>${all.length}</b> รายการ`;
+  } else {
+    document.getElementById('result-info').innerHTML = 
+      `พบ <b>${filtered.length}</b> จากทั้งหมด <b>${all.length}</b> รายการ`;
+  }
+  render(filtered);
+}
+function render(list){
+  if(list.length === 0){
+    document.getElementById('list').innerHTML = `<div class="no-result">ไม่พบอุปกรณ์ที่ออนไลน์ 😊<br>รอการเชื่อมต่อจากอุปกรณ์...</div>`;
+    return;
+  }
+  document.getElementById('list').innerHTML = list.map(d=>`
+    <div class="card ${d.status_summary}">
+      <div class="name">${getIcon(d)} ${d.device_id} — ${d.site_name} ${getBadge(d)}</div>
+      <div class="meta">🏢 ${d.customer_id} | 📍 ${d.province} | ⏰ ${d.last_updated}</div>
+      ${!d.partner_online && d.role==='MASTER'?'<div class="fbox">⚠️ ไม่พบคู่ขนาน — ตรวจสอบตัวสำรอง</div>':''}
+      ${d.backup_active?'<div class="fbox">⚡ ตัวหลักขาดการติดต่อ — สำรองกำลังทำงานแทน</div>':''}
+      ${d.fault_list.length>0?`<div class="fbox"><b>⚠️ พบ ${d.fault_list.length} ปัญหา</b>${d.fault_list.map(f=>`<div class="row">${f}</div>`).join('')}</div>`:''}
+      
+      <div class="${currentView!=='mini'?'hidden':''}">
+        <div class="section">
+                <b>📊 ตรวจสอบอุปกรณ์วัด</b>
+          <div class="grid">
+            ${Object.entries(d.sensors)
+              .filter(([k]) => k.startsWith('sens_'))
+              .map(([k, s]) => `
+                <div class="item ${s.ok === true ? 'ok' : s.ok === false ? 'dang' : 'warn'}">
+                  ${getSensorIcon(s)} ${s.name}<br><b>${s.value}</b>
+                </div>`
+              ).join('')}
+          </div>
+        </div>
+
+          <b>🌡
