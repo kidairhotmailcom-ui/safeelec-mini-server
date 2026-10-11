@@ -603,37 +603,18 @@ body {
     backdrop-filter: blur(8px);
     border: 1px solid rgba(0, 200, 255, 0.15);
     border-radius: 12px;
-    padding: 20px 15px;
+    padding: 24px 20px;
     margin-bottom: 24px;
-}
-.logo-img {
-    max-width: 130px;
-    margin: 0 auto 10px;
-    display: block;
-}
-.company-th {
-    font-size: 18px;
-    color: #1a1a1a;
-    font-weight: 700;
-}
-.divider-row {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    margin: 6px 0;
-    font-size: 13px;
-    color: #333;
 }
-.divider-line {
-    width: 35px;
-    height: 1px;
-    background: #333;
-}
-.company-en {
-    font-size: 11px;
-    color: #222;
-    letter-spacing: 0.5px;
+.logo-img {
+    max-width: 100%;
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: contain;
 }
 .login-title {
     font-size: 22px;
@@ -714,13 +695,6 @@ button:active { transform: scale(0.97); }
     <div class="wrapper">
         <div class="logo-card">
             <img src="https://raw.githubusercontent.com/kidairhotmailcom-ui/safeelec-mini-server/main/119B2CA8-7BC5-4D30-9735-5200A647A172.png" alt="PNS" class="logo-img">
-            <div class="company-th">บริษัท เพชรนาคา</div>
-            <div class="divider-row">
-                <div class="divider-line"></div>
-                <span>system work จำกัด</span>
-                <div class="divider-line"></div>
-            </div>
-            <div class="company-en">PETCHNAKA SYSTEM WORK CO.,LTD.</div>
         </div>
 
         <div class="login-title">
