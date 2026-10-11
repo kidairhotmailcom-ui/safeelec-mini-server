@@ -752,27 +752,9 @@ def login():
     </div>
 </body>
 </html>
-    """, err=err)
+    """)
 
+# ==================== ตรวจสอบเข้าสู่ระบบ ====================
 @app.route("/do_login", methods=["POST"])
 def do_login():
-    user = request.form.get("user", "").strip()
-    pwd = request.form.get("pwd", "")
-    if user in USER_DB and USER_DB[user]["password"] == pwd:
-        session["username"] = user
-        session["cust_id"] = USER_DB[user]["customer_id"]
-        session["name"] = USER_DB[user]["name"]
-        return redirect("/")
-    return redirect("/login?err=ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect("/login")
-
-# ==================== หน้าหลัก/แดชบอร์ด ====================
-@app.route("/")
-def dashboard():
-    return render_template_string("""
-<!DOCTYPE html>
-<html lang="
+    user = request.form.get("user",
