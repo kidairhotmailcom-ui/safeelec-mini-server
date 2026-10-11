@@ -258,29 +258,107 @@ def trigger_alert(dev):
 def generate_excel_report():
     output = io.BytesIO()
     workbook = xlsxwriter.Workbook(output)
-    ws = workbook.add_worksheet("สรุปภาพรวม")
-    header = workbook.add_format({'bold': True, 'bg_color': '#2f9', 'color': '#032', 'align': 'center'})
-    normal = workbook.add_format({'text_wrap': True})
-    red = workbook.add_format({'font_color': '#f44', 'bold': True})
-    green = workbook.add_format({'font_color': '#4f9'})
-    headers = ["รหัส", "สถานที่", "บทบาท", "ออนไลน์", "สถานะ", "อุณหภูมิ", "กราวด์ R(Ω)", "กราวด์ V(V)", "ปัญหา"]
-    for col, h in enumerate(headers):
-        ws.write(0, col, h, header)
+    
+    # === รูปแบบ ===
+    fmt_header = workbook.add_format({'bold': True, 'bg_color': '#1e40af', 'color': '#ffffff', 'align': 'center', 'valign': 'vcenter', 'text_wrap': True})
+    fmt_center = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
+    fmt_left = workbook.add_format({'align': 'left', 'valign': 'vcenter', 'text_wrap': True})
+    fmt_online = workbook.add_format({'color': '#22c55e', 'bold': True, 'align': 'center'})
+    fmt_offline = workbook.add_format({'color': '#ef4444', 'bold': True, 'align': 'center'})
+    fmt_normal = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
+    fmt_red = workbook.add_format({'bg_color': '#fef2f2', 'font_color': '#dc2626', 'align': 'center'})
+    fmt_yellow = workbook.add_format({'bg_color': '#fffbeb', 'font_color': '#d97706', 'align': 'center'})
+    fmt_green = workbook.add_format({'bg_color': '#f0fdf4', 'font_color': '#16a34a', 'align': 'center'})
+
+    # ===== แผ่น 1: สรุปภาพรวม =====
+    ws1 = workbook.add_worksheet("สรุปภาพรวม")
+    headers_summary = [
+        "วันที่", "เวลา", "รหัสอุปกรณ์", "สถานที่ติดตั้ง", "ลูกค้า", "จังหวัด",
+        "บทบาท", "สถานะเชื่อมต่อ", "สถานะระบบ",
+        "อุณหภูมิ (°C)", "ความชื้น (%)",
+        "กราวด์ R (Ω)", "กราวด์ V (V)",
+        "จำนวนปัญหา", "รายการปัญหา"
+    ]
+    for col, h in enumerate(headers_summary):
+        ws1.write(0, col, h, fmt_header)
+        ws1.set_column(col, col, 16)
+    
     for row, d in enumerate(devices, start=1):
-        status_fmt = green if d["alert_level"]=="normal" else red
+        status_fmt = fmt_green if d["alert_level"]=="normal" else fmt_yellow if d["alert_level"]=="warning" else fmt_red
+        online_fmt = fmt_online if d["is_online"] else fmt_offline
         role_label = d.get("role", "-")
         if d.get("backup_active"):
             role_label += " (ทำงานแทน)"
-        ws.write(row, 0, d["device_id"], normal)
-        ws.write(row, 1, d["site_name"], normal)
-        ws.write(row, 2, role_label, normal)
-        ws.write(row, 3, "✅ ใช่" if d["is_online"] else "❌ ไม่", green if d["is_online"] else red)
-        ws.write(row, 4, d["status_summary"], status_fmt)
-        ws.write(row, 5, d["current_temp"], normal)
-        ws.write(row, 6, d["gnd_resistance_ohm"], normal)
-        ws.write(row, 7, d["gnd_voltage_v"], normal)
-        ws.write(row, 8, f"{len(d['fault_list'])} รายการ", normal)
-    ws.set_column(0, 8, 18)
+        
+        ws1.write(row, 0, datetime.now().strftime("%d/%m/%Y"), fmt_center)
+        ws1.write(row, 1, d.get("last_updated", "-"), fmt_center)
+        ws1.write(row, 2, d["device_id"], fmt_left)
+        ws1.write(row, 3, d["site_name"], fmt_left)
+        ws1.write(row, 4, d.get("customer_id", "-"), fmt_center)
+        ws1.write(row, 5, d.get("province", "-"), fmt_center)
+        ws1.write(row, 6, role_label, fmt_center)
+        ws1.write(row, 7, "✅ ออนไลน์" if d["is_online"] else "❌ ออฟไลน์", online_fmt)
+        ws1.write(row, 8, d["status_summary"], status_fmt)
+        ws1.write(row, 9, d.get("current_temp", "-"), fmt_center)
+        ws1.write(row, 10, d.get("humidity", "-"), fmt_center)
+        ws1.write(row, 11, d.get("gnd_resistance_ohm", "-"), fmt_center)
+        ws1.write(row, 12, d.get("gnd_voltage_v", "-"), fmt_center)
+        ws1.write(row, 13, len(d.get("fault_list", [])), fmt_center)
+        ws1.write(row, 14, "; ".join(d.get("fault_list", ["-"])), fmt_left)
+
+    # ===== แผ่น 2: ข้อมูลเชิงลึก =====
+    ws2 = workbook.add_worksheet("ข้อมูลเชิงลึก")
+    headers_detail = [
+        "รหัส", "สถานที่", "แรงดัน L1-L2 (V)", "แรงดัน L2-L3 (V)", "แรงดัน L3-L1 (V)",
+        "กระแส L1 (A)", "กระแส L2 (A)", "กระแส L3 (A)", "กำลังไฟฟ้า (kW)",
+        "โซน1 V", "โซน1 A", "โซน2 V", "โซน2 A", "โซน3 V", "โซน3 A",
+        "ระบบ 3 เฟส", "ระบบโซน", "แหล่งจ่าย", "รีเลย์", "ล็อกความปลอดภัย"
+    ]
+    for col, h in enumerate(headers_detail):
+        ws2.write(0, col, h, fmt_header)
+        ws2.set_column(col, col, 14)
+    
+    for row, d in enumerate(devices, start=1):
+        ws2.write(row, 0, d["device_id"], fmt_left)
+        ws2.write(row, 1, d["site_name"], fmt_left)
+        ws2.write(row, 2, d.get("v_l1_l2", "-"), fmt_center)
+        ws2.write(row, 3, d.get("v_l2_l3", "-"), fmt_center)
+        ws2.write(row, 4, d.get("v_l3_l1", "-"), fmt_center)
+        ws2.write(row, 5, d.get("a_l1", "-"), fmt_center)
+        ws2.write(row, 6, d.get("a_l2", "-"), fmt_center)
+        ws2.write(row, 7, d.get("a_l3", "-"), fmt_center)
+        ws2.write(row, 8, d.get("power_kw", "-"), fmt_center)
+        ws2.write(row, 9, d.get("z1_v", "-"), fmt_center)
+        ws2.write(row, 10, d.get("z1_a", "-"), fmt_center)
+        ws2.write(row, 11, d.get("z2_v", "-"), fmt_center)
+        ws2.write(row, 12, d.get("z2_a", "-"), fmt_center)
+        ws2.write(row, 13, d.get("z3_v", "-"), fmt_center)
+        ws2.write(row, 14, d.get("z3_a", "-"), fmt_center)
+        ws2.write(row, 15, "✅ ปกติ" if d.get("balance_3ph_ok") else "⚠️ ไม่สมดุล", fmt_center)
+        ws2.write(row, 16, "✅ ปกติ" if d.get("z_balance_ok") else "⚠️ ไม่สมดุล", fmt_center)
+        ws2.write(row, 17, d.get("power_status", "-"), fmt_center)
+        ws2.write(row, 18, "ON" if d.get("relay_state") else "OFF", fmt_center)
+        ws2.write(row, 19, "ล็อก" if d.get("safety_lock") else "ปกติ", fmt_center)
+
+    # ===== แผ่น 3: สถานะเซ็นเซอร์ =====
+    ws3 = workbook.add_worksheet("สถานะเซ็นเซอร์")
+    headers_sensor = ["รหัสอุปกรณ์", "ชื่อสถานที่", "เซ็นเซอร์", "ค่าที่วัดได้", "สถานะ"]
+    for col, h in enumerate(headers_sensor):
+        ws3.write(0, col, h, fmt_header)
+        ws3.set_column(col, col, 22)
+    
+    row_num = 1
+    for d in devices:
+        for key, s in d.get("sensors", {}).items():
+            status_text = "✅ ปกติ" if s.get("ok") is True else "❌ ผิดปกติ" if s.get("ok") is False else "⏳ รอข้อมูล"
+            status_fmt = fmt_green if s.get("ok") is True else fmt_red if s.get("ok") is False else fmt_yellow
+            ws3.write(row_num, 0, d["device_id"], fmt_left)
+            ws3.write(row_num, 1, d["site_name"], fmt_left)
+            ws3.write(row_num, 2, s.get("name", key), fmt_left)
+            ws3.write(row_num, 3, s.get("value", "-"), fmt_center)
+            ws3.write(row_num, 4, status_text, status_fmt)
+            row_num += 1
+
     workbook.close()
     output.seek(0)
     return {
