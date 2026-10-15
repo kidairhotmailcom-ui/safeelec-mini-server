@@ -22,7 +22,7 @@ USER_DB = {
 }
 
 CONFIG = {
-    "SYSTEM_NAME": "SAFE-ELEC",
+    "SYSTEM_NAME": "SAFE-ELEC Smart Energy System",
     "VERSION": "3.0.0-FULL-DEPLOY",
     "STANDARD": {
         "V3_NOM": 380, "V3_MIN": 342, "V3_MAX": 418,
