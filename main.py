@@ -53,8 +53,8 @@ CONFIG = {
         "AUTO_SEND": True,
         "SCHEDULE_TIME": "09:00",
         "DAY_OF_MONTH": 1,
-    }
-,
+    },
+
    "ENERGY": {
         "ENABLED": True,
         "DAILY_TARGET_KWH": 4.0,
@@ -62,8 +62,8 @@ CONFIG = {
         "PF": 0.9,
         "WARNING_PCT": 105,
         "LOSS_CURRENT_THRESHOLD": 0.2,
-    }
-
+    } 
+}
 FIELD_MAP = {
     "id": "device_id", "esp_id": "device_id", "esp": "device_id",
     "site": "site_name", "cust": "customer_id", "role": "role",
@@ -490,6 +490,7 @@ def check_all(dev):
     S = CONFIG["STANDARD"]
     faults = check_ground(dev)
     faults += check_dual_backup(dev)
+    493    update_device_energy(dev)  
     sensors_list = [
         ("sens_current", "เซ็นเซอร์กระแส"),
         ("sens_temp", "เซ็นเซอร์อุณหภูมิ"),
