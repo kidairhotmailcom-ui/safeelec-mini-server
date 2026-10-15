@@ -835,8 +835,7 @@ button:active { transform: scale(0.97); }
         </div>
 
         <div class="login-title">
-            🔐 เข้าสู่ระบบ <span class="safe-blue">SAFE-</span><br>
-            <span class="safe-blue">SAFE-ELEC</span>
+               🔐 <span class="safe-blue">SAFE-ELEC</span> Smart Energy System
         </div>
 
         <form method="post" action="/do_login">
