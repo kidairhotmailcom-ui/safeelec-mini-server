@@ -443,6 +443,48 @@ def check_dual_backup(dev):
         dev["sensors"]["dualmode"]["value"] = "ไม่ระบุ"
         dev["sensors"]["dualmode"]["ok"] = None
     return faults
+def calc_power(voltage, current, pf=0.9):
+    return round((voltage * current * pf) / 1000, 3)
+
+def update_device_energy(dev, hours=1):
+    E = CONFIG["ENERGY"]
+    if not E["ENABLED"] or not dev.get("is_online", False):
+        return
+    
+    z1_kw = calc_power(dev["z1_v"]["value"], dev["z1_a"]["value"], E["PF"])
+    z2_kw = calc_power(dev["z2_v"]["value"], dev["z2_a"]["value"], E["PF"])
+    z3_kw = calc_power(dev["z3_v"]["value"], dev["z3_a"]["value"], E["PF"])
+    total_kw = round(z1_kw + z2_kw + z3_kw, 3)
+    
+    added_kwh = round(total_kw * hours, 3)
+    dev["energy_today_kwh"] = round(dev["energy_today_kwh"] + added_kwh, 3)
+    dev["energy_cost_today"] = round(dev["energy_today_kwh"] * E["ELECTRICITY_RATE"], 2)
+    
+    tgt = dev["energy_target_kwh"]
+    dev["energy_percent_of_target"] = round((dev["energy_today_kwh"] / tgt) * 100, 1) if tgt > 0 else 0
+    
+    if dev["energy_percent_of_target"] > E["WARNING_PCT"]:
+        dev["energy_status"] = "🔴 สูงกว่าเป้าหมาย"
+    elif dev["energy_percent_of_target"] < 95:
+        dev["energy_status"] = "🟢 ประหยัดดี"
+    else:
+        dev["energy_status"] = "🟡 ปกติ"
+    
+    if dev["energy_today_kwh"] > dev["energy_yesterday_kwh"]:
+        dev["energy_trend"] = "📈 เพิ่มขึ้น"
+    elif dev["energy_today_kwh"] < dev["energy_yesterday_kwh"]:
+        dev["energy_trend"] = "📉 ลดลง"
+    else:
+        dev["energy_trend"] = "➡️ คงที่"
+    
+    dev["energy_alerts"] = []
+    for name, v, a in [("โซน1", dev["z1_v"]["value"], dev["z1_a"]["value"]),
+                        ("โซน2", dev["z2_v"]["value"], dev["z2_a"]["value"]),
+                        ("โซน3", dev["z3_v"]["value"], dev["z3_a"]["value"])]:
+        if 0 < a < E["LOSS_CURRENT_THRESHOLD"] * 5:
+            loss_kwh = round(calc_power(v, a) * 24, 2)
+            if loss_kwh > 0.01:
+                dev["energy_alerts"].append(f"⚠️ {name}: พบกระแสรั่ว สูญเสีย ~{loss_kwh} kWh/วัน")
 
 def check_all(dev):
     S = CONFIG["STANDARD"]
