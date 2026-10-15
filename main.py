@@ -54,7 +54,15 @@ CONFIG = {
         "SCHEDULE_TIME": "09:00",
         "DAY_OF_MONTH": 1,
     }
-}
+,
+   "ENERGY": {
+        "ENABLED": True,
+        "DAILY_TARGET_KWH": 4.0,
+        "ELECTRICITY_RATE": 4.22,
+        "PF": 0.9,
+        "WARNING_PCT": 105,
+        "LOSS_CURRENT_THRESHOLD": 0.2,
+    }
 
 FIELD_MAP = {
     "id": "device_id", "esp_id": "device_id", "esp": "device_id",
