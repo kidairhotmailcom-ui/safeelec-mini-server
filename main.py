@@ -861,7 +861,7 @@ h1{text-align:center;color:#6cf;margin-bottom:4px}
 </style>
 </head>
 <body>
-<h1>⚡ SAFE-ELEC PLATFORM</h1>
+<h1>⚡ SAFE-ELEC Smart Energy System</h1>
 <div class="ver">รองรับระบบคู่ขนาน ESP — ตัวหลักเสีย สำรองทำงานแทนทันที ✅</div>
 <div class="user-bar">
   👤 {{session['name']}}
