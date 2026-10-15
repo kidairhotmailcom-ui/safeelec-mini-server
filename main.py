@@ -156,7 +156,17 @@ TEMPLATE = {
         "sens_ground": {"name": "เซ็นเซอร์กราวด์", "value": "รอข้อมูล", "ok": None},
     },
     "fault_list": [], "alert_level": "normal",
-}
+    "energy_today_kwh": 0.0,
+    "energy_yesterday_kwh": 0.0,
+    "energy_cost_today": 0.0,
+    "energy_target_kwh": 4.0,
+    "energy_percent_of_target": 0.0,
+    "energy_trend": "-",
+    "energy_status": "normal",
+    "energy_loss_kwh": 0.0,
+    "energy_alerts": [],
+    "energy_history": [],
+    }
 
 devices = []
 for dev_id, site, cust, prov, stype in DEVICE_LIST:
