@@ -450,10 +450,10 @@ def update_device_energy(dev, hours=1):
     E = CONFIG["ENERGY"]
     if not E["ENABLED"] or not dev.get("is_online", False):
         return
-    
-    z1_kw = calc_power(dev["z1_v"]["value"], dev["z1_a"]["value"], E["PF"])
-    z2_kw = calc_power(dev["z2_v"]["value"], dev["z2_a"]["value"], E["PF"])
-    z3_kw = calc_power(dev["z3_v"]["value"], dev["z3_a"]["value"], E["PF"])
+
+    z1_kw = calc_power(dev["z1_v"], dev["z1_a"], E["PF"])
+z2_kw = calc_power(dev["z2_v"], dev["z2_a"], E["PF"])
+z3_kw = calc_power(dev["z3_v"], dev["z3_a"], E["PF"])
     total_kw = round(z1_kw + z2_kw + z3_kw, 3)
     
     added_kwh = round(total_kw * hours, 3)
@@ -478,9 +478,9 @@ def update_device_energy(dev, hours=1):
         dev["energy_trend"] = "➡️ คงที่"
     
     dev["energy_alerts"] = []
-    for name, v, a in [("โซน1", dev["z1_v"]["value"], dev["z1_a"]["value"]),
-                        ("โซน2", dev["z2_v"]["value"], dev["z2_a"]["value"]),
-                        ("โซน3", dev["z3_v"]["value"], dev["z3_a"]["value"])]:
+    for name, v, a in [("โซน1", dev["z1_v"], dev["z1_a"]),
+                    ("โซน2", dev["z2_v"], dev["z2_a"]),
+                    ("โซน3", dev["z3_v"], dev["z3_a"])]:
         if 0 < a < E["LOSS_CURRENT_THRESHOLD"] * 5:
             loss_kwh = round(calc_power(v, a) * 24, 2)
             if loss_kwh > 0.01:
