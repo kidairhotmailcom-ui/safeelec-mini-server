@@ -478,7 +478,7 @@ def update_device_energy(dev, hours=1):
         dev["energy_trend"] = "➡️ คงที่"
     
     dev["energy_alerts"] = []
-        for name, v, a in [
+    for name, v, a in [
         ("โซน1", dev["z1_v"], dev["z1_a"]),
         ("โซน2", dev["z2_v"], dev["z2_a"]),
         ("โซน3", dev["z3_v"], dev["z3_a"])
