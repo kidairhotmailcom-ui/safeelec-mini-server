@@ -478,9 +478,11 @@ def update_device_energy(dev, hours=1):
         dev["energy_trend"] = "➡️ คงที่"
     
     dev["energy_alerts"] = []
-    for name, v, a in [("โซน1", dev["z1_v"], dev["z1_a"]),
-                    ("โซน2", dev["z2_v"], dev["z2_a"]),
-                    ("โซน3", dev["z3_v"], dev["z3_a"])]:
+        for name, v, a in [
+        ("โซน1", dev["z1_v"], dev["z1_a"]),
+        ("โซน2", dev["z2_v"], dev["z2_a"]),
+        ("โซน3", dev["z3_v"], dev["z3_a"])
+    ]:
         if 0 < a < E["LOSS_CURRENT_THRESHOLD"] * 5:
             loss_kwh = round(calc_power(v, a) * 24, 2)
             if loss_kwh > 0.01:
