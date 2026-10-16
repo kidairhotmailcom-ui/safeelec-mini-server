@@ -190,12 +190,12 @@ def index():
       filter: blur(80px); top: 10%; left: 10%; z-index: 0;
     }
     .box {
-      background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(16px);
+      background: rgba(255,255,255,0.03); backdrop-filter: blur(16px);
       padding: 50px 40px; border-radius: 28px; text-align: center; max-width: 500px;
-      border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 20px 50px rgba(0,0,0,0.4);
       position: relative; z-index: 1; transition: transform 0.3s ease;
     }
-    .box:hover { transform: translateY(-5px); border-color: rgba(0, 98, 255, 0.3); }
+    .box:hover { transform: translateY(-5px); border-color: rgba(0,98,255,0.3); }
     .logo-container { background: #fff; padding: 15px; border-radius: 20px; display: inline-block; margin-bottom: 25px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
     .logo { max-width: 140px; }
     h1 { font-family: 'Chakra Petch', sans-serif; font-size: 1.6rem; margin-bottom: 6px; }
@@ -253,9 +253,9 @@ def login_page():
       color: #e6f1ff;
     }
     .box {
-      background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(16px);
+      background: rgba(255,255,255,0.03); backdrop-filter: blur(16px);
       padding: 40px 30px; border-radius: 28px; max-width: 450px; width: 100%;
-      border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 20px 50px rgba(0,0,0,0.4);
       text-align: center;
     }
     .logo-container { 
@@ -322,35 +322,9 @@ def logout():
     session.clear()
     return redirect("/login")
 
-# === หน้าแดชบอร์ด ===
-@app.route("/dashboard")
-def dashboard():
-    if "username" not in session:
-        return redirect("/login")
-    return f"""
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>แดชบอร์ด — SAFE-ELEC</title>
-        <style>
-            body {{ background: #0f1629; color: #fff; font-family: sans-serif; padding: 30px; text-align: center; }}
-            .container {{ max-width: 600px; margin: 0 auto; background: #1a2342; padding: 40px; border-radius: 16px; border: 1px solid #2a3b63; }}
-            h1 {{ color: #6cf; margin-bottom: 20px; }}
-            .user {{ margin-bottom: 30px; color: #8ac; }}
-            a {{ color: #f66; text-decoration: none; display: inline-block; margin-top: 20px; padding: 10px 20px; background: #251a30; border-radius: 8px; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>✅ ยินดีต้อนรับสู่ SAFE-ELEC</h1>
-            <div class="user">👤 คุณ: <strong>{session.get('name', '')}</strong><br>รหัสลูกค้า: {session.get('cust_id', '')}</div>
-            <p>เข้าสู่ระบบสำเร็จแล้ว!</p>
-            <a href="/logout">🚪 ออกจากระบบ</a>
-        </div>
-    </body>
-    </html>
-    """
+# ==============================================
+# === API ควบคุมและสถานะอุปกรณ์ ===
+# ==============================================
 device_command_store = {}
 
 @app.route('/api/set-command', methods=['POST'])
@@ -366,7 +340,7 @@ def set_command():
             device_command_store[device_id] = {}
         device_command_store[device_id][f'z{zone}'] = state
         device_command_store[device_id]['cmd_hash'] = str(int(datetime.datetime.now().timestamp() * 1000))
-        return jsonify({'ok': True})
+        return jsonify({'ok': True, 'message': 'อัปเดตสถานะสำเร็จ'})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)})
 
@@ -376,18 +350,150 @@ def get_command():
     dev = device_command_store.get(device_id, {})
     return jsonify({
         'cmd_hash': dev.get('cmd_hash', ''),
-        'z1': dev.get('z1'),
-        'z2': dev.get('z2'),
-        'z3': dev.get('z3'),
-        'z4': dev.get('z4'),
-        'z5': dev.get('z5'),
-        'z6': dev.get('z6')
+        'z1': dev.get('z1', False),
+        'z2': dev.get('z2', False),
+        'z3': dev.get('z3', False),
+        'z4': dev.get('z4', False),
+        'z5': dev.get('z5', False),
+        'z6': dev.get('z6', False)
     })
 
 @app.route('/api/data', methods=['GET'])
 def get_device_data():
     device_id = request.args.get('device_id', 'SAFE-001')
     return jsonify(device_command_store.get(device_id, {}))
+
+# === หน้าแดชบอร์ด ===
+@app.route("/dashboard")
+def dashboard():
+    if "username" not in session:
+        return redirect("/login")
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>แดชบอร์ด — SAFE-ELEC</title>
+        <style>
+            body {{ background: #0f1629; color: #fff; font-family: sans-serif; padding: 30px; text-align: center; }}
+            .container {{ max-width: 600px; margin: 0 auto; background: #1a2342; padding: 40px; border-radius: 16px; border: 1px solid #2a3b63; }}
+            h1 {{ color: #6cf; margin-bottom: 10px; }}
+            .user {{ margin-bottom: 30px; color: #8ac; }}
+            a {{ color: #f66; text-decoration: none; display: inline-block; margin-top: 20px; padding: 10px 20px; background: #251a30; border-radius: 8px; }}
+            
+            .card {{ background: #253052; padding: 25px; border-radius: 12px; margin-top: 30px; text-align: left; }}
+            h2 {{ color: #a0d2ff; font-size: 1.1rem; margin-bottom: 20px; }}
+            
+            .zone-row {{ display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid #384470; }}
+            .zone-row:last-child {{ border-bottom: none; }}
+            
+            .zone-name {{ flex: 1; font-size: 0.95rem; }}
+            
+            .status-badge {{ 
+                display: inline-block; min-width: 70px; padding: 4px 10px; border-radius: 20px; 
+                font-size: 0.8rem; text-align: center; margin-right: 12px; font-weight: 500;
+            }}
+            .status-on {{ background: #065f46; color: #6ee7b7; }}
+            .status-off {{ background: #374151; color: #9ca3af; }}
+            
+            .btn {{ padding: 6px 16px; border: none; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: 500; min-width: 65px; }}
+            .btn-on {{ background: #10b981; color: white; }}
+            .btn-off {{ background: #4b5563; color: #e5e7eb; }}
+            
+            .refresh-btn {{ 
+                background: #3b82f6; color: white; border: none; padding: 8px 16px; 
+                border-radius: 6px; cursor: pointer; font-size: 0.85rem; margin-bottom: 15px;
+            }}
+            .refresh-btn:hover {{ background: #2563eb; }}
+            
+            .status-bar {{ margin-top: 15px; font-size: 0.85rem; color: #9ab; text-align: center; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>✅ แดชบอร์ดระบบ SAFE-ELEC</h1>
+            <div class="user">👤 คุณ: <strong>{session.get('name', '')}</strong><br>รหัสลูกค้า: {session.get('cust_id', '')}</div>
+            <p>เข้าสู่ระบบสำเร็จแล้ว!</p>
+            
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2>📊 สถานะอุปกรณ์</h2>
+                    <button class="refresh-btn" onclick="loadStatus()">🔄 รีเฟรช</button>
+                </div>
+                
+                <div id="status-list">
+                    <div style="text-align: center; padding: 20px; color: #9ab;">กำลังโหลด...</div>
+                </div>
+                
+                <div class="status-bar" id="last-update">อัปเดตเมื่อ: --</div>
+            </div>
+            
+            <a href="/logout">🚪 ออกจากระบบ</a>
+        </div>
+
+        <script>
+        const zoneNames = {{
+            1: '1. ไฟใต้กันสาด',
+            2: '2. ไฟโลโก้ป้าย',
+            3: '3. ไฟป้ายเสาสูง',
+            4: '4. ไฟลานจอด',
+            5: '5. ล็อคเลข 7',
+            6: '6. ไฟข้างร้าน'
+        }};
+
+        async function loadStatus() {{
+            try {{
+                const res = await fetch('/api/command?device_id=SAFE-001');
+                const data = await res.json();
+                renderStatus(data);
+                document.getElementById('last-update').textContent = 
+                    'อัปเดตเมื่อ: ' + new Date().toLocaleTimeString('th-TH');
+            }} catch (e) {{
+                document.getElementById('status-list').innerHTML = 
+                    '<div style="text-align:center; color:#f87171; padding:20px;">❌ โหลดข้อมูลล้มเหลว</div>';
+            }}
+        }}
+
+        function renderStatus(data) {{
+            let html = '';
+            for (let i = 1; i <= 6; i++) {{
+                const isOn = data['z' + i] === true;
+                html += `
+                    <div class="zone-row">
+                        <span class="zone-name">${{zoneNames[i]}}</span>
+                        <span class="status-badge ${{isOn ? 'status-on' : 'status-off'}}">
+                            ${{isOn ? '🟢 เปิด' : '⚪ ปิด'}}
+                        </span>
+                        <button class="btn ${{isOn ? 'btn-on' : 'btn-off'}}" 
+                                onclick="toggleZone(${{i}}, ${{!isOn}})">
+                            ${{isOn ? 'ปิด' : 'เปิด'}}
+                        </button>
+                    </div>
+                `;
+            }}
+            document.getElementById('status-list').innerHTML = html;
+        }}
+
+        async function toggleZone(zone, newState) {{
+            try {{
+                await fetch('/api/set-command', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ device_id: 'SAFE-001', zone: zone, state: newState }})
+                }});
+                await loadStatus();
+            }} catch (e) {{
+                alert('❌ ส่งคำสั่งล้มเหลว');
+            }}
+        }}
+
+        // โหลดสถานะเมื่อเปิดหน้า
+        window.onload = loadStatus;
+        </script>
+    </body>
+    </html>
+"""
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
