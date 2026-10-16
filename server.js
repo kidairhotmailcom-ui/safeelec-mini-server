@@ -351,6 +351,43 @@ def dashboard():
     </body>
     </html>
     """
+device_command_store = {}
+
+@app.route('/api/set-command', methods=['POST'])
+def set_command():
+    try:
+        data = request.json
+        device_id = data.get('device_id', 'SAFE-001')
+        zone = data.get('zone')
+        state = data.get('state')
+        if not zone or state is None:
+            return jsonify({'ok': False, 'error': 'ข้อมูลไม่ครบ'})
+        if device_id not in device_command_store:
+            device_command_store[device_id] = {}
+        device_command_store[device_id][f'z{zone}'] = state
+        device_command_store[device_id]['cmd_hash'] = str(int(datetime.datetime.now().timestamp() * 1000))
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+
+@app.route('/api/command', methods=['GET'])
+def get_command():
+    device_id = request.args.get('device_id', 'SAFE-001')
+    dev = device_command_store.get(device_id, {})
+    return jsonify({
+        'cmd_hash': dev.get('cmd_hash', ''),
+        'z1': dev.get('z1'),
+        'z2': dev.get('z2'),
+        'z3': dev.get('z3'),
+        'z4': dev.get('z4'),
+        'z5': dev.get('z5'),
+        'z6': dev.get('z6')
+    })
+
+@app.route('/api/data', methods=['GET'])
+def get_device_data():
+    device_id = request.args.get('device_id', 'SAFE-001')
+    return jsonify(device_command_store.get(device_id, {}))
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
