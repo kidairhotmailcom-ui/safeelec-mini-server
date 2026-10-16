@@ -168,9 +168,6 @@ def index():
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PNS - เพชรนาคา ซิสเต็มเวิร์ก</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -180,7 +177,6 @@ def index():
       align-items: center;
       justify-content: center;
       padding: 24px;
-      font-family: 'Sarabun', sans-serif;
       color: #e6f1ff;
       position: relative;
     }
@@ -193,22 +189,20 @@ def index():
       background: rgba(255,255,255,0.03); backdrop-filter: blur(16px);
       padding: 50px 40px; border-radius: 28px; text-align: center; max-width: 500px;
       border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 20px 50px rgba(0,0,0,0.4);
-      position: relative; z-index: 1; transition: transform 0.3s ease;
+      position: relative; z-index: 1;
     }
-    .box:hover { transform: translateY(-5px); border-color: rgba(0,98,255,0.3); }
     .logo-container { background: #fff; padding: 15px; border-radius: 20px; display: inline-block; margin-bottom: 25px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
     .logo { max-width: 140px; }
-    h1 { font-family: 'Chakra Petch', sans-serif; font-size: 1.6rem; margin-bottom: 6px; }
-    .en { font-family: 'Chakra Petch', sans-serif; color: #00d2ff; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 24px; }
+    h1 { font-size: 1.6rem; margin-bottom: 6px; }
+    .en { color: #00d2ff; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 24px; }
     .divider { height: 2px; width: 60px; background: linear-gradient(90deg, #0062ff, #00d2ff); margin: 0 auto 24px; border-radius: 2px; }
     p { color: #a0aec0; font-size: 1.1rem; margin-bottom: 35px; }
     .btn {
       display: inline-flex; align-items: center; justify-content: center; gap: 10px;
       background: linear-gradient(135deg, #0062ff, #004bd4); color: #fff;
       padding: 16px 32px; border-radius: 14px; text-decoration: none; font-weight: 600;
-      transition: all 0.3s ease;
     }
-    .btn:hover { background: linear-gradient(135deg, #1a75ff, #0056f5); transform: translateY(-2px); }
+    .btn:hover { background: linear-gradient(135deg, #1a75ff, #0056f5); }
   </style>
 </head>
 <body>
@@ -237,9 +231,6 @@ def login_page():
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>เข้าสู่ระบบ — SAFE-ELEC</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -249,7 +240,6 @@ def login_page():
       align-items: center;
       justify-content: center;
       padding: 24px;
-      font-family: 'Sarabun', sans-serif;
       color: #e6f1ff;
     }
     .box {
@@ -263,7 +253,7 @@ def login_page():
       display: inline-block; margin-bottom: 25px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); 
     }
     .logo { max-width: 130px; }
-    h2 { font-family: 'Chakra Petch', sans-serif; font-size: 1.4rem; margin-bottom: 25px; }
+    h2 { font-size: 1.4rem; margin-bottom: 25px; }
     .form-group { text-align: left; margin-bottom: 20px; }
     label { display: block; margin-bottom: 8px; color: #8892b0; font-size: 0.9rem; }
     input {
@@ -275,9 +265,8 @@ def login_page():
     .btn {
       width: 100%; padding: 14px; background: linear-gradient(90deg, #0062ff, #00d2ff);
       border: none; border-radius: 12px; color: #fff; font-size: 1rem;
-      font-weight: 600; cursor: pointer; transition: opacity 0.3s;
+      font-weight: 600; cursor: pointer;
     }
-    .btn:hover { opacity: 0.9; }
     .err { color: #f44; margin-top: 15px; }
   </style>
 </head>
@@ -363,7 +352,7 @@ def get_device_data():
     device_id = request.args.get('device_id', 'SAFE-001')
     return jsonify(device_command_store.get(device_id, {}))
 
-# === หน้าแดชบอร์ด ===
+# === หน้าแดชบอร์ด — รวมปุ่มกดและข้อมูลไว้ที่เดียวกัน ===
 @app.route("/dashboard")
 def dashboard():
     if "username" not in session:
@@ -376,57 +365,84 @@ def dashboard():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>แดชบอร์ด — SAFE-ELEC</title>
         <style>
-            body {{ background: #0f1629; color: #fff; font-family: sans-serif; padding: 30px; text-align: center; }}
-            .container {{ max-width: 600px; margin: 0 auto; background: #1a2342; padding: 40px; border-radius: 16px; border: 1px solid #2a3b63; }}
-            h1 {{ color: #6cf; margin-bottom: 10px; }}
-            .user {{ margin-bottom: 30px; color: #8ac; }}
+            body {{ background: #0f1629; color: #fff; font-family: sans-serif; padding: 20px; text-align: center; }}
+            .container {{ max-width: 600px; margin: 0 auto; }}
+            h1 {{ color: #6cf; margin-bottom: 10px; font-size: 1.5rem; }}
+            .user {{ margin-bottom: 20px; color: #8ac; font-size: 0.95rem; }}
             a {{ color: #f66; text-decoration: none; display: inline-block; margin-top: 20px; padding: 10px 20px; background: #251a30; border-radius: 8px; }}
             
-            .card {{ background: #253052; padding: 25px; border-radius: 12px; margin-top: 30px; text-align: left; }}
-            h2 {{ color: #a0d2ff; font-size: 1.1rem; margin-bottom: 20px; }}
+            .card {{ background: #253052; padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: left; }}
+            h2 {{ color: #a0d2ff; font-size: 1rem; margin-bottom: 15px; }}
             
-            .zone-row {{ display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid #384470; }}
+            /* === ส่วนข้อมูลเซนเซอร์ === */
+            .sensor-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }}
+            .sensor-item {{ background: rgba(51, 65, 85, 0.5); padding: 12px; border-radius: 8px; text-align: center; }}
+            .sensor-label {{ font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px; }}
+            .sensor-value {{ font-size: 1.1rem; font-weight: 600; color: #e2e8f0; }}
+            
+            /* === ส่วนปุ่มควบคุม === */
+            .zone-row {{ display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #384470; }}
             .zone-row:last-child {{ border-bottom: none; }}
-            
-            .zone-name {{ flex: 1; font-size: 0.95rem; }}
-            
+            .zone-name {{ flex: 1; font-size: 0.9rem; color: #e2e8f0; }}
             .status-badge {{ 
-                display: inline-block; min-width: 70px; padding: 4px 10px; border-radius: 20px; 
-                font-size: 0.8rem; text-align: center; margin-right: 12px; font-weight: 500;
+                display: inline-block; min-width: 60px; padding: 3px 8px; border-radius: 12px; 
+                font-size: 0.75rem; text-align: center; margin-right: 10px; font-weight: 500;
             }}
             .status-on {{ background: #065f46; color: #6ee7b7; }}
             .status-off {{ background: #374151; color: #9ca3af; }}
-            
-            .btn {{ padding: 6px 16px; border: none; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: 500; min-width: 65px; }}
+            .btn {{ padding: 5px 14px; border: none; border-radius: 6px; font-size: 0.8rem; cursor: pointer; font-weight: 500; min-width: 55px; }}
             .btn-on {{ background: #10b981; color: white; }}
             .btn-off {{ background: #4b5563; color: #e5e7eb; }}
-            
             .refresh-btn {{ 
-                background: #3b82f6; color: white; border: none; padding: 8px 16px; 
-                border-radius: 6px; cursor: pointer; font-size: 0.85rem; margin-bottom: 15px;
+                background: #3b82f6; color: white; border: none; padding: 7px 14px; 
+                border-radius: 6px; cursor: pointer; font-size: 0.8rem; margin-bottom: 12px;
             }}
             .refresh-btn:hover {{ background: #2563eb; }}
-            
-            .status-bar {{ margin-top: 15px; font-size: 0.85rem; color: #9ab; text-align: center; }}
+            .status-bar {{ margin-top: 10px; font-size: 0.8rem; color: #9ab; text-align: center; }}
         </style>
     </head>
     <body>
         <div class="container">
             <h1>✅ แดชบอร์ดระบบ SAFE-ELEC</h1>
             <div class="user">👤 คุณ: <strong>{session.get('name', '')}</strong><br>รหัสลูกค้า: {session.get('cust_id', '')}</div>
-            <p>เข้าสู่ระบบสำเร็จแล้ว!</p>
+            <p style="margin-bottom: 25px; color: #94a3b8; font-size: 0.9rem;">เข้าสู่ระบบสำเร็จแล้ว!</p>
             
+            {/* === การ์ดที่ 1: ข้อมูลเซนเซอร์ === */}
+            <div class="card">
+                <h2>📊 ตรวจสอบอุปกรณ์วัด</h2>
+                <div class="sensor-grid">
+                    <div class="sensor-item">
+                        <div class="sensor-label">🌡️ อุณหภูมิ</div>
+                        <div class="sensor-value" id="temp">-- °C</div>
+                    </div>
+                    <div class="sensor-item">
+                        <div class="sensor-label">💧 ความชื้น</div>
+                        <div class="sensor-value" id="humidity">-- %</div>
+                    </div>
+                    <div class="sensor-item">
+                        <div class="sensor-label">⚡ แรงดันไฟ</div>
+                        <div class="sensor-value" id="voltage">-- V</div>
+                    </div>
+                    <div class="sensor-item">
+                        <div class="sensor-label">🔌 กระแสไฟ</div>
+                        <div class="sensor-value" id="current">-- A</div>
+                    </div>
+                </div>
+                <div class="status-bar" id="sensor-update">อัปเดตเมื่อ: --</div>
+            </div>
+            
+            {/* === การ์ดที่ 2: ปุ่มควบคุม === */}
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h2>📊 สถานะอุปกรณ์</h2>
-                    <button class="refresh-btn" onclick="loadStatus()">🔄 รีเฟรช</button>
+                    <h2>💡 ควบคุมแสงสว่าง</h2>
+                    <button class="refresh-btn" onclick="loadAllStatus()">🔄 รีเฟรช</button>
                 </div>
                 
-                <div id="status-list">
-                    <div style="text-align: center; padding: 20px; color: #9ab;">กำลังโหลด...</div>
+                <div id="light-controls">
+                    <div style="text-align: center; padding: 15px; color: #9ab;">กำลังโหลด...</div>
                 </div>
                 
-                <div class="status-bar" id="last-update">อัปเดตเมื่อ: --</div>
+                <div class="status-bar" id="light-update">อัปเดตเมื่อ: --</div>
             </div>
             
             <a href="/logout">🚪 ออกจากระบบ</a>
@@ -442,20 +458,21 @@ def dashboard():
             6: '6. ไฟข้างร้าน'
         }};
 
-        async function loadStatus() {{
+        // โหลดสถานะไฟ
+        async function loadLightStatus() {{
             try {{
                 const res = await fetch('/api/command?device_id=SAFE-001');
                 const data = await res.json();
-                renderStatus(data);
-                document.getElementById('last-update').textContent = 
+                renderLights(data);
+                document.getElementById('light-update').textContent = 
                     'อัปเดตเมื่อ: ' + new Date().toLocaleTimeString('th-TH');
             }} catch (e) {{
-                document.getElementById('status-list').innerHTML = 
-                    '<div style="text-align:center; color:#f87171; padding:20px;">❌ โหลดข้อมูลล้มเหลว</div>';
+                document.getElementById('light-controls').innerHTML = 
+                    '<div style="text-align:center; color:#f87171; padding:15px;">❌ โหลดข้อมูลล้มเหลว</div>';
             }}
         }}
 
-        function renderStatus(data) {{
+        function renderLights(data) {{
             let html = '';
             for (let i = 1; i <= 6; i++) {{
                 const isOn = data['z' + i] === true;
@@ -463,7 +480,7 @@ def dashboard():
                     <div class="zone-row">
                         <span class="zone-name">${{zoneNames[i]}}</span>
                         <span class="status-badge ${{isOn ? 'status-on' : 'status-off'}}">
-                            ${{isOn ? '🟢 เปิด' : '⚪ ปิด'}}
+                            ${{isOn ? 'เปิด' : 'ปิด'}}
                         </span>
                         <button class="btn ${{isOn ? 'btn-on' : 'btn-off'}}" 
                                 onclick="toggleZone(${{i}}, ${{!isOn}})">
@@ -472,7 +489,7 @@ def dashboard():
                     </div>
                 `;
             }}
-            document.getElementById('status-list').innerHTML = html;
+            document.getElementById('light-controls').innerHTML = html;
         }}
 
         async function toggleZone(zone, newState) {{
@@ -482,14 +499,33 @@ def dashboard():
                     headers: {{ 'Content-Type': 'application/json' }},
                     body: JSON.stringify({{ device_id: 'SAFE-001', zone: zone, state: newState }})
                 }});
-                await loadStatus();
+                await loadLightStatus();
             }} catch (e) {{
                 alert('❌ ส่งคำสั่งล้มเหลว');
             }}
         }}
 
-        // โหลดสถานะเมื่อเปิดหน้า
-        window.onload = loadStatus;
+        // โหลดข้อมูลเซนเซอร์ (ตัวอย่าง - เชื่อมกับ API จริงของคุณ)
+        async function loadSensorData() {{
+            // TODO: เชื่อมกับ API ข้อมูลเซนเซอร์จริง
+            // ตัวอย่าง: const res = await fetch('/api/esp/readings?device_id=SAFE-001&limit=1');
+            // const data = await res.json();
+            // if (data.length > 0) {{
+            //     document.getElementById('temp').textContent = data[0].temperature + ' °C';
+            //     document.getElementById('humidity').textContent = data[0].humidity + ' %';
+            //     document.getElementById('voltage').textContent = data[0].voltage + ' V';
+            //     document.getElementById('current').textContent = data[0].current + ' A';
+            // }}
+            document.getElementById('sensor-update').textContent = 
+                'อัปเดตเมื่อ: ' + new Date().toLocaleTimeString('th-TH');
+        }}
+
+        // โหลดทั้งหมด
+        async function loadAllStatus() {{
+            await Promise.all([loadLightStatus(), loadSensorData()]);
+        }}
+
+        window.onload = loadAllStatus;
         </script>
     </body>
     </html>
