@@ -253,6 +253,7 @@ def send_line_alert(message):
 def send_email_alert(subject, body, to_email=None, attach_file=None):
     cfg = CONFIG["ALERT"]
     recipient = to_email or cfg["EMAIL_TO"]
+    
         if not recipient or not cfg["SMTP_PASS"]:
             return False
     try:
