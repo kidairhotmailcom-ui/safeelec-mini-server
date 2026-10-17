@@ -210,16 +210,16 @@ for dev_id, site, cust, prov, stype in DEVICE_LIST:
     d["gnd_voltage_v"] = 0.7
     
     # สถานะเซ็นเซอร์ต่างๆ
-    d["sens_current"]["value"] = "ปกติ"
-    d["sens_current"]["ok"] = True
-    d["sens_temp"]["value"] = "ปกติ"
-    d["sens_temp"]["ok"] = True
-    d["sens_volt"]["value"] = "ปกติ"
-    d["sens_volt"]["ok"] = True
-    d["sens_heat"]["value"] = "ปกติ"
-    d["sens_heat"]["ok"] = True
-    d["sens_ground"]["value"] = "ปกติ"
-    d["sens_ground"]["ok"] = True
+    d["sensors"]["sens_current"]["value"] = "ปกติ"
+    d["sensors"]["sens_current"]["ok"] = True
+    d["sensors"]["sens_temp"]["value"] = "ปกติ"
+    d["sensors"]["sens_temp"]["ok"] = True
+    d["sensors"]["sens_volt"]["value"] = "ปกติ"
+    d["sensors"]["sens_volt"]["ok"] = True
+    d["sensors"]["sens_heat"]["value"] = "ปกติ"
+    d["sensors"]["sens_heat"]["ok"] = True
+    d["sensors"]["sens_ground"]["value"] = "ปกติ"
+    d["sensors"]["sens_ground"]["ok"] = True
     
     d["sensors"]["esp"]["value"] = "เชื่อมต่อปกติ"
     d["sensors"]["esp"]["ok"] = True
