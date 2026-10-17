@@ -351,7 +351,36 @@ def get_command():
 def get_device_data():
     device_id = request.args.get('device_id', 'SAFE-001')
     return jsonify(device_command_store.get(device_id, {}))
+# === ตรวจสอบสิทธิ์ผู้ใช้ ===
+def login_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "username" not in session:
+            return redirect("/login")
+        return f(*args, **kwargs)
+    return decorated_function
 
+# === API: ดึงข้อมูลเซนเซอร์ล่าสุด ===
+@app.route('/api/device/latest', methods=['GET'])
+@login_required
+def get_device_latest():
+    try:
+        device_id = request.args.get('device_id', 'SAFE-001')
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            'SELECT * FROM esp_readings WHERE device_id=%s ORDER BY recorded_at DESC LIMIT 1',
+            (device_id,)
+        )
+        latest = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if latest:
+            return jsonify({'ok': True, 'data': latest})
+        return jsonify({'ok': True, 'data': None})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
 # === หน้าแดชบอร์ด — รวมปุ่มกดและข้อมูลไว้ที่เดียวกัน ===
 @app.route("/dashboard")
 def dashboard():
