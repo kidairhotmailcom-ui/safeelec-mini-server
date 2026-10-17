@@ -271,10 +271,10 @@ def send_email_alert(subject, body, to_email=None, attach_file=None):
         msg["To"] = recipient
         msg["Subject"] = f"SAFE-ELEC: {subject}"
         msg.attach(MIMEText(body, "plain", "utf-8"))
-        if attach_file:
-            part = MIMEText(attach_file["data"], _subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-            part.add_header("Content-Disposition", f'attachment; filename="{attach_file["name"]}"')
-            msg.attach(part)
+    if attach_file:
+        part = MIMEText(attach_file["data"], _subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        part.add_header("Content-Disposition", f'attachment; filename="{attach_file["name"]}"')
+        msg.attach(part)
         print("[อีเมล] กำลังเชื่อมต่อ...")
         with smtplib.SMTP(cfg["SMTP_SERVER"], cfg["SMTP_PORT"], timeout=15) as server:
             server.set_debuglevel(1)
