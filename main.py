@@ -1180,7 +1180,162 @@ def test_email():
         return "✅ ส่งอีเมลสำเร็จ! เช็คกล่องขาเข้าของคุณได้เลยครับ (ถ้าไม่เจอ ดูที่จดหมายขยะด้วยนะ)"
     else:
         return "❌ ส่งไม่สำเร็จ — ตรวจสอบค่า EMAIL_TO, EMAIL_FROM และ SMTP_PASS ใน Environment Variables ที่ Render"
+# ==================================================
+# ระบบ OTA UPDATE — เริ่ม
+# ==================================================
+import os
+from flask import send_from_directory
 
+FIRMWARE_FOLDER = "firmware"
+os.makedirs(FIRMWARE_FOLDER, exist_ok=True)
+
+FIRMWARE_INFO = {
+    "version": "1.0.0",
+    "filename": "firmware_v1.0.0.bin",
+    "release_date": "2026-10-17",
+    "changelog": "- เวอร์ชันเริ่มต้นระบบ OTA\n- รองรับอุปกรณ์หลัก-สำรอง"
+}
+
+device_ota_status = {}
+
+@app.route("/api/ota/check", methods=["GET"])
+def ota_check():
+    device_id = request.args.get("device_id")
+    current_version = request.args.get("version", "0.0.0")
+    if not device_id:
+        return jsonify({"error": "Missing device_id"}), 400
+    has_update = FIRMWARE_INFO["version"] != current_version
+    device_ota_status[device_id] = {
+        "current_version": current_version,
+        "latest_version": FIRMWARE_INFO["version"],
+        "last_check": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "status": "pending" if has_update else "up_to_date"
+    }
+    return jsonify({
+        "has_update": has_update,
+        "latest_version": FIRMWARE_INFO["version"],
+        "download_url": f"/api/ota/download/{FIRMWARE_INFO['filename']}" if has_update else None,
+        "changelog": FIRMWARE_INFO["changelog"]
+    })
+
+@app.route("/api/ota/download/<filename>", methods=["GET"])
+def ota_download(filename):
+    try:
+        return send_from_directory(FIRMWARE_FOLDER, filename, as_attachment=True)
+    except Exception as e:
+        print(f"[OTA] Download error: {e}")
+        return jsonify({"error": "File not found"}), 404
+
+@app.route("/api/ota/result", methods=["POST"])
+def ota_result():
+    data = request.get_json() or {}
+    device_id = data.get("device_id")
+    status = data.get("status")
+    version = data.get("version")
+    message = data.get("message", "")
+    if device_id and device_id in device_ota_status:
+        device_ota_status[device_id].update({
+            "status": status, "version": version,
+            "message": message,
+            "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        })
+    print(f"[OTA] {device_id} | {status} | v{version} | {message}")
+    return jsonify({"ok": True})
+
+@app.route("/api/ota/status", methods=["GET"])
+def ota_status():
+    return jsonify({
+        "firmware_latest": FIRMWARE_INFO,
+        "total_devices": len(device_ota_status),
+        "devices": device_ota_status
+    })
+
+@app.route("/ota")
+def ota_page():
+    if "username" not in session:
+        return redirect("/login")
+    return render_template_string("""
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>จัดการอัปเดตเฟิร์มแวร์ OTA</title>
+        <style>
+            body { font-family: sans-serif; padding: 20px; max-width: 900px; margin: 0 auto; background: #0f1629; color: #fff; }
+            h1 { color: #6cf; }
+            .box { background: #1a2342; padding: 16px; border-radius: 12px; margin: 12px 0; border: 1px solid #2a3b63; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { padding: 10px; text-align: left; border-bottom: 1px solid #2a3b63; }
+            th { background: #1e2b4d; color: #94ccff; }
+            .ok { color: #4f9; }
+            .pending { color: #fa4; }
+            .fail { color: #f44; }
+            pre { background: #0f1f3f; padding: 10px; border-radius: 6px; white-space: pre-wrap; }
+            code { background: #0f1f3f; padding: 2px 6px; border-radius: 4px; color: #94d4ff; }
+        </style>
+    </head>
+    <body>
+        <h1>🔧 ระบบจัดการอัปเดตเฟิร์มแวร์ (OTA)</h1>
+
+        <div class="box">
+            <h3>📦 เวอร์ชันล่าสุด ปัจจุบัน</h3>
+            <p><strong>เวอร์ชัน:</strong> {{ info.version }}</p>
+            <p><strong>ไฟล์:</strong> <code>{{ info.filename }}</code></p>
+            <p><strong>วันที่เผยแพร่:</strong> {{ info.release_date }}</p>
+            <p><strong>รายการเปลี่ยนแปลง:</strong></p>
+            <pre>{{ info.changelog }}</pre>
+        </div>
+
+        <div class="box">
+            <h3>📊 สถานะอุปกรณ์</h3>
+            <p>อุปกรณ์ทั้งหมด: {{ devices|length }} เครื่อง</p>
+            <table>
+                <tr>
+                    <th>รหัสอุปกรณ์</th>
+                    <th>เวอร์ชันปัจจุบัน</th>
+                    <th>สถานะ</th>
+                    <th>ตรวจสอบล่าสุด</th>
+                </tr>
+                {% for id, d in devices.items() %}
+                <tr>
+                    <td>{{ id }}</td>
+                    <td>v{{ d.current_version }}</td>
+                    <td>
+                        {% if d.status == 'up_to_date' %}
+                        <span class="ok">✅ ทันสมัย</span>
+                        {% elif d.status == 'pending' %}
+                        <span class="pending">⏳ รออัปเดต</span>
+                        {% elif d.status == 'success' %}
+                        <span class="ok">✅ อัปเดตสำเร็จ</span>
+                        {% elif d.status == 'failed' %}
+                        <span class="fail">❌ อัปเดตไม่สำเร็จ</span>
+                        {% else %}
+                        {{ d.status }}
+                        {% endif %}
+                    </td>
+                    <td>{{ d.last_check or '-' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" style="text-align:center; color:#8ac;">ยังไม่มีอุปกรณ์เชื่อมต่อ</td></tr>
+                {% endfor %}
+            </table>
+        </div>
+
+        <div class="box">
+            <h3>📌 วิธีเผยแพร่เวอร์ชันใหม่</h3>
+            <ol>
+                <li>สร้างโฟลเดอร์ชื่อ <code>firmware</code> ไว้ข้างๆ ไฟล์ main.py</li>
+                <li>นำไฟล์ .bin จาก Arduino IDE ไปวางในโฟลเดอร์นั้น</li>
+                <li>แก้ค่า FIRMWARE_INFO ให้ตรงกับชื่อไฟล์และเวอร์ชัน</li>
+                <li>บันทึกและอัปโหลดขึ้นเซิร์ฟเวอร์ — เสร็จ!</li>
+            </ol>
+        </div>
+    </body>
+    </html>
+    """, info=FIRMWARE_INFO, devices=device_ota_status)
+# ==================================================
+# สิ้นสุดระบบ OTA UPDATE
+# ==================================================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
