@@ -253,9 +253,17 @@ def send_line_alert(message):
 def send_email_alert(subject, body, to_email=None, attach_file=None):
     cfg = CONFIG["ALERT"]
     recipient = to_email or cfg["EMAIL_TO"]
+    print(f"[อีเมล] ถึง: {recipient}")
+    print(f"[อีเมล] จาก: {cfg['EMAIL_FROM']}")
+    print(f"[อีเมล] เซิร์ฟเวอร์: {cfg['SMTP_SERVER']}:{cfg['SMTP_PORT']}")
+    print(f"[อีเมล] SMTP_PASS มีค่า: {'✅ ใช่' if cfg['SMTP_PASS'] else '❌ ไม่มี'}")
     
-    if not recipient or not cfg["SMTP_PASS"]:
-        return False
+    if not recipient:
+    print("[อีเมล] ❌ ขาด EMAIL_TO")
+    return False
+    if not cfg["SMTP_PASS"]:
+    print("[อีเมล] ❌ ขาด SMTP_PASS")
+    return False
     try:
         msg = MIMEMultipart()
         msg["From"] = cfg["EMAIL_FROM"]
@@ -266,10 +274,16 @@ def send_email_alert(subject, body, to_email=None, attach_file=None):
             part = MIMEText(attach_file["data"], _subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             part.add_header("Content-Disposition", f'attachment; filename="{attach_file["name"]}"')
             msg.attach(part)
+        print("[อีเมล] กำลังเชื่อมต่อ...")
         with smtplib.SMTP(cfg["SMTP_SERVER"], cfg["SMTP_PORT"], timeout=15) as server:
+            server.set_debuglevel(1)
+            print("[อีเมล] เริ่ม TLS...")
             server.starttls()
+            print("[อีเมล] กำลังเข้าสู่ระบบ...")
             server.login(cfg["EMAIL_FROM"], cfg["SMTP_PASS"])
+            print("[อีเมล] กำลังส่ง...")
             server.send_message(msg)
+            print("[อีเมล] ✅ ส่งสำเร็จ!")
         return True
     except Exception as e:
         print(f"[อีเมล] ส่งไม่สำเร็จ: {e}")
