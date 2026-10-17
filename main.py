@@ -126,6 +126,9 @@ TEMPLATE = {
     "z1_v": 220.0, "z1_a": 0.0, "z1_w": 0.0,
     "z2_v": 220.0, "z2_a": 0.0, "z2_w": 0.0,
     "z3_v": 220.0, "z3_a": 0.0, "z3_w": 0.0,
+    "z4_v": 220.0, "z4_a": 0.0, "z4_w": 0.0,   # ✅ เพิ่ม
+    "z5_v": 220.0, "z5_a": 0.0, "z5_w": 0.0,   # ✅ เพิ่ม
+    "z6_v": 220.0, "z6_a": 0.0, "z6_w": 0.0,  
     "z_total_a": 0.0, "z_balance_ok": True,
     "gnd_resistance_ohm": 0.0, "gnd_voltage_v": 0.0, "gnd_system_ok": True,
     "sensors": {
@@ -176,7 +179,7 @@ for dev_id, site, cust, prov, stype in DEVICE_LIST:
     d["customer_id"] = cust
     d["province"] = prov
     d["site_type"] = stype
-        d["last_updated"] = datetime.now().strftime("%H:%M:%S")
+    d["last_updated"] = datetime.now().strftime("%H:%M:%S")
     d["last_seen"] = datetime.now()
     d["is_online"] = True
     
