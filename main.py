@@ -1141,6 +1141,22 @@ def get_command():
         "z5": s.get("z5", True),
         "z6": s.get("z6", True)
     })
+@app.route("/admin/test-email")
+def test_email():
+    if "username" not in session:
+        return "⚠️ ต้องเข้าสู่ระบบก่อนนะครับ"
+    
+    report = generate_excel_report()
+    success = send_email_alert(
+        "📋 ทดสอบส่งรายงาน SAFE-ELEC",
+        "สวัสดีครับ!\n\nนี่คืออีเมลทดสอบจากระบบ SAFE-ELEC ✅\n\nไฟล์แนบคือรายงานสรุปข้อมูลระบบครับ\n\nขอแสดงความนับถือ\nทีมงาน SAFE-ELEC",
+        attach_file=report
+    )
+    
+    if success:
+        return "✅ ส่งอีเมลสำเร็จ! เช็คกล่องขาเข้าของคุณได้เลยครับ (ถ้าไม่เจอ ดูที่จดหมายขยะด้วยนะ)"
+    else:
+        return "❌ ส่งไม่สำเร็จ — ตรวจสอบค่า EMAIL_TO, EMAIL_FROM และ SMTP_PASS ใน Environment Variables ที่ Render"
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
