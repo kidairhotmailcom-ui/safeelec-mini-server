@@ -44,7 +44,7 @@ CONFIG = {
         "LINE_TOKEN": os.environ.get("LINE_TOKEN", ""),
         "EMAIL_TO": os.environ.get("EMAIL_TO", ""),
         "EMAIL_FROM": os.environ.get("EMAIL_FROM", ""),
-        "SMTP_SERVER": "smtp-mail.outlook.com",
+        "SMTP_SERVER": "smtp.gmail.com",  
         "SMTP_PORT": 587,
         "SMTP_PASS": os.environ.get("SMTP_PASS", ""),
         "SEND_REPEAT_DELAY_MIN": 30,
