@@ -262,7 +262,7 @@ def send_email_alert(subject, body, attach_file=None):
         msg["Subject"] = f"SAFE-ELEC: {subject}"
         msg.attach(MIMEText(body, "plain", "utf-8"))
         if attach_file:
-            part = MIMEText(attach_file["data"], _subtype="csv", _charset="utf-8")
+            part = MIMEText(attach_file["data"], _subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             part.add_header("Content-Disposition", f'attachment; filename="{attach_file["name"]}"')
             msg.attach(part)
         with smtplib.SMTP(cfg["SMTP_SERVER"], cfg["SMTP_PORT"], timeout=15) as server:
