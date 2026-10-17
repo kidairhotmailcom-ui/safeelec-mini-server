@@ -253,17 +253,18 @@ def send_line_alert(message):
 def send_email_alert(subject, body, to_email=None, attach_file=None):
     cfg = CONFIG["ALERT"]
     recipient = to_email or cfg["EMAIL_TO"]
+    
     print(f"[อีเมล] ถึง: {recipient}")
     print(f"[อีเมล] จาก: {cfg['EMAIL_FROM']}")
     print(f"[อีเมล] เซิร์ฟเวอร์: {cfg['SMTP_SERVER']}:{cfg['SMTP_PORT']}")
     print(f"[อีเมล] SMTP_PASS มีค่า: {'✅ ใช่' if cfg['SMTP_PASS'] else '❌ ไม่มี'}")
     
     if not recipient:
-    print("[อีเมล] ❌ ขาด EMAIL_TO")
-    return False
+        print("[อีเมล] ❌ ขาด EMAIL_TO")
+        return False
     if not cfg["SMTP_PASS"]:
-    print("[อีเมล] ❌ ขาด SMTP_PASS")
-    return False
+        print("[อีเมล] ❌ ขาด SMTP_PASS")
+        return False
     try:
         msg = MIMEMultipart()
         msg["From"] = cfg["EMAIL_FROM"]
