@@ -250,7 +250,7 @@ def send_line_alert(message):
         print(f"[LINE] ผิดพลาด: {type(e).__name__} — {e}")
         return False
 
-def send_email_alert(subject, body, attach_file=None):
+def send_email_alert(subject, body, to_email=None, attach_file=None):
     cfg = CONFIG["ALERT"]
     recipient = to_email or cfg["EMAIL_TO"]
     if not cfg["EMAIL_TO"] or not cfg["SMTP_PASS"]:
