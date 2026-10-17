@@ -272,20 +272,26 @@ def send_email_alert(subject, body, to_email=None, attach_file=None):
         msg["Subject"] = f"SAFE-ELEC: {subject}"
         msg.attach(MIMEText(body, "plain", "utf-8"))
     if attach_file:
-        part = MIMEText(attach_file["data"], _subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        part.add_header("Content-Disposition", f'attachment; filename="{attach_file["name"]}"')
-        msg.attach(part)
-        print("[อีเมล] กำลังเชื่อมต่อ...")
-        with smtplib.SMTP(cfg["SMTP_SERVER"], cfg["SMTP_PORT"], timeout=15) as server:
-            server.set_debuglevel(1)
-            print("[อีเมล] เริ่ม TLS...")
-            server.starttls()
-            print("[อีเมล] กำลังเข้าสู่ระบบ...")
-            server.login(cfg["EMAIL_FROM"], cfg["SMTP_PASS"])
-            print("[อีเมล] กำลังส่ง...")
-            server.send_message(msg)
-            print("[อีเมล] ✅ ส่งสำเร็จ!")
-        return True
+    from email.mime.base import MIMEBase
+    from email import encoders
+    part = MIMEBase('application', 'octet-stream')
+    part.set_payload(attach_file["data"])
+    encoders.encode_base64(part)
+    part.add_header(
+        "Content-Disposition",
+        f"attachment; filename=\"{attach_file['name']}\"",
+    )
+    msg.attach(part)
+        #with smtplib.SMTP(cfg["SMTP_SERVER"], cfg["SMTP_PORT"], timeout=15) as server:
+            #server.set_debuglevel(1)
+            #print("[อีเมล] เริ่ม TLS...")
+            #server.starttls()
+            #print("[อีเมล] กำลังเข้าสู่ระบบ...")
+            #server.login(cfg["EMAIL_FROM"], cfg["SMTP_PASS"])
+            #print("[อีเมล] กำลังส่ง...")
+            #server.send_message(msg)
+            print("[อีเมล] ⏭️ ข้ามส่ง — ปิดชั่วคราวบน Render")
+        return False
     except Exception as e:
         print(f"[อีเมล] ส่งไม่สำเร็จ: {e}")
         return False
