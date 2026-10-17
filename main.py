@@ -1063,6 +1063,16 @@ function render(list){
       
       <div class="${currentView!=='mini'?'hidden':''}">
         <div class="section">
+          <b>🔧 ควบคุมรีเลย์</b>
+          <div class="grid" style="grid-template-columns: repeat(3,1fr);gap:8px;margin-top:10px;">
+            <button onclick="toggleRelay('${d.device_id}','z1')" id="btn-${d.device_id}-z1" style="padding:10px;background:${d.relay_state?.z1!==false?'#2f9':'#f44'};color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">โซน 1</button>
+            <button onclick="toggleRelay('${d.device_id}','z2')" id="btn-${d.device_id}-z2" style="padding:10px;background:${d.relay_state?.z2!==false?'#2f9':'#f44'};color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">โซน 2</button>
+            <button onclick="toggleRelay('${d.device_id}','z3')" id="btn-${d.device_id}-z3" style="padding:10px;background:${d.relay_state?.z3!==false?'#2f9':'#f44'};color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">โซน 3</button>
+            <button onclick="toggleRelay('${d.device_id}','z4')" id="btn-${d.device_id}-z4" style="padding:10px;background:${d.relay_state?.z4!==false?'#2f9':'#f44'};color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">โซน 4</button>
+            <button onclick="toggleRelay('${d.device_id}','z5')" id="btn-${d.device_id}-z5" style="padding:10px;background:${d.relay_state?.z5!==false?'#2f9':'#f44'};color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">โซน 5</button>
+            <button onclick="toggleRelay('${d.device_id}','z6')" id="btn-${d.device_id}-z6" style="padding:10px;background:${d.relay_state?.z6!==false?'#2f9':'#f44'};color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">โซน 6</button>
+  </div>
+</div>
                 <b>📊 ตรวจสอบอุปกรณ์วัด</b>
           <div class="grid">
             ${Object.entries(d.sensors)
@@ -1078,6 +1088,18 @@ function render(list){
     </div>
   `).join('');
 }
+async function toggleRelay(deviceId, zone) {
+  const res = await fetch(`/api/command?device_id=${deviceId}`);
+  const cmd = await res.json();
+  const newState = !cmd[zone];
+  await fetch('/api/command/set', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({device_id:deviceId, zone:zone, state:newState})
+  });
+  alert(`${zone.toUpperCase()} → ${newState?'✅ เปิดแล้ว':'❌ ปิดแล้ว'}`);
+  location.reload();
+}
 load();
 document.getElementById('q').addEventListener('input', applyFilterAndRender);
 </script>
@@ -1088,6 +1110,16 @@ relay_state = {
     "SAFE-001": {"z1": True, "z2": True, "z3": True, "z4": True, "z5": True, "z6": True},
     "SAFE-001-BAK": {"z1": True, "z2": True, "z3": True, "z4": True, "z5": True, "z6": True},
 }
+@app.route("/api/command/set", methods=["POST"])
+def set_command():
+    data = request.get_json(force=True)
+    dev_id = data.get("device_id", "SAFE-001")
+    zone = data.get("zone")
+    state = data.get("state", True)
+    if dev_id in relay_state and zone in relay_state[dev_id]:
+        relay_state[dev_id][zone] = bool(state)
+        return jsonify({"ok": True, zone: state})
+    return jsonify({"ok": False, "error": "ไม่พบอุปกรณ์หรือโซน"}), 404
 
 # --- API ส่งคำสั่งให้ ESP ---
 @app.route("/api/command", methods=["GET"])
