@@ -271,15 +271,15 @@ def send_email_alert(subject, body, to_email=None, attach_file=None):
         msg["To"] = recipient
         msg["Subject"] = f"SAFE-ELEC: {subject}"
         msg.attach(MIMEText(body, "plain", "utf-8"))
-    if attach_file:
-    from email.mime.base import MIMEBase
-    from email import encoders
-    part = MIMEBase('application', 'octet-stream')
-    part.set_payload(attach_file["data"])
-    encoders.encode_base64(part)
-    part.add_header(
-        "Content-Disposition",
-        f"attachment; filename=\"{attach_file['name']}\"",
+        if attach_file:
+            from email.mime.base import MIMEBase
+            from email import encoders
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload(attach_file["data"])
+            encoders.encode_base64(part)
+            part.add_header(
+                 "Content-Disposition",
+                 f"attachment; filename=\"{attach_file['name']}\"",
     )
     msg.attach(part)
         #with smtplib.SMTP(cfg["SMTP_SERVER"], cfg["SMTP_PORT"], timeout=15) as server:
