@@ -253,12 +253,12 @@ def send_line_alert(message):
 def send_email_alert(subject, body, to_email=None, attach_file=None):
     cfg = CONFIG["ALERT"]
     recipient = to_email or cfg["EMAIL_TO"]
-    if not cfg["EMAIL_TO"] or not cfg["SMTP_PASS"]:
+        if not recipient or not cfg["SMTP_PASS"]:
         return False
     try:
         msg = MIMEMultipart()
         msg["From"] = cfg["EMAIL_FROM"]
-        msg["To"] = cfg["EMAIL_TO"]
+        msg["To"] = recipient
         msg["Subject"] = f"SAFE-ELEC: {subject}"
         msg.attach(MIMEText(body, "plain", "utf-8"))
         if attach_file:
