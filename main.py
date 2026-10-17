@@ -1081,6 +1081,31 @@ document.getElementById('q').addEventListener('input', applyFilterAndRender);
 </body>
 </html>
 """)
+relay_state = {
+    "SAFE-001": {"z1": True, "z2": True, "z3": True, "z4": True, "z5": True, "z6": True},
+    "SAFE-001-BAK": {"z1": True, "z2": True, "z3": True, "z4": True, "z5": True, "z6": True},
+}
+
+# --- API ส่งคำสั่งให้ ESP ---
+@app.route("/api/command", methods=["GET"])
+def get_command():
+    import hashlib, json
+    dev_id = request.args.get("device_id", "SAFE-001")
+    s = relay_state.get(dev_id, {
+        "z1": True, "z2": True, "z3": True,
+        "z4": True, "z5": True, "z6": True
+    })
+    hash_str = json.dumps(s, sort_keys=True)
+    cmd_hash = hashlib.md5(hash_str.encode()).hexdigest()[:8]
+    return jsonify({
+        "cmd_hash": cmd_hash,
+        "z1": s.get("z1", True),
+        "z2": s.get("z2", True),
+        "z3": s.get("z3", True),
+        "z4": s.get("z4", True),
+        "z5": s.get("z5", True),
+        "z6": s.get("z6", True)
+    })
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
