@@ -166,6 +166,11 @@
         <div class="value" id="occupied-rooms">0</div>
       </div>
       <div class="stat-card">
+        <div class="icon">🔑</div>
+        <div class="label">ห้องว่าง</div>
+        <div class="value" id="empty-rooms">0</div>
+      </div>
+      <div class="stat-card">
         <div class="icon">📡</div>
         <div class="label">อุปกรณ์ออนไลน์</div>
         <div class="value" id="online-devices">0/0</div>
@@ -174,6 +179,14 @@
         <div class="icon">⚠️</div>
         <div class="label">ค้างชำระ</div>
         <div class="value" id="due-bills">0</div>
+      </div>
+    </div>
+
+    <!-- รายการห้องว่าง -->
+    <div class="card">
+      <h3>🔑 รายการห้องว่าง</h3>
+      <div id="empty-rooms-list" style="margin-top:12px; min-height:40px;">
+        <span style="color:var(--g);">ยังไม่มีข้อมูลห้อง</span>
       </div>
     </div>
 
@@ -271,8 +284,66 @@
   </div>
   <div class="container">
     <div class="card">
-      <h3>บันทึกค่ามิเตอร์ไฟประจำเดือน</h3>
-      <p style="color:var(--g); margin-top:8px;">รอเชื่อมต่ออุปกรณ์ ESP32 จริง</p>
+      <h3>⚙️ ตั้งค่าอัตราค่าไฟ</h3>
+      <div class="form-row">
+        <div>
+          <label>อัตราค่าไฟ (บาท/หน่วย)</label>
+          <input type="number" id="electric-rate" value="5" onchange="saveRates()">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📝 บันทึกค่ามิเตอร์ไฟประจำเดือน</h3>
+      <div class="form-row">
+        <div>
+          <label>เลือกห้อง</label>
+          <select id="electric-room" onchange="loadLastMeter('electric')">
+            <option value="">-- เลือกห้อง --</option>
+          </select>
+        </div>
+        <div>
+          <label>เดือน/ปี</label>
+          <input type="month" id="electric-month">
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>ค่ามิเตอร์เดือนก่อน</label>
+          <input type="number" id="electric-last" readonly placeholder="โหลดอัตโนมัติ">
+        </div>
+        <div>
+          <label>ค่ามิเตอร์เดือนนี้</label>
+          <input type="number" id="electric-current" oninput="calcElectric()">
+        </div>
+        <div>
+          <label>จำนวนที่ใช้</label>
+          <input type="number" id="electric-unit" readonly>
+        </div>
+        <div>
+          <label>รวมค่าไฟ (บาท)</label>
+          <input type="number" id="electric-total" readonly>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="saveMeterRecord('electric')">💾 บันทึกค่าไฟ</button>
+    </div>
+
+    <div class="card">
+      <h3>📊 ประวัติค่าไฟ</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>ห้อง</th>
+            <th>เดือน</th>
+            <th>มิเตอร์ก่อน</th>
+            <th>มิเตอร์ปัจจุบัน</th>
+            <th>หน่วยที่ใช้</th>
+            <th>รวม (บาท)</th>
+            <th>จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="electric-tbody"></tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -287,8 +358,66 @@
   </div>
   <div class="container">
     <div class="card">
-      <h3>บันทึกค่ามิเตอร์น้ำประจำเดือน</h3>
-      <p style="color:var(--g); margin-top:8px;">รอเชื่อมต่ออุปกรณ์ ESP32 จริง</p>
+      <h3>⚙️ ตั้งค่าอัตราค่าน้ำ</h3>
+      <div class="form-row">
+        <div>
+          <label>อัตราค่าน้ำ (บาท/หน่วย)</label>
+          <input type="number" id="water-rate" value="20" onchange="saveRates()">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📝 บันทึกค่ามิเตอร์น้ำประจำเดือน</h3>
+      <div class="form-row">
+        <div>
+          <label>เลือกห้อง</label>
+          <select id="water-room" onchange="loadLastMeter('water')">
+            <option value="">-- เลือกห้อง --</option>
+          </select>
+        </div>
+        <div>
+          <label>เดือน/ปี</label>
+          <input type="month" id="water-month">
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>ค่ามิเตอร์เดือนก่อน</label>
+          <input type="number" id="water-last" readonly placeholder="โหลดอัตโนมัติ">
+        </div>
+        <div>
+          <label>ค่ามิเตอร์เดือนนี้</label>
+          <input type="number" id="water-current" oninput="calcWater()">
+        </div>
+        <div>
+          <label>จำนวนที่ใช้</label>
+          <input type="number" id="water-unit" readonly>
+        </div>
+        <div>
+          <label>รวมค่าน้ำ (บาท)</label>
+          <input type="number" id="water-total" readonly>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="saveMeterRecord('water')">💾 บันทึกค่าน้ำ</button>
+    </div>
+
+    <div class="card">
+      <h3>📊 ประวัติค่าน้ำ</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>ห้อง</th>
+            <th>เดือน</th>
+            <th>มิเตอร์ก่อน</th>
+            <th>มิเตอร์ปัจจุบัน</th>
+            <th>หน่วยที่ใช้</th>
+            <th>รวม (บาท)</th>
+            <th>จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="water-tbody"></tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -376,7 +505,9 @@
 <script>
 // ====================== ตัวแปรหลัก ======================
 const STORAGE_KEY = 'hostel_data';
+const METER_KEY = 'meter_records';
 let roomsData = {};
+let meterRecords = { electric: [], water: [] };
 let editingId = null;
 let currentPage = 'login';
 
@@ -387,6 +518,7 @@ function doLogin() {
   if (u === 'admin' && p === '1234') {
     showPage('dashboard');
     loadData();
+    loadMeterData();
     updateDashboard();
     renderRooms();
     initMonthSelector();
@@ -404,11 +536,16 @@ function doLogout() {
 // ====================== PAGE NAVIGATION ======================
 function showPage(pageName) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('show'));
+  loadData();
+  loadMeterData();
   const page = document.getElementById('page-' + pageName);
   if (page) page.classList.add('show');
   currentPage = pageName;
+  
   if (pageName === 'dashboard') updateDashboard();
   if (pageName === 'rooms') renderRooms();
+  if (pageName === 'meter') { loadRates(); updateRoomDropdowns(); renderMeterTable('electric'); setThisMonth('electric'); }
+  if (pageName === 'water') { loadRates(); updateRoomDropdowns(); renderMeterTable('water'); setThisMonth('water'); }
   if (pageName === 'report') { initMonthSelector(); renderReport(); }
 }
 
@@ -423,22 +560,203 @@ function loadData() {
   else roomsData = {};
 }
 
+// ====================== METER DATA ======================
+function loadMeterData() {
+  const saved = localStorage.getItem(METER_KEY);
+  if (saved) meterRecords = JSON.parse(saved);
+  else meterRecords = { electric: [], water: [] };
+}
+
+function saveMeterData() {
+  localStorage.setItem(METER_KEY, JSON.stringify(meterRecords));
+}
+
+function saveRates() {
+  const electricRate = document.getElementById('electric-rate')?.value;
+  const waterRate = document.getElementById('water-rate')?.value;
+  localStorage.setItem('rates', JSON.stringify({ electric: electricRate, water: waterRate }));
+}
+
+function loadRates() {
+  const saved = localStorage.getItem('rates');
+  if (saved) {
+    const rates = JSON.parse(saved);
+    if (document.getElementById('electric-rate')) document.getElementById('electric-rate').value = rates.electric || 5;
+    if (document.getElementById('water-rate')) document.getElementById('water-rate').value = rates.water || 20;
+  }
+}
+
+function updateRoomDropdowns() {
+  const roomIds = Object.keys(roomsData).sort();
+  const electricSelect = document.getElementById('electric-room');
+  const waterSelect = document.getElementById('water-room');
+  
+  if (electricSelect) {
+    electricSelect.innerHTML = '<option value="">-- เลือกห้อง --</option>' +
+      roomIds.map(id => `<option value="${id}">${id}</option>`).join('');
+  }
+  if (waterSelect) {
+    waterSelect.innerHTML = '<option value="">-- เลือกห้อง --</option>' +
+      roomIds.map(id => `<option value="${id}">${id}</option>`).join('');
+  }
+}
+
+function loadLastMeter(type) {
+  const roomId = document.getElementById(`${type}-room`).value;
+  if (!roomId) {
+    document.getElementById(`${type}-last`).value = '';
+    return;
+  }
+  
+  const records = meterRecords[type].filter(r => r.roomId === roomId);
+  if (records.length > 0) {
+    records.sort((a, b) => b.month.localeCompare(a.month));
+    document.getElementById(`${type}-last`).value = records[0].current;
+  } else {
+    document.getElementById(`${type}-last`).value = 0;
+  }
+}
+
+function calcElectric() {
+  const last = parseFloat(document.getElementById('electric-last').value) || 0;
+  const current = parseFloat(document.getElementById('electric-current').value) || 0;
+  const rate = parseFloat(document.getElementById('electric-rate').value) || 5;
+  const unit = Math.max(0, current - last);
+  const total = unit * rate;
+  
+  document.getElementById('electric-unit').value = unit;
+  document.getElementById('electric-total').value = total.toFixed(2);
+}
+
+function calcWater() {
+  const last = parseFloat(document.getElementById('water-last').value) || 0;
+  const current = parseFloat(document.getElementById('water-current').value) || 0;
+  const rate = parseFloat(document.getElementById('water-rate').value) || 20;
+  const unit = Math.max(0, current - last);
+  const total = unit * rate;
+  
+  document.getElementById('water-unit').value = unit;
+  document.getElementById('water-total').value = total.toFixed(2);
+}
+
+function saveMeterRecord(type) {
+  const roomId = document.getElementById(`${type}-room`).value;
+  const month = document.getElementById(`${type}-month`).value;
+  const last = parseFloat(document.getElementById(`${type}-last`).value) || 0;
+  const current = parseFloat(document.getElementById(`${type}-current`).value) || 0;
+  const unit = parseFloat(document.getElementById(`${type}-unit`).value) || 0;
+  const total = parseFloat(document.getElementById(`${type}-total`).value) || 0;
+  
+  if (!roomId) { alert('❌ กรุณาเลือกห้อง'); return; }
+  if (!month) { alert('❌ กรุณาเลือกเดือน'); return; }
+  if (current <= last) { alert('❌ ค่ามิเตอร์เดือนนี้ต้องมากกว่าเดือนก่อน'); return; }
+  
+  const existingIndex = meterRecords[type].findIndex(r => r.roomId === roomId && r.month === month);
+  const record = { roomId, month, last, current, unit, total };
+  
+  if (existingIndex >= 0) {
+    if (!confirm('⚠️ มีข้อมูลเดือนนี้แล้ว จะแทนที่หรือไม่?')) return;
+    meterRecords[type][existingIndex] = record;
+  } else {
+    meterRecords[type].push(record);
+  }
+  
+  saveMeterData();
+  alert('✅ บันทึกสำเร็จ!');
+  
+  document.getElementById(`${type}-room`).value = '';
+  document.getElementById(`${type}-month`).value = '';
+  document.getElementById(`${type}-last`).value = '';
+  document.getElementById(`${type}-current`).value = '';
+  document.getElementById(`${type}-unit`).value = '';
+  document.getElementById(`${type}-total`).value = '';
+  
+  renderMeterTable(type);
+}
+
+function renderMeterTable(type) {
+  const tbody = document.getElementById(`${type}-tbody`);
+  if (!tbody) return;
+  
+  const records = [...meterRecords[type]].sort((a, b) => b.month.localeCompare(a.month));
+  
+  if (records.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color:var(--g);">ยังไม่มีข้อมูล</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = records.map((r, i) => `
+    <tr>
+      <td>${r.roomId}</td>
+      <td>${formatMonth(r.month)}</td>
+      <td>${r.last}</td>
+      <td>${r.current}</td>
+      <td>${r.unit}</td>
+      <td>${r.total.toFixed(2)}</td>
+      <td>
+        <button class="btn-danger" style="padding:2px 6px; font-size:12px;" onclick="deleteMeterRecord('${type}', ${i})">ลบ</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function deleteMeterRecord(type, index) {
+  if (confirm('แน่ใจหรือไม่ที่จะลบ?')) {
+    meterRecords[type].splice(index, 1);
+    saveMeterData();
+    renderMeterTable(type);
+  }
+}
+
+function formatMonth(monthStr) {
+  if (!monthStr) return '-';
+  const [y, m] = monthStr.split('-');
+  const monthNames = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  return `${monthNames[parseInt(m)-1]} ${parseInt(y)+543}`;
+}
+
+function setThisMonth(type) {
+  const now = new Date().toISOString().slice(0, 7);
+  const input = document.getElementById(`${type}-month`);
+  if (input && !input.value) input.value = now;
+}
+
 // ====================== DASHBOARD UPDATE ======================
 function updateDashboard() {
   const totalRooms = Object.keys(roomsData).length;
   const occupiedRooms = Object.values(roomsData).filter(r => r.name && r.name !== '').length;
+  const emptyRooms = totalRooms - occupiedRooms;
   const onlineDevices = Object.values(roomsData).filter(r => r.deviceOnline === true).length;
   const dueCount = Object.values(roomsData).filter(r => (r.dueAmount || 0) > 0).length;
 
   const t = document.getElementById('total-rooms');
   const o = document.getElementById('occupied-rooms');
+  const e = document.getElementById('empty-rooms');
   const d = document.getElementById('online-devices');
   const b = document.getElementById('due-bills');
+  const emptyList = document.getElementById('empty-rooms-list');
 
   if (t) t.textContent = totalRooms;
   if (o) o.textContent = occupiedRooms;
+  if (e) e.textContent = emptyRooms;
   if (d) d.textContent = `${onlineDevices}/${totalRooms}`;
   if (b) b.textContent = dueCount;
+  
+  if (emptyList) {
+    const emptyRoomIds = Object.keys(roomsData)
+      .filter(id => !roomsData[id].name || roomsData[id].name === '')
+      .sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
+    
+    if (totalRooms === 0) {
+      emptyList.innerHTML = '<span style="color:var(--g);">ยังไม่มีข้อมูลห้อง</span>';
+    } else if (emptyRoomIds.length === 0) {
+      emptyList.innerHTML = '<span style="color:var(--g);">ไม่มีห้องว่าง</span>';
+    } else {
+      emptyList.innerHTML = emptyRoomIds.map(id => 
+        `<span class="badge empty" style="margin:4px;">${id}</span>`
+      ).join('');
+    }
+  }
 }
 
 // ====================== ROOMS FUNCTIONS ======================
@@ -520,6 +838,7 @@ function saveRoom() {
   alert(isNew ? '✅ เพิ่มห้อง ' + id + ' สำเร็จ!' : '✅ อัปเดตห้อง ' + id + ' สำเร็จ!');
   cancelEdit();
   renderRooms();
+  updateDashboard();
 }
 
 function deleteRoom(roomId) {
@@ -528,6 +847,7 @@ function deleteRoom(roomId) {
     saveData();
     cancelEdit();
     renderRooms();
+    updateDashboard();
   }
 }
 
@@ -653,7 +973,10 @@ function importData() {
 function clearAllData() {
   if (confirm('⚠️ แน่ใจหรือไม่? ข้อมูลทั้งหมดจะหายไปและไม่สามารถกู้คืนได้!')) {
     roomsData = {};
+    meterRecords = { electric: [], water: [] };
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(METER_KEY);
+    localStorage.removeItem('rates');
     renderRooms();
     updateDashboard();
     alert('✅ ล้างข้อมูลเรียบร้อยแล้ว');
@@ -662,37 +985,4 @@ function clearAllData() {
 
 // ====================== ESP32 Device Status ======================
 function updateDeviceStatus(roomId, isOnline, lastUpdate, elec, water) {
-  const row = document.getElementById('esp-room-' + roomId);
-  if (!row) return;
-
-  const statusCell = row.querySelector('td:nth-child(3) span');
-  const updateCell = document.getElementById('last-update-' + roomId);
-  const elecCell = document.getElementById('elec-latest-' + roomId);
-  const waterCell = document.getElementById('water-latest-' + roomId);
-
-  if (isOnline) {
-    statusCell.className = 'badge online';
-    statusCell.innerHTML = '<span class="status-indicator"></span>ออนไลน์';
-  } else {
-    statusCell.className = 'badge offline';
-    statusCell.innerHTML = '<span class="status-indicator"></span>ไม่ออนไลน์';
-  }
-  if (updateCell) updateCell.textContent = lastUpdate || '—';
-  if (elecCell) elecCell.textContent = elec || '—';
-  if (waterCell) waterCell.textContent = water || '—';
-
-  if (roomsData[roomId]) {
-    roomsData[roomId].deviceOnline = isOnline;
-    saveData();
-    updateDashboard();
-  }
-}
-
-// ====================== INIT ======================
-document.addEventListener('DOMContentLoaded', function() {
-  loadData();
-});
-</script>
-
-</body>
-</html>
+  const
