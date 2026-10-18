@@ -369,40 +369,53 @@
     </div>
   </div>
   <div class="container">
+    <!-- ฟอร์มเพิ่ม/แก้ไข -->
     <div class="card">
-      <h3>➕ เพิ่ม/แก้ไข ห้องและผู้เช่า</h3>
+      <h3 id="form-title">➕ เพิ่มห้องใหม่</h3>
       <div class="form-row">
-        <div class="input-group"><label>เลขห้อง</label><input type="text" placeholder="101"></div>
-        <div class="input-group"><label>ชื่อผู้เช่า</label><input type="text" placeholder="ชื่อ-นามสกุล"></div>
-        <div class="input-group"><label>เบอร์โทร</label><input type="text" placeholder="08x-xxxxxxx"></div>
-        <div class="input-group"><label>ราคาห้อง/เดือน</label><input type="number" value="1500"></div>
+        <div class="input-group">
+          <label>เลขห้อง</label>
+          <input type="text" id="room-id" placeholder="เช่น 101" readonly>
+        </div>
+        <div class="input-group">
+          <label>ชื่อผู้เช่า</label>
+          <input type="text" id="room-name" placeholder="กรอกชื่อ-นามสกุล">
+        </div>
+        <div class="input-group">
+          <label>เบอร์โทร</label>
+          <input type="text" id="room-phone" placeholder="08x-xxxxxxx">
+        </div>
+        <div class="input-group">
+          <label>ราคาห้อง/เดือน</label>
+          <input type="number" id="room-price" value="1500">
+        </div>
       </div>
-      <button class="btn primary-btn" style="margin-top: 15px;" onclick="saveRoom()">บันทึก</button>
+      <button class="btn primary-btn" style="margin-top: 15px;" onclick="saveRoom()">💾 บันทึก</button>
+      <button class="outline-btn" style="margin-top: 10px; display: none;" id="cancel-edit" onclick="cancelEdit()">ยกเลิก</button>
     </div>
+
+    <!-- รายการห้อง -->
     <div class="card">
       <h3>📋 รายการห้องทั้งหมด</h3>
-      <table>
-        <tr><th>ห้อง</th><th>ชื่อผู้เช่า</th><th>ราคาห้อง</th><th>สถานะ</th><th>สถานะอุปกรณ์</th><th>จัดการ</th></tr>
-        <tr>
-          <td>101</td><td>นาย ก</td><td>1,500</td><td><span class="badge paid">มีผู้เช่า</span></td>
-          <td><span class="badge online">ออนไลน์</span></td>
-          <td><button class="outline-btn small-btn">แก้ไข</button></td>
-        </tr>
-        <tr>
-          <td>102</td><td>-</td><td>1,500</td><td><span class="badge empty">ว่าง</span></td>
-          <td><span class="badge offline">ไม่มีอุปกรณ์</span></td>
-          <td><button class="outline-btn small-btn">แก้ไข</button></td>
-        </tr>
-        <tr>
-          <td>202</td><td>นายสมศักดิ์</td><td>3,000</td><td><span class="badge paid">มีผู้เช่า</span></td>
-          <td><span class="badge offline">ไม่ออนไลน์</span></td>
-          <td><button class="outline-btn small-btn">แก้ไข</button></td>
-        </tr>
+      <table id="rooms-table">
+        <thead>
+          <tr>
+            <th>ห้อง</th>
+            <th>ชื่อผู้เช่า</th>
+            <th>เบอร์โทร</th>
+            <th>ราคาห้อง</th>
+            <th>สถานะ</th>
+            <th>สถานะอุปกรณ์</th>
+            <th>จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="rooms-tbody">
+          <!-- ข้อมูลจะแสดงที่นี่อัตโนมัติ -->
+        </tbody>
       </table>
     </div>
   </div>
 </div>
-
 <!-- ===== ออกบิล ===== -->
 <div id="page-bills" class="page hidden">
   <div class="navbar">
