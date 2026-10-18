@@ -663,6 +663,36 @@ function printBill(room) {
 function sendBill(room) {
   alert(`✅ ส่งแจ้งเตือนบิลห้อง ${room} เรียบร้อย!`);
 }
+function downloadReportCSV() {
+  const rows = [
+    ['รายงานค่าใช้จ่ายหอพัก'],
+    ['ห้อง', 'ผู้เช่า', 'ค่าห้อง', 'ค่าน้ำ', 'ค่าไฟ', 'รวม', 'สถานะ'],
+    ['101', 'นาย ก', 1500, 120, 75, 1695, 'จ่ายแล้ว'],
+    ['202', 'นายสมศักดิ์', 3000, 180, 240, 3420, 'ค้างชำระ'],
+    ['301', 'นางสาวส้ม', 2500, 90, 210, 2800, 'ค้างชำระ']
+  ];
+
+  const csv = '\uFEFF' + rows.map(row =>
+    row.map(value =>
+      '"' + String(value).replace(/"/g, '""') + '"'
+    ).join(',')
+  ).join('\r\n');
+
+  const blob = new Blob([csv], {
+    type: 'text/csv;charset=utf-8;'
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = url;
+  link.download = 'รายงานหอพัก.csv';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+} 
 </script>
 
 </body>
