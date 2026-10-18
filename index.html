@@ -553,13 +553,26 @@ const monthTh = [
 
 // ========== สลับหน้า ==========
 function showPage(pageId) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('page-' + pageId).classList.add('active');
+  const target = document.getElementById('page-' + pageId);
+  if (!target) {
+    alert('ไม่พบหน้าที่ต้องการ: ' + pageId);
+    return;
+  }
+
+  document.querySelectorAll('.page').forEach(p => {
+    p.classList.remove('active');
+    p.classList.add('hidden');
+  });
+
+  target.classList.remove('hidden');
+  target.classList.add('active');
 }
+
 function goLogin() {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('page-login').classList.add('active');
+  showPage('login');
 }
+
+
 
 // ========== สลับบทบาทเข้าสู่ระบบ ==========
 document.querySelectorAll('.role-tab').forEach(tab => {
