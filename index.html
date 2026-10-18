@@ -375,7 +375,7 @@
       <div class="form-row">
         <div class="input-group">
           <label>เลขห้อง</label>
-          <input type="text" id="room-id" placeholder="เช่น 101" readonly>
+          <input type="text" id="room-id" placeholder="เช่น 101">
         </div>
         <div class="input-group">
           <label>ชื่อผู้เช่า</label>
@@ -712,26 +712,99 @@ function saveMeterReading() {
   alert('✅ บันทึกข้อมูลสำเร็จ!');
 }
 
-function deleteRoom(roomId) {
-  if (confirm('แน่ใจไหมที่จะลบห้อง ' + roomId + '?')) {
-    alert('✅ ลบห้อง ' + roomId + ' สำเร็จ!');
-  }
+let roomsData = {
+  '101': { name: 'นาย ก', phone: '', price: 1500, deviceOnline: true },
+  '202': { name: '-', phone: '', price: 1500, deviceOnline: false },
+  '102': { name: 'นายสมศักดิ์', phone: '', price: 3000, deviceOnline: false }
+};
+
+let editingId = null;
+
+function renderRooms() {
+  const tbody = document.getElementById('rooms-tbody');
+  tbody.innerHTML = '';
+  
+  Object.keys(roomsData).sort().forEach(id => {
+    const r = roomsData[id];
+    const isEmpty = r.name === '-';
+    const statusText = isEmpty ? 'ว่าง' : 'มีผู้เช่า';
+    const statusClass = isEmpty ? 'empty' : 'paid';
+    const deviceText = r.deviceOnline ? 'ออนไลน์' : 'ไม่ออนไลน์';
+    const deviceClass = r.deviceOnline ? 'online' : 'offline';
+    
+    tbody.innerHTML += `
+      <tr>
+        <td>${id}</td>
+        <td>${r.name}</td>
+        <td>${r.phone || '-'}</td>
+        <td>${Number(r.price).toLocaleString()}</td>
+        <td><span class="badge ${statusClass}">${statusText}</span></td>
+        <td><span class="badge ${deviceClass}">${deviceText}</span></td>
+        <td>
+          <button class="outline-btn small-btn" onclick="editRoom('${id}')">แก้ไข</button>
+          <button class="outline-btn small-btn" onclick="deleteRoom('${id}')">ลบ</button>
+        </td>
+      </tr>
+    `;
+  });
 }
 
 function editRoom(roomId) {
-  alert('📝 แก้ไขห้อง: ' + roomId);
+  editingId = roomId;
+  const r = roomsData[roomId];
+  document.getElementById('room-id').value = roomId;
+  document.getElementById('room-id').readOnly = true;
+  document.getElementById('room-name').value = r.name === '-' ? '' : r.name;
+  document.getElementById('room-phone').value = r.phone || '';
+  document.getElementById('room-price').value = r.price;
+  document.getElementById('form-title').textContent = '✏️ แก้ไขห้อง ' + roomId;
+  document.getElementById('cancel-edit').style.display = 'inline-block';
+  document.getElementById('room-id').scrollIntoView({behavior: 'smooth'});
 }
-  
-function saveRoom() {
-  const id = document.getElementById('room-id').value;
-  const name = document.getElementById('room-name').value || '-';
-  const phone = document.getElementById('room-phone').value || '';
-  const price = document.getElementById('room-price').value;
-  alert('✅ บันทึกเรียบร้อย!\nห้อง: ' + id + '\nชื่อ: ' + name + '\nราคา: ' + price + ' บาท');
+
+function cancelEdit() {
+  editingId = null;
   document.getElementById('room-id').value = '';
+  document.getElementById('room-id').readOnly = false;
   document.getElementById('room-name').value = '';
   document.getElementById('room-phone').value = '';
   document.getElementById('room-price').value = 1500;
+  document.getElementById('form-title').textContent = '➕ เพิ่มห้องใหม่';
+  document.getElementById('cancel-edit').style.display = 'none';
+}
+
+function saveRoom() {
+  const id = document.getElementById('room-id').value.trim();
+  let name = document.getElementById('room-name').value.trim();
+  const phone = document.getElementById('room-phone').value.trim();
+  const price = parseInt(document.getElementById('room-price').value) || 1500;
+  
+  if (!id) { alert('❌ กรอกเลขห้องก่อน!'); return; }
+  if (!name) name = '-';
+  
+  const isNew = !roomsData[id];
+  roomsData[id] = {
+    name: name,
+    phone: phone,
+    price: price,
+    deviceOnline: roomsData[id] ? roomsData[id].deviceOnline : false
+  };
+  
+  alert(isNew ? '✅ เพิ่มห้อง ' + id + ' สำเร็จ!' : '✅ อัปเดตห้อง ' + id + ' สำเร็จ!');
+  cancelEdit();
+  renderRooms();
+}
+
+function deleteRoom(roomId) {
+  if (confirm('แน่ใจไหมที่จะลบห้อง ' + roomId + '?')) {
+    delete roomsData[roomId];
+    alert('✅ ลบห้อง ' + roomId + ' สำเร็จ!');
+    cancelEdit();
+    renderRooms();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', renderRooms);
 }
 </script>
 
