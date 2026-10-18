@@ -721,6 +721,18 @@ function deleteRoom(roomId) {
 function editRoom(roomId) {
   alert('📝 แก้ไขห้อง: ' + roomId);
 }
+  
+function saveRoom() {
+  const id = document.getElementById('room-id').value;
+  const name = document.getElementById('room-name').value || '-';
+  const phone = document.getElementById('room-phone').value || '';
+  const price = document.getElementById('room-price').value;
+  alert('✅ บันทึกเรียบร้อย!\nห้อง: ' + id + '\nชื่อ: ' + name + '\nราคา: ' + price + ' บาท');
+  document.getElementById('room-id').value = '';
+  document.getElementById('room-name').value = '';
+  document.getElementById('room-phone').value = '';
+  document.getElementById('room-price').value = 1500;
+}
 </script>
 
 </body>
