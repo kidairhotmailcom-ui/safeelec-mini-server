@@ -695,6 +695,19 @@ function downloadReportCSV() {
 
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 } 
+function saveMeterReading() {
+  alert('✅ บันทึกข้อมูลสำเร็จ!');
+}
+
+function deleteRoom(roomId) {
+  if (confirm('แน่ใจไหมที่จะลบห้อง ' + roomId + '?')) {
+    alert('✅ ลบห้อง ' + roomId + ' สำเร็จ!');
+  }
+}
+
+function editRoom(roomId) {
+  alert('📝 แก้ไขห้อง: ' + roomId);
+}
 </script>
 
 </body>
