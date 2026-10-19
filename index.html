@@ -1023,6 +1023,60 @@ function clearAllData() {
   localStorage.clear();
   location.reload();
 }
+// ========== สรุปภาพรวม ==========
+function renderSummary() {
+  const tbody = document.getElementById('summary-body');
+  const rooms = getAllRooms();
+  tbody.innerHTML = '';
+  
+  let totalRent = 0, totalElec = 0, totalWater = 0, totalAll = 0, totalPaid = 0, totalDue = 0;
+  
+  rooms.forEach(room => {
+    const bills = getBillsByRoom(room.id);
+    const latestBill = bills.length > 0 ? bills[bills.length - 1] : null;
+    
+    const rent = latestBill ? latestBill.rent || 0 : 0;
+    const elec = latestBill ? latestBill.elecTotal || 0 : 0;
+    const water = latestBill ? latestBill.waterTotal || 0 : 0;
+    const all = rent + elec + water;
+    const paid = latestBill && latestBill.status === 'ชำระแล้ว' ? all : 0;
+    const due = latestBill && latestBill.status !== 'ชำระแล้ว' ? all : 0;
+    
+    totalRent += rent;
+    totalElec += elec;
+    totalWater += water;
+    totalAll += all;
+    totalPaid += paid;
+    totalDue += due;
+    
+    tbody.innerHTML += `
+      <tr>
+        <td>${room.name}</td>
+        <td>${room.tenant || '-'}</td>
+        <td>${money(rent)}</td>
+        <td>${money(elec)}</td>
+        <td>${money(water)}</td>
+        <td>${money(all)}</td>
+        <td>${money(paid)}</td>
+        <td>${money(due)}</td>
+      </tr>
+    `;
+  });
+  
+  document.getElementById('sum-rent').textContent = money(totalRent);
+  document.getElementById('sum-elec').textContent = money(totalElec);
+  document.getElementById('sum-water').textContent = money(totalWater);
+  document.getElementById('sum-total').textContent = money(totalAll);
+  document.getElementById('sum-paid').textContent = money(totalPaid);
+  document.getElementById('sum-due').textContent = money(totalDue);
+}
+
+// เพิ่มเรียกใช้เมื่อเปลี่ยนแท็บ
+const originalSwitchTab = switchTab;
+switchTab = function(id) {
+  originalSwitchTab(id);
+  if (id === 'summary') renderSummary();
+};
 
 // ========== เริ่มทำงาน ==========
 document.addEventListener('DOMContentLoaded', function() {
