@@ -1230,10 +1230,6 @@ function downloadSummary() {
 }
 // เรียกใช้เมื่อกดปุ่ม
 function switchTab(id) {
-  document.querySelectorAll('.sub-section').forEach(s => s.classList.add('hidden'));
-  document.getElementById(id + '-view').classList.remove('hidden');
-  if (id === 'summary') renderSummary();
-}
 document.addEventListener('DOMContentLoaded', () => {
   fetchMeterFromESP();
   setInterval(fetchMeterFromESP, 60000);
