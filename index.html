@@ -528,7 +528,20 @@ let meterData = {
   waterCurrent: 0,
   lastUpdate: null
 };
+function displayMeterValues() {
+  const elecLast = document.getElementById('electric-last');
+  const elecCurrent = document.getElementById('electric-current');
+  if (elecLast && elecLast.value === '') elecLast.value = meterData.elecPrev;
+  if (elecCurrent) elecCurrent.value = meterData.elecCurrent;
 
+  const waterLast = document.getElementById('water-last');
+  const waterCurrent = document.getElementById('water-current');
+  if (waterLast && waterLast.value === '') waterLast.value = meterData.waterPrev;
+  if (waterCurrent) waterCurrent.value = meterData.waterCurrent;
+
+  if (elecCurrent) calcMeter('electric');
+  if (waterCurrent) calcMeter('water');
+}
 async function fetchMeterFromESP() {
   try {
     const USE_MOCK_DATA = true;
@@ -540,6 +553,9 @@ async function fetchMeterFromESP() {
       meterData.waterCurrent = 445;
       meterData.lastUpdate = new Date();
       console.log("📌 ใช้ข้อมูลทดสอบ — เปลี่ยนเป็น ESP จริงเมื่อพร้อม");
+      meterData.lastUpdate = new Date();
+      console.log("📌 ใช้ข้อมูลทดสอบ — เปลี่ยนเป็น ESP จริงเมื่อพร้อม");
+      displayMeterValues()
       return;
     }
 
@@ -554,6 +570,9 @@ async function fetchMeterFromESP() {
     meterData.waterCurrent = waterRes.current || 0;
     meterData.lastUpdate = new Date();
     console.log("✅ อ่านค่าจาก ESP สำเร็จ");
+    meterData.lastUpdate = new Date();
+    console.log("✅ อ่านค่าจาก ESP สำเร็จ");
+    displayMeterValues(); 
     
   } catch (err) {
     console.warn("⚠️ ไม่สามารถติดต่อ ESP ได้:", err);
