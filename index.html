@@ -659,21 +659,29 @@ function initMeterPage(type) {
   renderMeters(type);
 }
 function loadLastMeter(type) {
-  const roomId = document.getElementById(`${type}-room`).value;
-  const month = document.getElementById(`${type}-month`).value;
+  const roomId = document.getElementById(`${type}-room`)?.value;
+  const month = document.getElementById(`${type}-month`)?.value;
   if (!roomId) {
     document.getElementById(`${type}-last`).value = '';
+    document.getElementById(`${type}-current`).value = '';
+    document.getElementById(`${type}-unit`).value = '';
+    document.getElementById(`${type}-total`).value = '';
     return;
   }
   const roomInfo = roomsData[roomId];
-  const firstValue = type === 'electric' ? (roomInfo?.initElec || 0) : (roomInfo?.initWater || 0);
-  
-  const prev = meterRecords[type]
+  let firstValue = 0;
+  if (type === 'electric') {
+    firstValue = parseFloat(roomInfo?.initElec) || 0;
+  } else {
+    firstValue = parseFloat(roomInfo?.initWater) || 0;
+  }
+  const prevList = meterRecords[type]
     .filter(r => r.roomId === roomId && r.month < month)
-    .sort((a, b) => b.month.localeCompare(a.month))[0];
-  
-  document.getElementById(`${type}-last`).value = prev ? prev.current : firstValue;
-  calcMeter(type);
+    .sort((a, b) => b.month.localeCompare(a.month));
+  document.getElementById(`${type}-last`).value = prevList.length > 0 ? prevList[0].current : firstValue;
+  document.getElementById(`${type}-current`).value = '';
+  document.getElementById(`${type}-unit`).value = '';
+  document.getElementById(`${type}-total`).value = '';
 }
 function calcMeter(type) {
   const last = parseFloat(document.getElementById(`${type}-last`).value) || 0;
