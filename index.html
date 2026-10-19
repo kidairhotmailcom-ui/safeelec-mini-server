@@ -1075,7 +1075,34 @@ function renderSummary() {
   document.getElementById('sum-paid').textContent = money(totalPaid);
   document.getElementById('sum-due').textContent = money(totalDue);
 }
-
+function downloadSummary() {
+  let csv = "ห้อง,ผู้เช่า,ค่าเช่า,ค่าไฟ,ค่าน้ำ,รวม,จ่ายแล้ว,ค้าง\n";
+  
+  const rows = document.querySelectorAll('#summary-body tr');
+  rows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+    const rowData = Array.from(cells).map(td => td.textContent.trim()).join(',');
+    csv += rowData + "\n";
+  });
+  
+  const sumRent = document.getElementById('sum-rent').textContent;
+  const sumElec = document.getElementById('sum-elec').textContent;
+  const sumWater = document.getElementById('sum-water').textContent;
+  const sumTotal = document.getElementById('sum-total').textContent;
+  const sumPaid = document.getElementById('sum-paid').textContent;
+  const sumDue = document.getElementById('sum-due').textContent;
+  csv += `รวมทั้งหมด,,${sumRent},${sumElec},${sumWater},${sumTotal},${sumPaid},${sumDue}`;
+  
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'สรุปค่าใช้จ่าย-' + new Date().toLocaleDateString('th-TH') + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  alert('✅ ดาวน์โหลดสำเร็จ! เปิดด้วย Excel หรือ Google Sheets ได้เลยครับ');
+}
 // เรียกใช้เมื่อกดปุ่ม
 function switchTab(id) {
   document.querySelectorAll('.sub-section').forEach(s => s.classList.add('hidden'));
