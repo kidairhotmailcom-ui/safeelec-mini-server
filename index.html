@@ -700,10 +700,16 @@ function localMonth(s) {
   return `${months[+m-1]} ${Number(y)+543}`;
 }
 function localDateYmd(d = new Date()) {
-  return d.toISOString().slice(0,10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 function localMonthNow() {
-  return new Date().toISOString().slice(0,7);
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
 }
 function localDate(isostring) {
   if (!isostring) return '-';
