@@ -938,7 +938,7 @@ function saveRates() { saveAllData(); }
 
 // ========== ระบบหน้าและการเข้าสู่ระบบ ==========
 function showPage(name) {
-  if (name !== 'login' && !isLoggedIn() && name !== 'login') {
+  if (name !== 'login' && !isLoggedIn()) {
     showPage('login');
     return;
   }
