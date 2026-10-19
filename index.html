@@ -1459,12 +1459,78 @@ function renderAll() {
   renderDevices();
 }
 
-window.onload = function() {
+ function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('show'));
+  const page = document.getElementById('page-' + name);
+  if (!page) return;
+
+  page.classList.add('show');
+
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'rooms') renderRooms();
+  if (name === 'meter') renderMeters('electric');
+  if (name === 'water') renderMeters('water');
+  if (name === 'bills') renderBills();
+  if (name === 'payments') renderNotifications();
+  if (name === 'income-expense') renderIncomeExpense();
+  if (name === 'devices') renderDevices();
+  if (name === 'report') renderReport();
+}
+
+function doLogin() {
+  const username = document.getElementById('login-user').value.trim();
+  const password = document.getElementById('login-pass').value;
+
+  if (username !== 'admin' || password !== '1234') {
+    alert('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+    return;
+  }
+
+  renderAll();
+  populateRoomSelects();
+  populateMonthFilters();
+  populateIEMonthFilter();
+  showPage('dashboard');
+}
+
+function doLogout() {
+  if (!confirm('ต้องการออกจากระบบหรือไม่?')) return;
+  showPage('login');
+  document.getElementById('login-pass').value = '';
+}
+
+function initDormManager() {
   loadData();
   populateRoomSelects();
   populateMonthFilters();
   populateIEMonthFilter();
-};
+
+  const today = localDateYmd();
+  document.getElementById('ie-date').value = today;
+
+  const month = localMonthNow();
+  document.getElementById('bill-month').value = month;
+  document.getElementById('report-month').value = month;
+
+  renderAll();
+
+  // เมื่อเปลี่ยนห้องหรือเดือน ให้โหลดเลขมิเตอร์ก่อนหน้าใหม่
+  ['electric', 'water'].forEach(type => {
+    document.getElementById(type + '-room')
+      .addEventListener('change', () => {
+        loadLastMeter(type);
+        calcMeter(type);
+      });
+
+    document.getElementById(type + '-month')
+      .addEventListener('change', () => {
+        loadLastMeter(type);
+        calcMeter(type);
+      });
+  });
+}
+
+window.onload = initDormManager;
 </script>
 
 </body>
