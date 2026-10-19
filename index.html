@@ -1104,6 +1104,18 @@ function renderMeters(type) {
     tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color:var(--g);padding:24px;">ยังไม่มีประวัติ</td></tr>';
     return;
   }
+  tbody.innerHTML = list.map(m => `<tr>
+    <td>${escapeHtml(m.roomId)}</td>
+    <td>${localMonth(m.month)}</td>
+    <td>${m.last}</td>
+    <td>${m.current}</td>
+    <td>${m.unit}</td>
+    <td>${money(m.total)}</td>
+    <td class="text-right no-print">
+      <button class="btn-sm btn-danger" onclick="deleteMeter('${type}', '${escapeHtml(m.roomId)}', '${m.month}')">🗑️</button>
+    </td>
+  </tr>`).join('');
+}
   tbody.innerHTML = list.map((m, i) => `<tr>
     <td>${escapeHtml(m.roomId)}</td>
     <td>${localMonth(m.month)}</td>
@@ -1117,9 +1129,11 @@ function renderMeters(type) {
   </tr>`).join('');
 }
 
-function deleteMeter(type, idx) {
-  if (!confirm('⚠️ ต้องการลบรายการนี้หรือไม่?')) return;
-  meterRecords[type].splice(idx, 1);
+function deleteMeter(type, roomId, month) {
+  if (!confirm(`⚠️ ลบรายการห้อง ${roomId} เดือน ${localMonth(month)} ใช่หรือไม่?`)) return;
+  meterRecords[type] = meterRecords[type].filter(
+    m => !(m.roomId === roomId && m.month === month)
+  );
   saveAllData();
   renderMeters(type);
 }
