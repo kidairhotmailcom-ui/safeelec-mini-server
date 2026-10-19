@@ -82,10 +82,31 @@
     .mb { margin-bottom: 16px; }
     #bill-document { display: none; background: white; padding: 24px; border-radius: 12px; margin-top: 20px; }
     @media print {
-      .no-print { display: none !important; }
-      body { background: white !important; }
-      #bill-document { display: block !important; }
-    }
+  body * {
+    visibility: hidden !important;
+  }
+
+  #bill-document,
+  #bill-document * {
+    visibility: visible !important;
+  }
+
+  #bill-document {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 24px;
+    background: white;
+  }
+  
+  @page {
+    size: A4;
+    margin: 1.5cm;
+  }
+}
   </style>
 </head>
 <body>
