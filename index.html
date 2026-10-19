@@ -1065,103 +1065,54 @@ function deleteRoom(id) {
 }
 
 // ========== มิเตอร์ ไฟ/น้ำ ==========
+
 function initMeterPage(type) {
+  if (type !== 'electric' && type !== 'water') return;
+
   const roomSelect = document.getElementById(`${type}-room`);
-  const ids = Object.keys(roomsData).sort();
-  roomSelect.innerHTML = '<option value="">— เลือกห้อง —</option>' +
-    ids.map(id => `<option value="${escapeHtml(id)}">${escapeHtml(id)} ${escapeHtml(roomsData[id].name || '')}</option>`).join('');
-  document.getElementById(`${type}-month`).value = localMonthNow();
-  renderMeters(type);
-}
+  const monthInput = document.getElementById(`${type}-month`);
 
-function loadLastMeter(type) {
-  const roomId = document.getElementById(`${type}-room`).value;
-  const month = document.getElementById(`${type}-month`).value;
-  if (!roomId || !month) {
-    document.getElementById(`${type}-last`).value = '';
-    document.getElementById(`${type}-current`).value = '';
-    document.getElementById(`${type}-unit`).value = '';
-    document.getElementById(`${type}-total`).value = '';
-    return;
-  }
-  const prev = meterRecords[type]
-    .filter(m => m.roomId === roomId && m.month < month)
-    .sort((a, b) => b.month.localeCompare(a.month))[0];
-  document.getElementById(`${type}-last`).value = prev ? prev.current : 0;
-  document.getElementById(`${type}-current`).value = '';
-  document.getElementById(`${type}-unit`).value = '';
-  document.getElementById(`${type}-total`).value = '';
-}
-
-function calcMeter(type) {
-  const last = parseFloat(document.getElementById(`${type}-last`).value) || 0;
-  const current = parseFloat(document.getElementById(`${type}-current`).value) || 0;
-  const rate = parseFloat(document.getElementById(`${type === 'electric' ? 'electric-rate' : 'water-rate'}`).value) || 0;
-  const unit = Math.max(0, current - last);
-  const total = unit * rate;
-  document.getElementById(`${type}-unit`).value = unit;
-  document.getElementById(`${type}-total`).value = total.toFixed(2);
-}
-
-function saveMeter(type) {
-  const roomId = document.getElementById(`${type}-room`).value;
-  const month = document.getElementById(`${type}-month`).value;
-  const last = parseFloat(document.getElementById(`${type}-last`).value) || 0;
-  const current = parseFloat(document.getElementById(`${type}-current`).value) || 0;
-  const unit = parseFloat(document.getElementById(`${type}-unit`).value) || 0;
-  const total = parseFloat(document.getElementById(`${type}-total`).value) || 0;
-
-  if (!roomId) { alert('⚠️ กรุณาเลือกห้อง'); return; }
-  if (!month) { alert('⚠️ กรุณาเลือกเดือน'); return; }
-  if (current < 0) { alert('⚠️ เลขมิเตอร์ต้องไม่ติดลบ'); return; }
-  if (last > current) { alert('⚠️ มิเตอร์เดือนนี้น้อยกว่าเดือนก่อน! ตรวจสอบอีกครั้ง'); return; }
-
-  const idx = meterRecords[type].findIndex(m => m.roomId === roomId && m.month === month);
-  if (idx >= 0) {
-    meterRecords[type][idx] = { roomId, month, last, current, unit, total };
-  } else {
-    meterRecords[type].push({ roomId, month, last, current, unit, total });
-  }
-  saveAllData();
-  alert('✅ บันทึกเรียบร้อย');
-  document.getElementById(`${type}-current`).value = '';
-  document.getElementById(`${type}-unit`).value = '';
-  document.getElementById(`${type}-total`).value = '';
-  renderMeters(type);
-}
-
-function renderMeters(type) {
-  const tbody = document.getElementById(`${type}-tbody`);
-  const list = [...meterRecords[type]].sort((a, b) =>
-    b.month.localeCompare(a.month) ||
-    a.roomId.localeCompare(b.roomId)
-  );
-
-  if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color:var(--g);padding:24px;">ยังไม่มีประวัติ</td></tr>';
+  if (!roomSelect || !monthInput) {
+    console.error('ไม่พบช่องเลือกห้องหรือเดือน:', type);
     return;
   }
 
-  tbody.innerHTML = list.map(m => `<tr>
-    <td>${escapeHtml(m.roomId)}</td>
-    <td>${localMonth(m.month)}</td>
-    <td>${m.last}</td>
-    <td>${m.current}</td>
-    <td>${m.unit}</td>
-    <td>${money(m.total)}</td>
-    <td class="text-right no-print">
-      <button class="btn-sm btn-danger" onclick="deleteMeter('${type}', '${escapeHtml(m.roomId)}', '${m.month}')">🗑️</button>
-    </td>
-  </tr>`).join('');
-}
-
-function deleteMeter(type, roomId, month) {
-  if (!confirm(`⚠️ ลบรายการห้อง ${roomId} เดือน ${localMonth(month)} ใช่หรือไม่?`)) return;
-  meterRecords[type] = meterRecords[type].filter(
-    m => !(m.roomId === roomId && m.month === month)
+  // เก็บค่าห้องเดิมไว้ หากห้องนั้นยังมีอยู่
+  const previousRoom = roomSelect.value;
+  const ids = Object.keys(roomsData || {}).sort((a, b) =>
+    String(a).localeCompare(String(b), undefined, { numeric: true })
   );
-  saveAllData();
+
+  // สร้างรายการห้องใหม่
+  roomSelect.replaceChildren();
+
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = '— เลือกห้อง —';
+  roomSelect.appendChild(placeholder);
+
+  ids.forEach(id => {
+    const option = document.createElement('option');
+    option.value = id;
+    option.textContent = `${id} ${roomsData[id]?.name || ''}`;
+    roomSelect.appendChild(option);
+  });
+
+  // คืนค่าห้องเดิม ถ้ายังมีในระบบ
+  if (ids.includes(previousRoom)) {
+    roomSelect.value = previousRoom;
+  }
+
+  if (!monthInput.value) {
+    monthInput.value = localMonthNow();
+  }
+
   renderMeters(type);
+
+  // โหลดเลขมิเตอร์เดิมของห้องที่เลือก
+  if (roomSelect.value) {
+    loadLastMeter(type);
+  }
 }
 
 // ========== จัดการบิล ==========
