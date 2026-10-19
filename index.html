@@ -529,18 +529,28 @@ let meterData = {
   lastUpdate: null
 };
 function displayMeterValues() {
-  const elecLast = document.getElementById('elec
-  const elecCurrent = document.getElementById('e
-  if (elecLast && elecLast.value === '') elecLas
-  if (elecCurrent) elecCurrent.value = meterData
+const elecLast = document.getElementById(‘electric-last’);
+const elecCurrent = document.getElementById(‘electric-current’);
 
-  const waterLast = document.getElementById('wat
-  const waterCurrent = document.getElementById('w
-  if (waterLast && waterLast.value === '') water
-  if (waterCurrent) waterCurrent.value = meterDa
+if (elecLast && elecLast.value === ‘’) {
+elecLast.value = meterData.elecPrev;
+}
+if (elecCurrent) {
+elecCurrent.value = meterData.elecCurrent;
+}
 
-  if (elecCurrent) calcMeter('electric');
-  if (waterCurrent) calcMeter('water');
+const waterLast = document.getElementById(‘water-last’);
+const waterCurrent = document.getElementById(‘water-current’);
+
+if (waterLast && waterLast.value === ‘’) {
+waterLast.value = meterData.waterPrev;
+}
+if (waterCurrent) {
+waterCurrent.value = meterData.waterCurrent;
+}
+
+if (elecCurrent) calcMeter(‘electric’);
+if (waterCurrent) calcMeter(‘water’);
 }
 async function fetchMeterFromESP() {
   try {
