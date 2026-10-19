@@ -70,7 +70,7 @@
     .btn-outline { background: transparent; border: 1px solid var(--p); color: var(--p); }
     input, select {
       width: 100%; padding: 12px; border: 1px solid #d1d5db;
-      border-radius: 8px margin: 8px 0; font-size: 15px;
+      border-radius: 8px; margin: 8px 0; font-size: 15px;
     }
     table { width: 100%; border-collapse: collapse; margin-top: 12px; }
     th, td {
@@ -92,6 +92,7 @@
     .overflow-auto { overflow-x: auto; }
     small { font-size: 12px; color: var(--g); }
     hr { border: none; border-top: 1px solid #eee; margin: 12px 0; }
+    .topnote {background: #fff7e6; color: #854d0e; border: 1px solid #f4d59a; border-radius: 10px; padding: 12px; margin: 16px 0;}
     #bill-document {
       display: none;
       background: white;
@@ -135,6 +136,9 @@
     </div>
   </div>
   <div class="container">
+    <div class="topnote">
+      <b>ℹ️ ข้อมูล:</b> ระบบบันทึกข้อมูลในเครื่อง (Local Storage) กรุณาสำรองข้อมูลเป็นประจำ หากพบข้อความแจ้งย้ายข้อมูล ให้กดตกลงและสำรองไฟล์ JSON ทันที
+    </div>
     <h1 class="page-title">ภาพรวมระบบ</h1>
 
     <div class="grid">
@@ -460,20 +464,23 @@
     <div class="card">
       <h3>ℹ️ ข้อมูลระบบ</h3>
       <p style="color:var(--g); font-size:14px; line-height:1.8;">
-        ระบบจัดการหอพัก<br>
-        ข้อมูลเก็บในเครื่อง (Local Storage)<br>
-        แนะนำให้สำรองข้อมูลเป็นประจำทุกเดือน
+        ระบบจัดการหอพัก — เวอร์ชันอัปเดต<br>
+        ✅ รองรับย้ายข้อมูลจากรุ่นเก่าอัตโนมัติ<br>
+        ✅ ข้อมูลเก็บในเครื่อง (Local Storage)<br>
+        ⚠️ แนะนำให้สำรองข้อมูลเป็นประจำทุกเดือน
       </p>
     </div>
   </div>
 </div>
 
 <script>
-// ========== คีย์เก็บข้อมูล ==========
-const STORAGE_KEY = 'hostel_data';
-const METER_KEY = 'meter_data';
-const BILL_KEY = 'bill_data';
-const RATES_KEY = 'rates_data';
+// ========== คีย์เก็บข้อมูล — รูปแบบใหม่ ==========
+const STORAGE_KEY = 'dorm_manager_complete_local_v1';
+// คีย์เก่าเพื่ออ่านย้ายข้อมูล
+const OLD_ROOMS = 'hostel_data';
+const OLD_METERS = 'meter_data';
+const OLD_BILLS = 'bill_data';
+const OLD_RATES = 'rates_data';
 
 // ========== ตัวแปรกลาง ==========
 let roomsData = {};
@@ -502,62 +509,138 @@ function fmtMonth(m) {
   return `${months[Number(x) - 1]} พ.ศ. ${Number(y) + 543}`;
 }
 
+// ========== การย้ายข้อมูลจากรุ่นเก่า ==========
+function migrateFromOldVersion() {
+  try {
+    // ตรวจสอบว่ามีข้อมูลรุ่นเก่าหรือไม่ และยังไม่เคยย้ายมาก่อน
+    const hasOldRooms = !!localStorage.getItem(OLD_ROOMS);
+    const hasNewData = !!localStorage.getItem(STORAGE_KEY);
+    
+    if (hasOldRooms && !hasNewData) {
+      const oldRooms = JSON.parse(localStorage.getItem(OLD_ROOMS) || 'null');
+      const oldMeters = JSON.parse(localStorage.getItem(OLD_METERS) || 'null');
+      const oldBills = JSON.parse(localStorage.getItem(OLD_BILLS) || 'null');
+      const oldRates = JSON.parse(localStorage.getItem(OLD_RATES) || 'null');
+      
+      if (oldRooms && typeof oldRooms === 'object' && !Array.isArray(oldRooms)) {
+        // ย้ายข้อมูลห้อง
+        roomsData = {};
+        for (const [id, r] of Object.entries(oldRooms)) {
+          roomsData[String(id)] = {
+            name: String(r?.name || ''),
+            phone: String(r?.phone || ''),
+            price: Number(r?.price) || 0
+          };
+        }
+        
+        // ย้ายข้อมูลมิเตอร์
+        if (oldMeters) {
+          meterRecords.electric = Array.isArray(oldMeters.electric) ? oldMeters.electric : [];
+          meterRecords.water = Array.isArray(oldMeters.water) ? oldMeters.water : [];
+        }
+        
+        // ย้ายข้อมูลบิล — รักษายอดรับชำระเดิม
+        if (Array.isArray(oldBills)) {
+          const migrated = [];
+          for (const b of oldBills) {
+            if (!b || !b.roomId || !b.month) continue;
+            const bill = {
+              id: Date.now() + Math.random(),
+              roomId: String(b.roomId),
+              tenant: String(b.tenant || oldRooms[b.roomId]?.name || ''),
+              month: String(b.month),
+              rent: Number(b.rent) || 0,
+              electric: Number(b.electric) || 0,
+              water: Number(b.water) || 0,
+              total: Number(b.total) || 0,
+              paid: Number(b.paid) || 0,
+              createdAt: b.createdAt || new Date().toISOString(),
+              migratedLegacy: true
+            };
+            // ถ้ามียอดจ่ายแต่ไม่มีวันที่ — ระบุชัดเจน
+            if (bill.paid > 0) {
+              bill.payments = [{
+                amount: bill.paid,
+                time: 'ไม่ทราบวันรับเงินจริง (ยอดสะสมจากรุ่นเก่า)',
+                method: 'ยอดสะสมจากรุ่นเก่า'
+              }];
+            }
+            migrated.push(bill);
+          }
+          billRecords = migrated;
+        }
+        
+        // ย้ายอัตรา
+        if (oldRates) {
+          if (oldRates.electric !== undefined) 
+            document.getElementById('electric-rate').value = oldRates.electric;
+          if (oldRates.water !== undefined) 
+            document.getElementById('water-rate').value = oldRates.water;
+        }
+        
+        // บันทึกข้อมูลรูปแบบใหม่
+        saveAllData();
+        alert('✅ ย้ายข้อมูลจากรุ่นเดิมสำเร็จ!\n\n⚠️ ข้อมูลเดิมยังไม่ได้ลบ กรุณาสำรองข้อมูล JSON ทันทีจากหน้าตั้งค่า เพื่อความปลอดภัย');
+        return true;
+      }
+    }
+  } catch (e) {
+    console.error('ย้ายข้อมูลไม่สำเร็จ:', e);
+    alert('⚠️ พบข้อมูลรุ่นเก่าแต่ย้ายไม่สำเร็จ\nข้อมูลเดิมยังอยู่ครบถ้วน ไม่ได้ลบ กรุณาสำรองข้อมูลเดิมก่อนดำเนินการต่อ');
+  }
+  return false;
+}
+
 // ========== โหลด/บันทึก ข้อมูล ==========
 function loadData() {
   try {
     const d = localStorage.getItem(STORAGE_KEY);
-    if (d) roomsData = JSON.parse(d);
+    if (d) {
+      const data = JSON.parse(d);
+      if (data.rooms) roomsData = data.rooms;
+      if (data.meters) meterRecords = data.meters;
+      if (data.bills) billRecords = data.bills;
+      if (data.rates) {
+        if (data.rates.electric) document.getElementById('electric-rate').value = data.rates.electric;
+        if (data.rates.water) document.getElementById('water-rate').value = data.rates.water;
+      }
+    }
   } catch(e) { roomsData = {}; }
 }
 
-function saveData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(roomsData));
+function saveAllData() {
+  const allData = {
+    rooms: roomsData,
+    meters: meterRecords,
+    bills: billRecords,
+    rates: {
+      electric: parseFloat(document.getElementById('electric-rate').value) || 5,
+      water: parseFloat(document.getElementById('water-rate').value) || 20
+    },
+    savedAt: new Date().toISOString()
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
 }
 
-function loadMeterData() {
-  try {
-    const d = localStorage.getItem(METER_KEY);
-    if (d) meterRecords = JSON.parse(d);
-  } catch(e) { meterRecords = { electric: [], water: [] }; }
+function saveData() {
+  saveAllData();
 }
 
 function saveMeterData() {
-  localStorage.setItem(METER_KEY, JSON.stringify(meterRecords));
-}
-
-function loadBillData() {
-  try {
-    const d = localStorage.getItem(BILL_KEY);
-    if (d) billRecords = JSON.parse(d);
-  } catch(e) { billRecords = []; }
+  saveAllData();
 }
 
 function saveBillData() {
-  localStorage.setItem(BILL_KEY, JSON.stringify(billRecords));
-}
-
-function loadRates() {
-  try {
-    const d = localStorage.getItem(RATES_KEY);
-    if (d) {
-      const r = JSON.parse(d);
-      if (r.electric !== undefined) document.getElementById('electric-rate').value = r.electric;
-      if (r.water !== undefined) document.getElementById('water-rate').value = r.water;
-    }
-  } catch(e) {}
+  saveAllData();
 }
 
 function saveRates() {
-  const electric = parseFloat(document.getElementById('electric-rate').value) || 5;
-  const water = parseFloat(document.getElementById('water-rate').value) || 20;
-  localStorage.setItem(RATES_KEY, JSON.stringify({ electric, water }));
+  saveAllData();
 }
 
 // ========== เริ่มต้นระบบ ==========
 loadData();
-loadMeterData();
-loadBillData();
-loadRates();
+migrateFromOldVersion(); // ย้ายข้อมูลอัตโนมัติหากพบรุ่นเก่า
 
 // ========== ระบบเข้าสู่ระบบ ==========
 function doLogin() {
@@ -903,6 +986,7 @@ function viewBill(index) {
     <div id="print-bill">
       <h2 style="text-align:center; color:#1e40af;">ใบแจ้งค่าเช่าหอพัก</h2>
       <p style="text-align:center;">เอกสารเรียกเก็บเงินประจำเดือน</p>
+      ${b.migratedLegacy ? '<p style="text-align:center; color:#b45309; font-size:13px;">⚠️ ย้ายมาจากรุ่นเก่า — ข้อมูลอ้างอิง ณ วันที่ย้าย</p>' : ''}
       <hr>
       <p><strong>ห้อง:</strong> ${safeText(b.roomId)}</p>
       <p><strong>ผู้เช่า:</strong> ${safeText(b.tenant)}</p>
@@ -939,6 +1023,15 @@ function payBill(index) {
   amount = parseFloat(amount) || 0;
   if (amount <= 0) { alert('จำนวนเงินต้องมากกว่า 0'); return; }
   if (amount > remaining + 0.005) { alert(`จำนวนเงินเกินยอดค้างชำระ (${money(remaining)} บาท)`); return; }
+  
+  // บันทึกประวัติการรับเงิน
+  if (!b.payments) b.payments = [];
+  b.payments.push({
+    amount: amount,
+    time: new Date().toISOString(),
+    method: 'เงินสด'
+  });
+  
   b.paid = Number(b.paid) + amount;
   saveBillData();
   renderBills();
@@ -992,8 +1085,7 @@ function renderReport() {
           <table>
             <thead>
               <tr>
-                <th>ห้อง</th><th>ผู้เช่า</th><th>ค่าเช่า
-                                <th>ค่าไฟ</th><th>ค่าน้ำ</th><th>รวม</th><th>ชำระแล้ว</th><th>ค้าง</th><th>สถานะ</th>
+                <th>ห้อง</th><th>ผู้เช่า</th><th>ค่าเช่า</th><th>ค่าไฟ</th><th>ค่าน้ำ</th><th>รวม</th><th>ชำระแล้ว</th><th>ค้าง</th><th>สถานะ</th>
               </tr>
             </thead>
             <tbody>
@@ -1029,6 +1121,7 @@ function renderReport() {
 // ========== สำรอง/นำเข้าข้อมูล ==========
 function exportData() {
   const allData = {
+    version: 'dorm_manager_complete_local_v1',
     rooms: roomsData,
     meters: meterRecords,
     bills: billRecords,
@@ -1095,3 +1188,4 @@ document.getElementById('report-month').value = localMonth();
 </script>
 </body>
 </html>
+       
