@@ -476,7 +476,11 @@
 <!-- 📊 สรุปภาพรวม -->
 <div id="summary-view" class="sub-section hidden">
   <h1 class="page-title">📊 สรุปภาพรวม</h1>
-  
+  <div class="no-print" style="margin-bottom:16px;">
+  <button class="btn-primary" onclick="downloadSummary()">📥 ดาวน์โหลดสรุป</button>
+  <button class="btn-success" onclick="window.print()">🖨️ พิมพ์/PDF</button>
+</div>
+
   <div class="card">
     <div style="overflow-x:auto;">
       <table class="data-table">
