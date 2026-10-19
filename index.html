@@ -1173,6 +1173,10 @@ function switchTab(id) {
   document.getElementById(id + '-view').classList.remove('hidden');
   if (id === 'summary') renderSummary();
 }
+document.addEventListener('DOMContentLoaded', () => {
+  fetchMeterFromESP();
+  setInterval(fetchMeterFromESP, 60000);
+});
 </script>
 
 </body>
