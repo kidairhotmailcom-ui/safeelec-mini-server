@@ -1060,10 +1060,18 @@ function loadLastMeter(type) {
   const month = document.getElementById(`${type}-month`).value;
   if (!roomId || !month) {
     document.getElementById(`${type}-last`).value = '';
+    document.getElementById(`${type}-current`).value = '';
+    document.getElementById(`${type}-unit`).value = '';
+    document.getElementById(`${type}-total`).value = '';
     return;
   }
-  const prev = meterRecords[type].filter(m => m.roomId === roomId && m.month < month).sort((a, b) => b.month.localeCompare(a.month))[0];
+  const prev = meterRecords[type]
+    .filter(m => m.roomId === roomId && m.month < month)
+    .sort((a, b) => b.month.localeCompare(a.month))[0];
   document.getElementById(`${type}-last`).value = prev ? prev.current : 0;
+  document.getElementById(`${type}-current`).value = '';
+  document.getElementById(`${type}-unit`).value = '';
+  document.getElementById(`${type}-total`).value = '';
 }
 
 function calcMeter(type) {
