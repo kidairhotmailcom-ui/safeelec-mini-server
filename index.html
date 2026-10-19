@@ -473,6 +473,42 @@
   <p style="margin-top:40px; text-align:right;">ลงชื่อ ............................ ผู้จัดการหอพัก</p>
 </div>
 
+<!-- 📊 สรุปภาพรวม -->
+<div id="summary-view" class="sub-section hidden">
+  <h1 class="page-title">📊 สรุปภาพรวม</h1>
+  
+  <div class="card">
+    <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ห้อง</th>
+            <th>ผู้เช่า</th>
+            <th>ค่าเช่า</th>
+            <th>ค่าไฟ</th>
+            <th>ค่าน้ำ</th>
+            <th>รวม</th>
+            <th>จ่ายแล้ว</th>
+            <th>ค้าง</th>
+          </tr>
+        </thead>
+        <tbody id="summary-body"></tbody>
+        <tfoot>
+          <tr style="font-weight:bold; background:#f0f0f0;">
+            <td colspan="2">รวมทั้งหมด</td>
+            <td id="sum-rent">0</td>
+            <td id="sum-elec">0</td>
+            <td id="sum-water">0</td>
+            <td id="sum-total">0</td>
+            <td id="sum-paid">0</td>
+            <td id="sum-due">0</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
 <script>
 // ========== ตัวแปรกลาง ==========
 let currentUser = null;
