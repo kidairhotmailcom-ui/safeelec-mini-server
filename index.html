@@ -1417,7 +1417,10 @@ function saveIncomeExpense() {
   const date = document.getElementById('ie-date').value;
   const desc = document.getElementById('ie-desc').value.trim();
   const amount = parseFloat(document.getElementById('ie-amount').value) || 0;
-  if (!date || !desc || amount <= 0) { alert('⚠️ กรุณากรอกข้อมูลให้ครบถ้วน'); return; }
+  if (!date || !desc || amount <= 0) { 
+    alert('⚠️ กรุณากรอกข้อมูลให้ครบถ้วน'); 
+    return; 
+  }
   incomeExpenseRecords.unshift({ id: Date.now().toString(), type, date, desc, amount });
   saveAllData();
   document.getElementById('ie-desc').value = '';
@@ -1440,7 +1443,6 @@ function exportIECSV() {
   ]));
   downloadCSV(rows, 'รายรับรายจ่าย');
 }
-
 // ========== จัดการอุปกรณ์ ESP32 ==========
 function renderDevices() {
   const tbody = document.getElementById('devices-tbody');
