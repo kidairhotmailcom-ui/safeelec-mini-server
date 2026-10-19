@@ -397,6 +397,19 @@
     </div>
   </div>
       <div class="card">
+  <h3>📝 ตั้งค่าเลขที่บิล</h3>
+  <div class="form-row">
+    <div>
+      <label>เริ่มนับจากเลขที่:</label>
+      <input type="number" id="bill-start-no" min="1" placeholder="เช่น 1">
+    </div>
+    <div style="align-self: flex-end;">
+      <button class="btn-primary" onclick="setBillNumber()">✅ ตั้งค่า</button>
+    </div>
+  </div>
+  <p style="font-size:13px; color:#666; margin-top:8px;">ตัวอย่าง: พิมพ์ 1 → บิลจะเป็น B001, B002, B003...</p>
+</div>
+      <div class="card">
         <h3>ข้อมูลระบบ</h3>
         <p style="margin:8px 0;"><strong>พื้นที่จัดเก็บ:</strong> ข้อมูลบันทึกในเครื่อง (Local Storage)</p>
         <p style="margin:8px 0;"><strong>รหัสผ่านผู้ดูแล:</strong> <span id="current-pass">1234</span></p>
