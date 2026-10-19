@@ -521,73 +521,122 @@ const ESP_CONFIG = {
   endpointWater: "/api/meter/water"
 };
 
+const DORM_API = "https://safeelec-mini-server.onrender.com";
+
 let meterData = {
-  elecPrev: 0,
-  elecCurrent: 0,
-  waterPrev: 0,
-  waterCurrent: 0,
+  elecPrev: null,
+  elecCurrent: null,
+  waterPrev: null,
+  waterCurrent: null,
   lastUpdate: null
 };
 
+// แสดงเฉพาะข้อมูลที่มีจริง ไม่ใส่ค่ามิเตอร์จำลอง
 function displayMeterValues() {
-  const elecLast = document.getElementById('electric-last');
-  const elecCurrent = document.getElementById('electric-current');
+  const el = id => document.getElementById(id);
 
-  if (elecLast && elecLast.value === '') {
-    elecLast.value = meterData.elecPrev ?? '';
-  }
-  if (elecCurrent) {
-    elecCurrent.value = meterData.elecCurrent ?? '';
-  }
+  const fields = [
+    ["electric-last", meterData.elecPrev],
+    ["electric-current", meterData.elecCurrent],
+    ["water-last", meterData.waterPrev],
+    ["water-current", meterData.waterCurrent]
+  ];
 
-  const waterLast = document.getElementById('water-last');
-  const waterCurrent = document.getElementById('water-current');
+  fields.forEach(([id, value]) => {
+    const input = el(id);
+    if (input && value !== null && value !== undefined) {
+      input.value = value;
+    }
+  });
 
-  if (waterLast && waterLast.value === '') {
-    waterLast.value = meterData.waterPrev ?? '';
-  }
-  if (waterCurrent) {
-    waterCurrent.value = meterData.waterCurrent ?? '';
-  }
-
-  if (elecCurrent) calcMeter('electric');
-  if (waterCurrent) calcMeter('water');
+  if (el("electric-current")) calcMeter("electric");
+  if (el("water-current")) calcMeter("water");
 }
 
-async function fetchMeterFromESP() {
+// อ่านข้อมูลจาก API ตามห้องและเดือนที่เลือก
+async function fetchRoomMeter(type, room, month) {
+  if (!room || !month) return null;
+
+  const url = new URL(DORM_API + "/api/dorm/meters");
+  url.searchParams.set("type", type);
+  url.searchParams.set("room", room);
+  url.searchParams.set("month", month);
+
+  const response = await fetch(url.toString());
+
+  if (!response.ok) {
+    throw new Error("อ่านข้อมูลมิเตอร์จากเซิร์ฟเวอร์ไม่สำเร็จ");
+  }
+
+  const data = await response.json();
+  return data;
+}
+
+// โหลดมิเตอร์ของห้องและเดือนที่เลือก
+async function loadLastMeter(type) {
+  const roomSelect = document.getElementById(`${type}-room`);
+  const monthInput = document.getElementById(`${type}-month`);
+
+  if (!roomSelect || !monthInput) return;
+
+  const room = roomSelect.value;
+  const month = monthInput.value;
+
+  const lastInput = document.getElementById(`${type}-last`);
+  const currentInput = document.getElementById(`${type}-current`);
+  const unitInput = document.getElementById(`${type}-unit`);
+  const totalInput = document.getElementById(`${type}-total`);
+
+  if (lastInput) lastInput.value = "";
+  if (currentInput) currentInput.value = "";
+  if (unitInput) unitInput.value = "";
+  if (totalInput) totalInput.value = "";
+
+  if (!room || !month) return;
+
+  // ใช้ข้อมูลที่บันทึกไว้ในระบบเดิมก่อน
+  const records = meterRecords[type] || [];
+  const previous = records
+    .filter(r => String(r.room) === String(room) && r.month < month)
+    .sort((a, b) => b.month.localeCompare(a.month))[0];
+
+  const roomInfo = roomsData[room];
+  const initial = type === "electric"
+    ? roomInfo?.initElec
+    : roomInfo?.initWater;
+
+  if (lastInput) {
+    const value = previous
+      ? previous.current
+      : (initial ?? "");
+    lastInput.value = value;
+  }
+
+  // ดึงค่าปัจจุบันจากระบบออนไลน์
   try {
-    const USE_MOCK_DATA = true;
+    const online = await fetchRoomMeter(type, room, month);
 
-    if (USE_MOCK_DATA) {
-      meterData.elecPrev = 1250;
-      meterData.elecCurrent = 1286;
-      meterData.waterPrev = 420;
-      meterData.waterCurrent = 445;
-      meterData.lastUpdate = new Date();
-      console.log("📌 ใช้ข้อมูลทดสอบ — เปลี่ยนเป็น ESP จริงเมื่อพร้อม");
-      meterData.lastUpdate = new Date();
-      console.log("📌 ใช้ข้อมูลทดสอบ — เปลี่ยนเป็น ESP จริงเมื่อพร้อม");
-      displayMeterValues()
-      return;
+    if (online) {
+      const previousValue = online.previous;
+      const currentValue = online.current;
+
+      if (previousValue !== null && previousValue !== undefined &&
+          lastInput && !previous) {
+        lastInput.value = previousValue;
+      }
+
+      if (currentValue !== null && currentValue !== undefined &&
+          currentInput) {
+        currentInput.value = currentValue;
+      }
+
+      if (currentInput && currentInput.value !== "") {
+        calcMeter(type);
+      }
     }
-
-    const [elecRes, waterRes] = await Promise.all([
-      fetch(ESP_CONFIG.baseUrl + ESP_CONFIG.endpointElec).then(r => r.json()),
-      fetch(ESP_CONFIG.baseUrl + ESP_CONFIG.endpointWater).then(r => r.json())
-    ]);
-    
-    meterData.elecPrev = elecRes.previous || meterData.elecCurrent;
-    meterData.elecCurrent = elecRes.current || 0;
-    meterData.waterPrev = waterRes.previous || meterData.waterCurrent;
-    meterData.waterCurrent = waterRes.current || 0;
-    meterData.lastUpdate = new Date();
-    console.log("✅ อ่านค่าจาก ESP สำเร็จ");
-    meterData.lastUpdate = new Date();
-    console.log("✅ อ่านค่าจาก ESP สำเร็จ");
-    displayMeterValues(); 
-    
-  } catch (err) {
-    console.warn("⚠️ ไม่สามารถติดต่อ ESP ได้:", err);
+  } catch (error) {
+    console.warn("ยังไม่มีข้อมูลออนไลน์สำหรับมิเตอร์", type, room, error);
+    // ยังเปิดหน้าและใช้ข้อมูลที่บันทึกไว้ในเครื่องได้
   }
 }
 
