@@ -1133,11 +1133,16 @@ function saveMeter(type) {
 
 function renderMeters(type) {
   const tbody = document.getElementById(`${type}-tbody`);
-  const list = [...meterRecords[type]].sort((a, b) => b.month.localeCompare(a.month) || a.roomId.localeCompare(b.roomId));
+  const list = [...meterRecords[type]].sort((a, b) =>
+    b.month.localeCompare(a.month) ||
+    a.roomId.localeCompare(b.roomId)
+  );
+
   if (!list.length) {
     tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color:var(--g);padding:24px;">ยังไม่มีประวัติ</td></tr>';
     return;
   }
+
   tbody.innerHTML = list.map(m => `<tr>
     <td>${escapeHtml(m.roomId)}</td>
     <td>${localMonth(m.month)}</td>
@@ -1147,18 +1152,6 @@ function renderMeters(type) {
     <td>${money(m.total)}</td>
     <td class="text-right no-print">
       <button class="btn-sm btn-danger" onclick="deleteMeter('${type}', '${escapeHtml(m.roomId)}', '${m.month}')">🗑️</button>
-    </td>
-  </tr>`).join('');
-}
-  tbody.innerHTML = list.map((m, i) => `<tr>
-    <td>${escapeHtml(m.roomId)}</td>
-    <td>${localMonth(m.month)}</td>
-    <td>${m.last}</td>
-    <td>${m.current}</td>
-    <td>${m.unit}</td>
-    <td>${money(m.total)}</td>
-    <td class="text-right no-print">
-      <button class="btn-sm btn-danger" onclick="deleteMeter('${type}', ${i})">🗑️</button>
     </td>
   </tr>`).join('');
 }
