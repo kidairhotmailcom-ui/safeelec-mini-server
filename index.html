@@ -878,7 +878,7 @@ function saveTotalRooms() {
   updateDashboard();
 }
 function updateDashboard() {
-  const totalRooms = Object.keys(roomsData).length;
+  const totalRooms = totalRoomsCount;
   const occupied = Object.values(roomsData).filter(r => r.name).length;
   const empty = totalRooms - occupied;
   const thisMonth = localMonthNow();
