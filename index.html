@@ -1115,6 +1115,240 @@ function initMeterPage(type) {
   }
 }
 
+function getMeterElements(type) {
+  const isWater = type === 'water';
+
+  return {
+    room: document.getElementById(
+      isWater ? 'water-room' : 'electric-room'
+    ),
+    month: document.getElementById(
+      isWater ? 'water-month' : 'electric-month'
+    ),
+    last: document.getElementById(
+      isWater ? 'water-last' : 'electric-last'
+    ),
+    current: document.getElementById(
+      isWater ? 'water-current' : 'electric-current'
+    ),
+    unit: document.getElementById(
+      isWater ? 'water-unit' : 'electric-unit'
+    ),
+    total: document.getElementById(
+      isWater ? 'water-total' : 'electric-total'
+    )
+  };
+}
+
+function renderMeters(type) {
+  if (type !== 'electric' && type !== 'water') return;
+
+  const list = meterRecords[type] || [];
+  const body = document.getElementById(
+    type === 'water' ? 'water-history' : 'electric-history'
+  );
+
+  if (!body) return;
+
+  const selectedRoom = getMeterElements(type).room?.value || '';
+  const selectedMonth = getMeterElements(type).month?.value || '';
+
+  const filtered = list
+    .filter(r =>
+      (!selectedRoom || String(r.roomId) === String(selectedRoom)) &&
+      (!selectedMonth || r.month === selectedMonth)
+    )
+    .sort((a, b) =>
+      String(b.month).localeCompare(String(a.month))
+    );
+
+  if (!filtered.length) {
+    body.innerHTML =
+      '<tr><td colspan="6">ยังไม่มีข้อมูลมิเตอร์ในเดือนที่เลือก</td></tr>';
+    return;
+  }
+
+  body.innerHTML = filtered.map(r => {
+    const room = roomsData.find(
+      x => String(x.id) === String(r.roomId)
+    );
+    const roomName = room ? room.roomNumber : r.roomId;
+
+    return `
+      <tr>
+        <td>${escapeMeterText(roomName)}</td>
+        <td>${escapeMeterText(r.month)}</td>
+        <td>${Number(r.last) || 0}</td>
+        <td>${Number(r.current) || 0}</td>
+        <td>${Number(r.unit) || 0}</td>
+        <td>${Number(r.total || 0).toLocaleString('th-TH', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })}</td>
+      </tr>`;
+  }).join('');
+}
+
+function escapeMeterText(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[ch]);
+}
+
+function loadLastMeter(type) {
+  if (type !== 'electric' && type !== 'water') return;
+
+  const el = getMeterElements(type);
+  if (!el.room || !el.month) return;
+
+  const roomId = el.room.value;
+  const month = el.month.value;
+
+  if (!roomId || !month) return;
+
+  const records = meterRecords[type] || [];
+
+  // ค่ามิเตอร์ตั้งต้นใช้ค่ามิเตอร์ล่าสุดก่อนเดือนที่กำลังเลือก
+  const previous = records
+    .filter(r =>
+      String(r.roomId) === String(roomId) &&
+      String(r.month) < String(month)
+    )
+    .sort((a, b) =>
+      String(b.month).localeCompare(String(a.month))
+    )[0];
+
+  const currentRecord = records.find(r =>
+    String(r.roomId) === String(roomId) &&
+    String(r.month) === String(month)
+  );
+
+  if (el.last) {
+    el.last.value = currentRecord
+      ? Number(currentRecord.last) || 0
+      : previous
+        ? Number(previous.current) || 0
+        : 0;
+  }
+
+  if (el.current) {
+    el.current.value = currentRecord
+      ? Number(currentRecord.current) || 0
+      : '';
+  }
+
+  calcMeter(type);
+  renderMeters(type);
+}
+
+function calcMeter(type) {
+  if (type !== 'electric' && type !== 'water') return;
+
+  const el = getMeterElements(type);
+  if (!el.last || !el.current) return;
+
+  const last = Number(el.last.value);
+  const current = Number(el.current.value);
+
+  const unit = Number.isFinite(last) &&
+    Number.isFinite(current) &&
+    el.current.value !== '' &&
+    current >= last
+      ? current - last
+      : 0;
+
+  if (el.unit) el.unit.value = unit;
+
+  // ค่าเริ่มต้นตามระบบเดิม: ไฟ 5 บาท/หน่วย น้ำ 15 บาท/หน่วย
+  const rateInput = document.getElementById(
+    type === 'water' ? 'water-rate' : 'electric-rate'
+  );
+
+  const rate = rateInput
+    ? Number(rateInput.value)
+    : type === 'water' ? 15 : 5;
+
+  if (el.total) {
+    el.total.value = (unit * (Number.isFinite(rate) ? rate : 0))
+      .toFixed(2);
+  }
+}
+
+function saveMeter(type) {
+  if (type !== 'electric' && type !== 'water') return;
+
+  const el = getMeterElements(type);
+
+  const roomId = el.room?.value;
+  const month = el.month?.value;
+  const last = Number(el.last?.value);
+  const current = Number(el.current?.value);
+
+  if (!roomId || !month) {
+    alert('กรุณาเลือกห้องและเดือน');
+    return;
+  }
+
+  if (
+    el.last?.value === '' ||
+    el.current?.value === '' ||
+    !Number.isFinite(last) ||
+    !Number.isFinite(current) ||
+    last < 0 ||
+    current < last
+  ) {
+    alert('กรุณาตรวจสอบเลขมิเตอร์ เลขปัจจุบันต้องไม่น้อยกว่าเลขครั้งก่อน');
+    return;
+  }
+
+  if (!meterRecords[type]) meterRecords[type] = [];
+
+  const unit = current - last;
+  const rateInput = document.getElementById(
+    type === 'water' ? 'water-rate' : 'electric-rate'
+  );
+  const rate = rateInput
+    ? Number(rateInput.value)
+    : type === 'water' ? 15 : 5;
+
+  const record = {
+    roomId,
+    month,
+    last,
+    current,
+    unit,
+    rate: Number.isFinite(rate) && rate >= 0 ? rate : 0,
+    total: unit * (
+      Number.isFinite(rate) && rate >= 0 ? rate : 0
+    ),
+    updatedAt: new Date().toISOString()
+  };
+
+  const index = meterRecords[type].findIndex(r =>
+    String(r.roomId) === String(roomId) &&
+    String(r.month) === String(month)
+  );
+
+  if (index >= 0) {
+    meterRecords[type][index] = record;
+  } else {
+    meterRecords[type].push(record);
+  }
+
+  try {
+    saveAllData();
+    renderMeters(type);
+    alert('บันทึกมิเตอร์เรียบร้อยแล้ว');
+  } catch (error) {
+    alert('บันทึกไม่สำเร็จ กรุณาตรวจสอบพื้นที่จัดเก็บข้อมูล');
+    console.error(error);
+  }
+}
+
 // ========== จัดการบิล ==========
 function initBillsPage() {
   const select = document.getElementById('bill-room');
