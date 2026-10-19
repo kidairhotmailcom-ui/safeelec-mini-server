@@ -640,6 +640,106 @@ async function loadLastMeter(type) {
   }
 }
 
+async function loadLastMeter(type) {
+  if (type !== "electric" && type !== "water") return;
+
+  const roomSelect = document.getElementById(`${type}-room`);
+  const monthInput = document.getElementById(`${type}-month`);
+  const lastInput = document.getElementById(`${type}-last`);
+  const currentInput = document.getElementById(`${type}-current`);
+  const unitInput = document.getElementById(`${type}-unit`);
+  const totalInput = document.getElementById(`${type}-total`);
+
+  if (!roomSelect || !monthInput) return;
+
+  const room = roomSelect.value;
+  const month = monthInput.value;
+
+  // ล้างค่าของห้องก่อนหน้า ป้องกันข้อมูลปะปนกัน
+  if (lastInput) lastInput.value = "";
+  if (currentInput) currentInput.value = "";
+  if (unitInput) unitInput.value = "";
+  if (totalInput) totalInput.value = "";
+
+  if (!room || !month) return;
+
+  // หาเลขมิเตอร์ครั้งก่อนจากข้อมูลที่บันทึกไว้
+  const records = Array.isArray(meterRecords[type])
+    ? meterRecords[type]
+    : [];
+
+  const previousRecord = records
+    .filter(r =>
+      String(r.room) === String(room) &&
+      String(r.month) < String(month)
+    )
+    .sort((a, b) =>
+      String(b.month).localeCompare(String(a.month))
+    )[0];
+
+  const roomInfo = roomsData[room];
+  const initialValue = type === "electric"
+    ? roomInfo?.initElec
+    : roomInfo?.initWater;
+
+  if (lastInput) {
+    if (previousRecord) {
+      lastInput.value = previousRecord.current ?? "";
+    } else if (initialValue !== undefined && initialValue !== null) {
+      lastInput.value = initialValue;
+    }
+  }
+
+  // ดึงค่าจากเซิร์ฟเวอร์ โดยแยกห้อง ประเภท และเดือน
+  try {
+    const apiUrl = new URL(
+      "https://safeelec-mini-server.onrender.com/api/dorm/meters"
+    );
+
+    apiUrl.searchParams.set("type", type);
+    apiUrl.searchParams.set("room", room);
+    apiUrl.searchParams.set("month", month);
+
+    const response = await fetch(apiUrl.toString());
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // อัปเดตเฉพาะเมื่อยังเลือกห้องและเดือนเดิมอยู่
+    if (
+      roomSelect.value !== room ||
+      monthInput.value !== month
+    ) return;
+
+    if (
+      data.previous !== null &&
+      data.previous !== undefined &&
+      lastInput &&
+      !previousRecord
+    ) {
+      lastInput.value = data.previous;
+    }
+
+    if (
+      data.current !== null &&
+      data.current !== undefined &&
+      currentInput
+    ) {
+      currentInput.value = data.current;
+      calcMeter(type);
+    }
+  } catch (error) {
+    console.warn(
+      `ยังโหลดมิเตอร์ออนไลน์ไม่ได้: ${type}, ห้อง ${room}, เดือน ${month}`,
+      error
+    );
+    // เก็บค่าครั้งก่อนในเครื่องไว้ ไม่สร้างค่ามิเตอร์ปลอม
+  }
+}
+
 let currentUser = null;
 let adminPassword = localStorage.getItem('admin_password') || '1234';
 let roomsData = JSON.parse(localStorage.getItem('dorm_rooms') || '{}');
