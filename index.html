@@ -867,9 +867,18 @@ function updateDashboard() {
   const totalPaid = billsData.filter(b => b.status === 'ชำระแล้ว').reduce((sum, b) => sum + b.total, 0);
   const totalDue = billsData.filter(b => b.status === 'ค้าง').reduce((sum, b) => sum + b.total, 0);
   
+  // รายชื่อห้องว่าง
+  const emptyRoomNames = Object.entries(roomsData)
+    .filter(([_, r]) => !r.name)
+    .map(([id]) => id)
+    .join(', ') || '-';
+  
   document.getElementById('total-rooms').textContent = totalRooms;
   document.getElementById('occupied-rooms').textContent = occupied;
   document.getElementById('empty-rooms').textContent = empty;
+  // เพิ่มแสดงรายชื่อห้องว่าง
+  const emptyNamesEl = document.getElementById('empty-room-names');
+  if (emptyNamesEl) emptyNamesEl.textContent = emptyRoomNames;
   document.getElementById('bills-this-month').textContent = billsThisMonth.length;
   document.getElementById('total-paid').textContent = money(totalPaid) + ' ฿';
   document.getElementById('total-due').textContent = money(totalDue) + ' ฿';
