@@ -819,7 +819,7 @@ function createBill() {
   const total = rent + elecTotal + waterTotal;
   
   const bill = {
-    id: 'B' + Date.now(),
+    id: getNextBillNumber(),
     roomId,
     month,
     tenantName: roomInfo.name || 'ไม่ระบุ',
