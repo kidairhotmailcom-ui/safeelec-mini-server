@@ -1026,36 +1026,37 @@ function clearAllData() {
 // ========== สรุปภาพรวม ==========
 function renderSummary() {
   const tbody = document.getElementById('summary-body');
-  const rooms = getAllRooms();
   tbody.innerHTML = '';
   
   let totalRent = 0, totalElec = 0, totalWater = 0, totalAll = 0, totalPaid = 0, totalDue = 0;
   
-  rooms.forEach(room => {
-    const bills = getBillsByRoom(room.id);
-    const latestBill = bills.length > 0 ? bills[bills.length - 1] : null;
+  // ดึงข้อมูลห้องจาก roomsData
+  Object.keys(roomsData).sort().forEach(roomId => {
+    const room = roomsData[roomId];
+    const roomBills = billsData.filter(b => b.roomId === roomId);
+    const latestBill = roomBills.length > 0 ? roomBills[0] : null;
     
-    const rent = latestBill ? latestBill.rent || 0 : 0;
-    const elec = latestBill ? latestBill.elecTotal || 0 : 0;
-    const water = latestBill ? latestBill.waterTotal || 0 : 0;
-    const all = rent + elec + water;
+    const rent = latestBill ? latestBill.rent || 0 : (room.price || 0);
+    const elecTotal = latestBill ? latestBill.electric || 0 : 0;
+    const waterTotal = latestBill ? latestBill.water || 0 : 0;
+    const all = rent + elecTotal + waterTotal;
     const paid = latestBill && latestBill.status === 'ชำระแล้ว' ? all : 0;
     const due = latestBill && latestBill.status !== 'ชำระแล้ว' ? all : 0;
     
     totalRent += rent;
-    totalElec += elec;
-    totalWater += water;
+    totalElec += elecTotal;
+    totalWater += waterTotal;
     totalAll += all;
     totalPaid += paid;
     totalDue += due;
     
     tbody.innerHTML += `
       <tr>
-        <td>${room.name}</td>
-        <td>${room.tenant || '-'}</td>
+        <td>${escapeHtml(roomId)}</td>
+        <td>${escapeHtml(room.name) || '-'}</td>
         <td>${money(rent)}</td>
-        <td>${money(elec)}</td>
-        <td>${money(water)}</td>
+        <td>${money(elecTotal)}</td>
+        <td>${money(waterTotal)}</td>
         <td>${money(all)}</td>
         <td>${money(paid)}</td>
         <td>${money(due)}</td>
@@ -1071,18 +1072,12 @@ function renderSummary() {
   document.getElementById('sum-due').textContent = money(totalDue);
 }
 
-// เพิ่มเรียกใช้เมื่อเปลี่ยนแท็บ
-const originalSwitchTab = switchTab;
-switchTab = function(id) {
-  originalSwitchTab(id);
+// เรียกใช้เมื่อกดปุ่ม
+function switchTab(id) {
+  document.querySelectorAll('.sub-section').forEach(s => s.classList.add('hidden'));
+  document.getElementById(id + '-view').classList.remove('hidden');
   if (id === 'summary') renderSummary();
-};
-
-// ========== เริ่มทำงาน ==========
-document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('login-pass').value = '1234';
-  document.getElementById('current-pass').textContent = adminPassword;
-});
+}
 </script>
 
 </body>
