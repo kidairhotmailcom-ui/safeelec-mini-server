@@ -871,6 +871,12 @@ function printBill(billId) {
 }
 
 // ========== แดชบอร์ด ==========
+function saveTotalRooms() {
+  totalRoomsCount = parseInt(document.getElementById('total-rooms-setting').value) || 0;
+  localStorage.setItem('dorm_total_rooms', totalRoomsCount);
+  alert('บันทึกแล้ว');
+  updateDashboard();
+}
 function updateDashboard() {
   const totalRooms = Object.keys(roomsData).length;
   const occupied = Object.values(roomsData).filter(r => r.name).length;
