@@ -457,6 +457,7 @@ let meterRecords = {
   water: JSON.parse(localStorage.getItem('dorm_water') || '[]')
 };
 let billsData = JSON.parse(localStorage.getItem('dorm_bills') || '[]');
+let totalRoomsCount = parseInt(localStorage.getItem('dorm_total_rooms') || '0');
 
 // ========== เครื่องมือพื้นฐาน ==========
 function saveAllData() {
