@@ -1589,11 +1589,24 @@ function exportData() {
 function importData(event) {
   const file = event.target.files[0];
   if (!file) return;
-  if (!confirm('⚠️ คำเตือน: ข้อมูลปัจจุบันทั้งหมดจะถูกแทนที่! ต้องการดำเนินการต่อหรือไม่?')) return;
+  if (!confirm('⚠️ คำเตือน: ข้อมูลปัจจุบันทั้งหมดจะถูกแทนที่และไม่สามารถกู้คืนได้!\nต้องการดำเนินการต่อหรือไม่?')) {
+    event.target.value = '';
+    return;
+  }
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
       const data = JSON.parse(e.target.result);
+      
+      // ✅ เคลียร์ข้อมูลเก่าทั้งหมดก่อนนำเข้า
+      roomsData = {};
+      meterRecords = { electric: [], water: [] };
+      billRecords = [];
+      if (typeof notificationRecords !== 'undefined') notificationRecords = [];
+      if (typeof incomeExpenseRecords !== 'undefined') incomeExpenseRecords = [];
+      if (typeof devices !== 'undefined') devices = [];
+      
+      // ✅ นำเข้าข้อมูลใหม่ เฉพาะส่วนที่มีในไฟล์
       if (data.rooms) roomsData = data.rooms;
       if (data.meters) meterRecords = data.meters;
       if (data.bills) billRecords = data.bills;
@@ -1604,15 +1617,17 @@ function importData(event) {
         if (data.rates.electric) document.getElementById('electric-rate').value = data.rates.electric;
         if (data.rates.water) document.getElementById('water-rate').value = data.rates.water;
       }
+      
       saveAllData();
       alert('✅ นำเข้าข้อมูลสำเร็จ! กำลังรีเฟรช...');
-      renderAll();
+      if (typeof renderAll === 'function') renderAll();
+      if (typeof updateDashboard === 'function') updateDashboard();
     } catch {
-      alert('❌ ไฟล์ข้อมูลไม่ถูกต้อง');
+      alert('❌ ไฟล์ข้อมูลไม่ถูกต้อง หรือไม่ใช่ไฟล์สำรองข้อมูล');
     }
+    event.target.value = '';
   };
   reader.readAsText(file);
-  event.target.value = '';
 }
 
 function renderAll() {
