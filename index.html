@@ -83,30 +83,21 @@
     #bill-document { display: none; background: white; padding: 24px; border-radius: 12px; margin-top: 20px; }
     .no-print { }
     @media print {
-  body * {
-    visibility: hidden;
-  }
-  .no-print {
-    display: none !important;
-  }
-  #bill-document,
-  #bill-document * {
-    visibility: visible;
-  }
-  #bill-document {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    padding: 24px;
-    background: white;
-    display: block !important;
-  }
-  @page {
-    size: A4;
-    margin: 1.5cm;
-  }
-}
+      body * { visibility: hidden; }
+      .no-print { display: none !important; }
+      #bill-document,
+      #bill-document * { visibility: visible; }
+      #bill-document {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        padding: 24px;
+        background: white;
+        display: block !important;
+      }
+      @page { size: A4; margin: 1.5cm; }
+    }
   </style>
 </head>
 <body>
@@ -273,7 +264,7 @@
     <div class="card">
       <h3>⚙️ อัตราค่าไฟ</h3>
       <label>บาท/หน่วย</label>
-      <input type="number" id="electric-rate" value="5" onchange="saveRates()">
+      <input type="number" id="electric-rate" value="5" onchange="saveAllData()">
     </div>
     <div class="card">
       <h3>📝 บันทึกข้อมูล</h3>
@@ -333,6 +324,7 @@
     </div>
   </div>
 </div>
+
 <!-- ====== หน้ามิเตอร์น้ำ ====== -->
 <div id="page-water" class="page">
   <div class="navbar">
@@ -345,7 +337,7 @@
     <div class="card">
       <h3>⚙️ อัตราค่าน้ำ</h3>
       <label>บาท/หน่วย</label>
-      <input type="number" id="water-rate" value="20" onchange="saveRates()">
+      <input type="number" id="water-rate" value="20" onchange="saveAllData()">
     </div>
     <div class="card">
       <h3>📝 บันทึกข้อมูล</h3>
@@ -698,7 +690,7 @@ let devices = [];
 let editingRoomId = null;
 let editingDeviceId = null;
 
-// ========== ป้องกัน XSS — ข้อ 43 ==========
+// ========== ป้องกัน XSS ==========
 function escapeHtml(text) {
   if (text === null || text === undefined) return '';
   return String(text)
@@ -735,7 +727,7 @@ function localDate(isostring) {
   return new Date(isostring).toLocaleString('th-TH', { dateStyle:'short', timeStyle:'short' });
 }
 
-// ========== ระบบเข้าสู่ระบบ — ข้อ 41 ==========
+// ========== ระบบเข้าสู่ระบบ ==========
 function hashPassword(pass) {
   let hash = 0;
   for (let i = 0; i < pass.length; i++) {
@@ -786,7 +778,7 @@ function changeAdminPassword() {
   document.getElementById('confirm-password').value = '';
 }
 
-// ========== ตรวจสอบสิทธิ์ — ข้อ 42 ==========
+// ========== ตรวจสอบสิทธิ์ ==========
 function isLoggedIn() {
   return sessionStorage.getItem('isLoggedIn') === 'true';
 }
@@ -799,7 +791,7 @@ function checkAuth() {
   return true;
 }
 
-// ========== ย้ายข้อมูลรุ่นเก่า — ข้อ 45, 46 ==========
+// ========== ย้ายข้อมูลรุ่นเก่า ==========
 function safeParseJSON(jsonStr, defaultValue) {
   try {
     return jsonStr ? JSON.parse(jsonStr) : defaultValue;
@@ -873,11 +865,12 @@ function migrateFromLegacy() {
     legacy.billRecords.forEach(b => {
       const exists = billRecords.find(x => x.roomId === b.roomId && x.month === b.month);
       if (!exists) {
-        billRecords.push({
+                billRecords.push({
           id: Date.now() + Math.random(), roomId: b.roomId, tenant: b.tenantName || '-',
           phone: b.phone || '', month: b.month, rent: b.rent || 0,
-          electric: b.electricCost || 0, water: b.waterCost || 0,
-          total: b.totalAmount || 0, paid: b.paidAmount || 0
+          electric: b.electricCost || 0, water: b.waterCost || 0, other: b.other || 0,
+          total: b.totalAmount || 0, paid: b.paidAmount || 0, status: b.status || 'unpaid',
+          createdAt: b.createdAt || new Date().toISOString(), paidAt: b.paidAt || null
         });
       }
     });
@@ -886,13 +879,15 @@ function migrateFromLegacy() {
   }
 
   if (totalMigrated > 0) {
+    OLD_KEYS.forEach(key => localStorage.removeItem(key));
     saveAllData();
-    alert(`🎉 ย้ายข้อมูลสำเร็จ!\n\n${msg.join('\n')}\n\nกรุณาตรวจสอบข้อมูล แล้วส่งออก JSON ทันทีเพื่อความปลอดภัย`);
-        renderAll();
+    renderAll();
+    alert(`🎉 ย้ายข้อมูลสำเร็จ!\n\n${msg.join('\n')}`);
     return true;
+  } else {
+    alert('⚠️ ไม่พบข้อมูลที่จะย้าย หรือข้อมูลอยู่ในระบบใหม่แล้ว');
+    return false;
   }
-  alert('ℹ️ ไม่พบข้อมูลรุ่นเก่า หรือย้ายข้อมูลเรียบร้อยแล้ว');
-  return false;
 }
 
 // ========== บันทึก/โหลดข้อมูลหลัก ==========
@@ -903,59 +898,58 @@ function saveAllData() {
     bills: billRecords,
     notifications: notificationRecords,
     incomeExpense: incomeExpenseRecords,
-    devices: devices,
-    rates: {
-      electric: parseFloat(document.getElementById('electric-rate').value) || 5,
-      water: parseFloat(document.getElementById('water-rate').value) || 20
-    }
+    devices: devices
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  console.log('💾 บันทึกข้อมูลเรียบร้อย');
 }
 
 function loadAllData() {
-  initDefaultPassword();
   const saved = localStorage.getItem(STORAGE_KEY);
-  if (!saved) return;
-  try {
-    const data = JSON.parse(saved);
-    roomsData = data.rooms || {};
-    meterRecords = data.meters || { electric: [], water: [] };
-    billRecords = data.bills || [];
-    notificationRecords = data.notifications || [];
-    incomeExpenseRecords = data.incomeExpense || [];
-    devices = data.devices || [];
-    if (data.rates) {
-      if (data.rates.electric) document.getElementById('electric-rate').value = data.rates.electric;
-      if (data.rates.water) document.getElementById('water-rate').value = data.rates.water;
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      roomsData = data.rooms || {};
+      meterRecords = data.meters || { electric: [], water: [] };
+      billRecords = data.bills || [];
+      notificationRecords = data.notifications || [];
+      incomeExpenseRecords = data.incomeExpense || [];
+      devices = data.devices || [];
+    } catch {
+      console.warn('⚠️ โหลดข้อมูลไม่สำเร็จ ใช้ค่าเริ่มต้นแทน');
+      roomsData = {};
+      meterRecords = { electric: [], water: [] };
+      billRecords = [];
+      notificationRecords = [];
+      incomeExpenseRecords = [];
+      devices = [];
     }
-  } catch {
-    console.warn('โหลดข้อมูลไม่สำเร็จ');
   }
 }
 
-function saveRates() { saveAllData(); }
-
-// ========== ระบบหน้าและการเข้าสู่ระบบ ==========
+// ========== ระบบหน้าเว็บ ==========
 function showPage(name) {
-  if (name !== 'login' && !isLoggedIn()) {
-    showPage('login');
-    return;
-  }
+  if (name !== 'login' && !checkAuth()) return;
+  
   document.querySelectorAll('.page').forEach(p => p.classList.remove('show'));
-  document.getElementById(`page-${name}`).classList.add('show');
+  const page = document.getElementById(`page-${name}`);
+  if (page) page.classList.add('show');
+
   if (name === 'dashboard') updateDashboard();
   if (name === 'rooms') renderRooms();
-  if (name === 'meter' || name === 'water') initMeterPage(name);
+  if (name === 'meter' || name === 'water') initMeterPage(name === 'meter' ? 'electric' : 'water');
   if (name === 'bills') initBillsPage();
   if (name === 'payments') renderNotifications();
   if (name === 'income-expense') renderIncomeExpense();
   if (name === 'devices') renderDevices();
-  if (name === 'report') { setReportMonth(); renderReport(); }
+  if (name === 'report') renderReport();
+  if (name === 'settings') migrateFromLegacy();
 }
 
 function doLogin() {
-  const user = document.getElementById('login-user').value;
+  const user = document.getElementById('login-user').value.trim();
   const pass = document.getElementById('login-pass').value;
+  
   if (user === 'admin' && checkPassword(pass)) {
     sessionStorage.setItem('isLoggedIn', 'true');
     showPage('dashboard');
@@ -965,802 +959,758 @@ function doLogin() {
 }
 
 function doLogout() {
-  sessionStorage.removeItem('isLoggedIn');
-  showPage('login');
-  document.getElementById('login-user').value = '';
-  document.getElementById('login-pass').value = '';
-}
-
-// ========== หน้าแดชบอร์ด ==========
-function updateDashboard() {
-  const totalRooms = Object.keys(roomsData).length;
-  const occupied = Object.values(roomsData).filter(r => r.name).length;
-  const empty = totalRooms - occupied;
-  const thisMonth = localMonthNow();
-  const monthBills = billRecords.filter(b => b.month === thisMonth);
-  const totalPaid = monthBills.reduce((s, b) => s + (b.paid || 0), 0);
-  const dueCount = monthBills.filter(b => (b.total || 0) > (b.paid || 0)).length;
-
-  document.getElementById('total-rooms').textContent = totalRooms;
-  document.getElementById('occupied-rooms').textContent = occupied;
-  document.getElementById('empty-rooms').textContent = empty;
-  document.getElementById('bills-this-month').textContent = monthBills.length;
-  document.getElementById('total-paid').textContent = money(totalPaid) + ' ฿';
-  document.getElementById('due-bills').textContent = dueCount;
+  if (confirm('ต้องการออกจากระบบใช่หรือไม่?')) {
+    sessionStorage.removeItem('isLoggedIn');
+    showPage('login');
+  }
 }
 
 // ========== จัดการห้อง ==========
-function renderRooms() {
-  const tbody = document.getElementById('rooms-tbody');
-  const ids = Object.keys(roomsData).sort();
-  document.getElementById('room-count').textContent = `ทั้งหมด ${ids.length} ห้อง`;
-  if (!ids.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color:var(--g);padding:24px;">ยังไม่มีข้อมูลห้อง</td></tr>';
-    return;
-  }
-  tbody.innerHTML = ids.map(id => {
-    const r = roomsData[id];
-    const occupied = !!r.name;
-    return `<tr>
-      <td><strong>${escapeHtml(id)}</strong></td>
-      <td>${escapeHtml(r.name || '-')}</td>
-      <td>${escapeHtml(r.phone || '-')}</td>
-      <td>${money(r.price)} ฿</td>
-      <td><span class="badge ${occupied ? 'full' : 'empty'}">${occupied ? 'มีผู้เช่า' : 'ว่าง'}</span></td>
-      <td class="text-right no-print">
-        <button class="btn-sm btn-outline" onclick="editRoom('${escapeHtml(id)}')">✏️</button>
-        <button class="btn-sm btn-danger" onclick="deleteRoom('${escapeHtml(id)}')">🗑️</button>
-      </td>
-    </tr>`;
-  }).join('');
-  resetRoomForm();
-}
-
-function resetRoomForm() {
-  editingRoomId = null;
-  document.getElementById('form-title').textContent = '➕ เพิ่มห้องใหม่';
-  document.getElementById('room-id').value = '';
-  document.getElementById('room-id').disabled = false;
-  document.getElementById('room-name').value = '';
-  document.getElementById('room-phone').value = '';
-  document.getElementById('room-price').value = '1500';
-  document.getElementById('cancel-edit').style.display = 'none';
-}
-
 function saveRoom() {
+  console.log('▶️ เริ่มบันทึกห้อง...');
+  
   const id = document.getElementById('room-id').value.trim();
   const name = document.getElementById('room-name').value.trim();
   const phone = document.getElementById('room-phone').value.trim();
   const price = parseFloat(document.getElementById('room-price').value) || 0;
 
-  if (!id) { alert('⚠️ กรุณากรอกเลขห้อง'); return; }
-  if (!editingRoomId && roomsData[id]) { alert('⚠️ ห้องนี้มีอยู่แล้ว'); return; }
+  if (!id) {
+    alert('⚠️ กรุณากรอกเลขห้อง');
+    return;
+  }
+  
+  if (!editingRoomId && roomsData[id]) {
+    alert('⚠️ ห้องนี้มีอยู่แล้ว');
+    return;
+  }
 
   roomsData[id] = { name, phone, price };
   saveAllData();
+  alert('✅ บันทึกข้อมูลห้องสำเร็จ!');
+  cancelEdit();
   renderRooms();
   updateDashboard();
 }
 
 function editRoom(id) {
   editingRoomId = id;
-  const r = roomsData[id];
-  document.getElementById('form-title').textContent = `✏️ แก้ไขห้อง ${escapeHtml(id)}`;
+  const room = roomsData[id];
   document.getElementById('room-id').value = id;
   document.getElementById('room-id').disabled = true;
-  document.getElementById('room-name').value = r.name || '';
-  document.getElementById('room-phone').value = r.phone || '';
-  document.getElementById('room-price').value = r.price || 1500;
+  document.getElementById('room-name').value = room.name || '';
+  document.getElementById('room-phone').value = room.phone || '';
+  document.getElementById('room-price').value = room.price || '';
+  document.getElementById('form-title').textContent = '✏️ แก้ไขข้อมูลห้อง';
   document.getElementById('cancel-edit').style.display = 'inline-block';
 }
 
-function cancelEdit() { resetRoomForm(); }
+function cancelEdit() {
+  editingRoomId = null;
+  document.getElementById('room-id').value = '';
+  document.getElementById('room-id').disabled = false;
+  document.getElementById('room-name').value = '';
+  document.getElementById('room-phone').value = '';
+  document.getElementById('room-price').value = '1500';
+  document.getElementById('form-title').textContent = '➕ เพิ่มห้องใหม่';
+  document.getElementById('cancel-edit').style.display = 'none';
+}
 
 function deleteRoom(id) {
-  if (!confirm(`⚠️ ต้องการลบห้อง ${escapeHtml(id)} ใช่หรือไม่?\nข้อมูลที่เกี่ยวข้องจะยังคงอยู่ แต่ไม่แสดงในรายการห้อง`)) return;
+  if (!confirm(`⚠️ ต้องการลบห้อง ${escapeHtml(id)} ใช่หรือไม่?\nข้อมูลมิเตอร์และบิลที่เกี่ยวข้องจะยังคงอยู่`)) return;
   delete roomsData[id];
   saveAllData();
   renderRooms();
   updateDashboard();
 }
 
-// ========== มิเตอร์ ไฟ/น้ำ ==========
+function renderRooms() {
+  const tbody = document.getElementById('rooms-tbody');
+  const ids = Object.keys(roomsData).sort();
+  document.getElementById('room-count').textContent = `ทั้งหมด ${ids.length} ห้อง`;
 
+  if (ids.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color:var(--g); padding:24px;">ยังไม่มีข้อมูลห้อง</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = ids.map(id => {
+    const r = roomsData[id];
+    const isEmpty = !r.name;
+    return `
+    <tr>
+      <td><strong>${escapeHtml(id)}</strong></td>
+      <td>${escapeHtml(r.name || '— ว่าง —')}</td>
+      <td>${escapeHtml(r.phone || '-')}</td>
+      <td class="text-right">${money(r.price)} บาท</td>
+      <td><span class="badge ${isEmpty ? 'empty' : 'full'}">${isEmpty ? 'ว่าง' : 'มีผู้เช่า'}</span></td>
+      <td class="text-right">
+        <button class="btn-sm btn-outline" onclick="editRoom('${escapeHtml(id)}')">แก้ไข</button>
+        <button class="btn-sm btn-danger" onclick="deleteRoom('${escapeHtml(id)}')">ลบ</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ========== มิเตอร์ไฟ/น้ำ ==========
 function initMeterPage(type) {
   if (type !== 'electric' && type !== 'water') return;
 
   const roomSelect = document.getElementById(`${type}-room`);
   const monthInput = document.getElementById(`${type}-month`);
 
-  if (!roomSelect || !monthInput) {
-    console.error('ไม่พบช่องเลือกห้องหรือเดือน:', type);
-    return;
-  }
-
-  // เก็บค่าห้องเดิมไว้ หากห้องนั้นยังมีอยู่
-  const previousRoom = roomSelect.value;
-  const ids = Object.keys(roomsData || {}).sort((a, b) =>
-    String(a).localeCompare(String(b), undefined, { numeric: true })
-  );
-
-  // สร้างรายการห้องใหม่
-  roomSelect.replaceChildren();
-
-  const placeholder = document.createElement('option');
-  placeholder.value = '';
-  placeholder.textContent = '— เลือกห้อง —';
-  roomSelect.appendChild(placeholder);
-
-  ids.forEach(id => {
-    const option = document.createElement('option');
-    option.value = id;
-    option.textContent = `${id} ${roomsData[id]?.name || ''}`;
-    roomSelect.appendChild(option);
+  // เติมรายการห้อง
+  roomSelect.innerHTML = '<option value="">— เลือกห้อง —</option>';
+  Object.keys(roomsData).sort().forEach(id => {
+    roomSelect.innerHTML += `<option value="${escapeHtml(id)}">ห้อง ${escapeHtml(id)}</option>`;
   });
 
-  // คืนค่าห้องเดิม ถ้ายังมีในระบบ
-  if (ids.includes(previousRoom)) {
-    roomSelect.value = previousRoom;
-  }
-
-  if (!monthInput.value) {
-    monthInput.value = localMonthNow();
-  }
-
+  // ตั้งค่าเดือนปัจจุบัน
+  monthInput.value = localMonthNow();
+  
+  // แสดงรายการบันทึก
   renderMeters(type);
-
-  // โหลดเลขมิเตอร์เดิมของห้องที่เลือก
-  if (roomSelect.value) {
-    loadLastMeter(type);
-  }
-}
-
-function getMeterElements(type) {
-  const isWater = type === 'water';
-
-  return {
-    room: document.getElementById(
-      isWater ? 'water-room' : 'electric-room'
-    ),
-    month: document.getElementById(
-      isWater ? 'water-month' : 'electric-month'
-    ),
-    last: document.getElementById(
-      isWater ? 'water-last' : 'electric-last'
-    ),
-    current: document.getElementById(
-      isWater ? 'water-current' : 'electric-current'
-    ),
-    unit: document.getElementById(
-      isWater ? 'water-unit' : 'electric-unit'
-    ),
-    total: document.getElementById(
-      isWater ? 'water-total' : 'electric-total'
-    )
-  };
-}
-
-function renderMeters(type) {
-  if (type !== 'electric' && type !== 'water') return;
-
-  const list = meterRecords[type] || [];
-  const body = document.getElementById(
-    type === 'water' ? 'water-history' : 'electric-history'
-  );
-
-  if (!body) return;
-
-  const selectedRoom = getMeterElements(type).room?.value || '';
-  const selectedMonth = getMeterElements(type).month?.value || '';
-
-  const filtered = list
-    .filter(r =>
-      (!selectedRoom || String(r.roomId) === String(selectedRoom)) &&
-      (!selectedMonth || r.month === selectedMonth)
-    )
-    .sort((a, b) =>
-      String(b.month).localeCompare(String(a.month))
-    );
-
-  if (!filtered.length) {
-    body.innerHTML =
-      '<tr><td colspan="6">ยังไม่มีข้อมูลมิเตอร์ในเดือนที่เลือก</td></tr>';
-    return;
-  }
-
-  body.innerHTML = filtered.map(r => {
-    const room = roomsData.find(
-      x => String(x.id) === String(r.roomId)
-    );
-    const roomName = room ? room.roomNumber : r.roomId;
-
-    return `
-      <tr>
-        <td>${escapeMeterText(roomName)}</td>
-        <td>${escapeMeterText(r.month)}</td>
-        <td>${Number(r.last) || 0}</td>
-        <td>${Number(r.current) || 0}</td>
-        <td>${Number(r.unit) || 0}</td>
-        <td>${Number(r.total || 0).toLocaleString('th-TH', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        })}</td>
-      </tr>`;
-  }).join('');
-}
-
-function escapeMeterText(value) {
-  return String(value ?? '').replace(/[&<>"']/g, ch => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  })[ch]);
 }
 
 function loadLastMeter(type) {
-  if (type !== 'electric' && type !== 'water') return;
-
-  const el = getMeterElements(type);
-  if (!el.room || !el.month) return;
-
-  const roomId = el.room.value;
-  const month = el.month.value;
-
-  if (!roomId || !month) return;
-
-  const records = meterRecords[type] || [];
-
-  // ค่ามิเตอร์ตั้งต้นใช้ค่ามิเตอร์ล่าสุดก่อนเดือนที่กำลังเลือก
-  const previous = records
-    .filter(r =>
-      String(r.roomId) === String(roomId) &&
-      String(r.month) < String(month)
-    )
-    .sort((a, b) =>
-      String(b.month).localeCompare(String(a.month))
-    )[0];
-
-  const currentRecord = records.find(r =>
-    String(r.roomId) === String(roomId) &&
-    String(r.month) === String(month)
-  );
-
-  if (el.last) {
-    el.last.value = currentRecord
-      ? Number(currentRecord.last) || 0
-      : previous
-        ? Number(previous.current) || 0
-        : 0;
-  }
-
-  if (el.current) {
-    el.current.value = currentRecord
-      ? Number(currentRecord.current) || 0
-      : '';
-  }
-
-  calcMeter(type);
-  renderMeters(type);
+  const roomId = document.getElementById(`${type}-room`).value;
+  const month = document.getElementById(`${type}-month`).value;
+  const lastRecord = meterRecords[type]
+    .filter(r => r.roomId === roomId && r.month < month)
+    .sort((a,b) => b.month.localeCompare(a.month))[0];
+  
+  document.getElementById(`${type}-last`).value = lastRecord ? lastRecord.current : 0;
+  document.getElementById(`${type}-current`).value = '';
+  document.getElementById(`${type}-unit`).value = '';
+  document.getElementById(`${type}-total`).value = '';
 }
 
 function calcMeter(type) {
-  if (type !== 'electric' && type !== 'water') return;
-
-  const el = getMeterElements(type);
-  if (!el.last || !el.current) return;
-
-  const last = Number(el.last.value);
-  const current = Number(el.current.value);
-
-  const unit = Number.isFinite(last) &&
-    Number.isFinite(current) &&
-    el.current.value !== '' &&
-    current >= last
-      ? current - last
-      : 0;
-
-  if (el.unit) el.unit.value = unit;
-
-  // ค่าเริ่มต้นตามระบบเดิม: ไฟ 5 บาท/หน่วย น้ำ 15 บาท/หน่วย
-  const rateInput = document.getElementById(
-    type === 'water' ? 'water-rate' : 'electric-rate'
-  );
-
-  const rate = rateInput
-    ? Number(rateInput.value)
-    : type === 'water' ? 15 : 5;
-
-  if (el.total) {
-    el.total.value = (unit * (Number.isFinite(rate) ? rate : 0))
-      .toFixed(2);
-  }
+  const last = parseFloat(document.getElementById(`${type}-last`).value) || 0;
+  const current = parseFloat(document.getElementById(`${type}-current`).value) || 0;
+  const rate = parseFloat(document.getElementById(`${type}-rate`).value) || 0;
+  
+  const unit = Math.max(0, current - last);
+  const total = unit * rate;
+  
+  document.getElementById(`${type}-unit`).value = unit;
+  document.getElementById(`${type}-total`).value = money(total);
 }
 
 function saveMeter(type) {
-  if (type !== 'electric' && type !== 'water') return;
+  const roomId = document.getElementById(`${type}-room`).value;
+  const month = document.getElementById(`${type}-month`).value;
+  const last = parseFloat(document.getElementById(`${type}-last`).value) || 0;
+  const current = parseFloat(document.getElementById(`${type}-current`).value) || 0;
+  const rate = parseFloat(document.getElementById(`${type}-rate`).value) || 0;
 
-  const el = getMeterElements(type);
+  if (!roomId) { alert('⚠️ กรุณาเลือกห้อง'); return; }
+  if (!month) { alert('⚠️ กรุณาเลือกเดือน'); return; }
+  if (current < last) { alert('⚠️ มิเตอร์เดือนนี้ต้องมากกว่าหรือเท่ากับเดือนก่อน'); return; }
 
-  const roomId = el.room?.value;
-  const month = el.month?.value;
-  const last = Number(el.last?.value);
-  const current = Number(el.current?.value);
+  const unit = Math.max(0, current - last);
+  const total = unit * rate;
 
-  if (!roomId || !month) {
-    alert('กรุณาเลือกห้องและเดือน');
+  const existingIndex = meterRecords[type].findIndex(r => r.roomId === roomId && r.month === month);
+  const record = { roomId, month, last, current, unit, rate, total };
+  
+  if (existingIndex >= 0) meterRecords[type][existingIndex] = record;
+  else meterRecords[type].push(record);
+
+  saveAllData();
+  alert('✅ บันทึกข้อมูลสำเร็จ!');
+  initMeterPage(type);
+}
+
+function deleteMeter(type, idx) {
+  if (!confirm('⚠️ ต้องการลบรายการนี้ใช่หรือไม่?')) return;
+  meterRecords[type].splice(idx, 1);
+  saveAllData();
+  renderMeters(type);
+}
+
+function renderMeters(type) {
+  const tbody = document.getElementById(`${type}-tbody`);
+  const list = meterRecords[type].slice().sort((a,b) => {
+    if (a.month !== b.month) return b.month.localeCompare(a.month);
+    return a.roomId.localeCompare(b.roomId);
+  });
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color:var(--g); padding:24px;">ยังไม่มีประวัติ</td></tr>';
     return;
   }
 
-  if (
-    el.last?.value === '' ||
-    el.current?.value === '' ||
-    !Number.isFinite(last) ||
-    !Number.isFinite(current) ||
-    last < 0 ||
-    current < last
-  ) {
-    alert('กรุณาตรวจสอบเลขมิเตอร์ เลขปัจจุบันต้องไม่น้อยกว่าเลขครั้งก่อน');
-    return;
-  }
-
-  if (!meterRecords[type]) meterRecords[type] = [];
-
-  const unit = current - last;
-  const rateInput = document.getElementById(
-    type === 'water' ? 'water-rate' : 'electric-rate'
-  );
-  const rate = rateInput
-    ? Number(rateInput.value)
-    : type === 'water' ? 15 : 5;
-
-  const record = {
-    roomId,
-    month,
-    last,
-    current,
-    unit,
-    rate: Number.isFinite(rate) && rate >= 0 ? rate : 0,
-    total: unit * (
-      Number.isFinite(rate) && rate >= 0 ? rate : 0
-    ),
-    updatedAt: new Date().toISOString()
-  };
-
-  const index = meterRecords[type].findIndex(r =>
-    String(r.roomId) === String(roomId) &&
-    String(r.month) === String(month)
-  );
-
-  if (index >= 0) {
-    meterRecords[type][index] = record;
-  } else {
-    meterRecords[type].push(record);
-  }
-
-  try {
-    saveAllData();
-    renderMeters(type);
-    alert('บันทึกมิเตอร์เรียบร้อยแล้ว');
-  } catch (error) {
-    alert('บันทึกไม่สำเร็จ กรุณาตรวจสอบพื้นที่จัดเก็บข้อมูล');
-    console.error(error);
-  }
+  tbody.innerHTML = list.map((r, i) => `
+  <tr>
+    <td>ห้อง ${escapeHtml(r.roomId)}</td>
+    <td>${localMonth(r.month)}</td>
+    <td>${r.last}</td>
+    <td>${r.current}</td>
+    <td>${r.unit}</td>
+    <td class="text-right">${money(r.total)}</td>
+    <td class="text-right">
+      <button class="btn-sm btn-danger" onclick="deleteMeter('${type}', ${i})">ลบ</button>
+    </td>
+  </tr>`).join('');
 }
 
 // ========== จัดการบิล ==========
 function initBillsPage() {
-  const select = document.getElementById('bill-room');
-  const monthSelect = document.getElementById('filter-month');
-  const ids = Object.keys(roomsData).sort();
-  select.innerHTML = '<option value="">— เลือกห้อง —</option>' +
-    ids.map(id => `<option value="${escapeHtml(id)}">${escapeHtml(id)} — ${escapeHtml(roomsData[id].name || 'ว่าง')}</option>`).join('');
-  document.getElementById('bill-month').value = localMonthNow();
+  const billRoom = document.getElementById('bill-room');
+  const billMonth = document.getElementById('bill-month');
+  const filterMonth = document.getElementById('filter-month');
 
+  // เติมรายการห้อง
+  billRoom.innerHTML = '<option value="">— เลือกห้อง —</option>';
+  Object.keys(roomsData).sort().forEach(id => {
+    billRoom.innerHTML += `<option value="${escapeHtml(id)}">ห้อง ${escapeHtml(id)}</option>`;
+  });
+
+  // เดือนปัจจุบัน
+  billMonth.value = localMonthNow();
+
+  // เติมตัวกรองเดือน
   const allMonths = [...new Set(billRecords.map(b => b.month))].sort().reverse();
-  monthSelect.innerHTML = '<option value="">— ทุกเดือน —</option>' +
-    allMonths.map(m => `<option value="${escapeHtml(m)}">${localMonth(m)}</option>`).join('');
+  filterMonth.innerHTML = '<option value="">— ทุกเดือน —</option>';
+  allMonths.forEach(m => filterMonth.innerHTML += `<option value="${m}">${localMonth(m)}</option>`);
+  filterMonth.value = '';
+
   renderBills();
 }
 
 function createBill() {
   const roomId = document.getElementById('bill-room').value;
   const month = document.getElementById('bill-month').value;
+
   if (!roomId) { alert('⚠️ กรุณาเลือกห้อง'); return; }
-  if (!month) { alert('⚠️ กรุณาระบุเดือน'); return; }
+  if (!month) { alert('⚠️ กรุณาเลือกเดือน'); return; }
 
   if (billRecords.some(b => b.roomId === roomId && b.month === month)) {
-    alert('⚠️ บิลห้องนี้เดือนนี้มีอยู่แล้ว!');
+    alert('⚠️ บิลของห้องนี้ในเดือนนี้มีอยู่แล้ว');
     return;
   }
 
   const room = roomsData[roomId];
-  const electric = meterRecords.electric.find(m => m.roomId === roomId && m.month === month)?.total || 0;
-  const water = meterRecords.water.find(m => m.roomId === roomId && m.month === month)?.total || 0;
+  const electricRec = meterRecords.electric.find(r => r.roomId === roomId && r.month === month);
+  const waterRec = meterRecords.water.find(r => r.roomId === roomId && r.month === month);
+
   const rent = room.price || 0;
+  const electric = electricRec ? electricRec.total : 0;
+  const water = waterRec ? waterRec.total : 0;
   const total = rent + electric + water;
 
-  billRecords.push({
+  const bill = {
     id: Date.now() + Math.random(),
-    roomId, tenant: room.name || '-', phone: room.phone || '',
-    month, rent, electric, water, total, paid: 0
-  });
+    roomId,
+    tenant: room.name || 'ไม่ระบุ',
+    phone: room.phone || '',
+    month,
+    rent,
+    electric,
+    water,
+    other: 0,
+    total,
+    paid: 0,
+    status: 'unpaid',
+    createdAt: new Date().toISOString(),
+    paidAt: null
+  };
+
+  billRecords.push(bill);
   saveAllData();
-  alert('✅ สร้างบิลเรียบร้อย');
-  renderBills();
-  updateDashboard();
+  alert('✅ สร้างบิลสำเร็จ!');
+  initBillsPage();
 }
 
 function createAllBills() {
-  const month = localMonthNow();
-  let created = 0;
-  Object.keys(roomsData).forEach(roomId => {
+  const month = prompt('กรุณาระบุเดือน (เช่น 2026-10):', localMonthNow());
+  if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+    alert('⚠️ รูปแบบเดือนไม่ถูกต้อง');
+    return;
+  }
+
+  let count = 0;
+  Object.keys(roomsData).sort().forEach(roomId => {
     if (!billRecords.some(b => b.roomId === roomId && b.month === month)) {
       const room = roomsData[roomId];
-      const electric = meterRecords.electric.find(m => m.roomId === roomId && m.month === month)?.total || 0;
-      const water = meterRecords.water.find(m => m.roomId === roomId && m.month === month)?.total || 0;
+      const electricRec = meterRecords.electric.find(r => r.roomId === roomId && r.month === month);
+      const waterRec = meterRecords.water.find(r => r.roomId === roomId && r.month === month);
+      
       billRecords.push({
-        id: Date.now() + Math.random(),
-        roomId, tenant: room.name || '-', phone: room.phone || '',
-        month, rent: room.price || 0, electric, water,
-        total: (room.price || 0) + electric + water, paid: 0
+        id: Date.now() + Math.random() + count,
+        roomId,
+        tenant: room.name || 'ไม่ระบุ',
+        phone: room.phone || '',
+        month,
+        rent: room.price || 0,
+        electric: electricRec ? electricRec.total : 0,
+        water: waterRec ? waterRec.total : 0,
+        other: 0,
+        total: (room.price || 0) + (electricRec?.total || 0) + (waterRec?.total || 0),
+        paid: 0,
+        status: 'unpaid',
+        createdAt: new Date().toISOString(),
+        paidAt: null
       });
-      created++;
+      count++;
     }
   });
+
   saveAllData();
-  alert(`✅ สร้างบิลเรียบร้อย ${created} รายการ`);
-  renderBills();
+  alert(`✅ สร้างบิลสำเร็จ ${count} รายการ`);
+  initBillsPage();
+}
+
+function payBill(billId) {
+  const bill = billRecords.find(b => b.id === billId);
+  if (!bill) return;
+
+  const amountStr = prompt(`จำนวนเงินที่รับชำระ:\nยอดเต็ม: ${money(bill.total)} บาท\nค้างชำระ: ${money(bill.total - bill.paid)} บาท`, money(bill.total - bill.paid));
+  if (!amountStr) return;
+  
+  const amount = parseMoney(amountStr);
+  if (amount <= 0) { alert('⚠️ จำนวนเงินต้องมากกว่า 0'); return; }
+
+  bill.paid += amount;
+  if (bill.paid >= bill.total) {
+    bill.paid = bill.total;
+    bill.status = 'paid';
+    bill.paidAt = new Date().toISOString();
+  } else if (bill.paid > 0) {
+    bill.status = 'partial';
+  }
+
+  // บันทึกประวัติการรับเงิน
+  notificationRecords.unshift({
+    id: Date.now(),
+    timestamp: new Date().toISOString(),
+    roomId: bill.roomId,
+    tenant: bill.tenant,
+    month: bill.month,
+    amount: amount,
+    status: bill.status
+  });
+
+  // บันทึกในรายรับ-รายจ่ายด้วย
+  incomeExpenseRecords.unshift({
+    id: Date.now(),
+    date: localDateYmd(),
+    type: 'income',
+    description: `รับชำระค่าบิล ห้อง ${bill.roomId} ${localMonth(bill.month)}`,
+    amount: amount
+  });
+
+  saveAllData();
+  alert('✅ บันทึกการชำระเงินสำเร็จ!');
+  initBillsPage();
+  updateDashboard();
+}
+
+function printBill(billId) {
+  const bill = billRecords.find(b => b.id === billId);
+  if (!bill) return;
+
+  const doc = document.getElementById('bill-document');
+  doc.style.display = 'block';
+  doc.innerHTML = `
+    <div style="text-align:center; margin-bottom:24px;">
+      <h2 style="margin:0;">ใบแจ้งค่าใช้จ่ายห้องพัก</h2>
+      <p style="margin:4px 0; color:#666;">ห้อง ${escapeHtml(bill.roomId)} — ${localMonth(bill.month)}</p>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
+      <div><strong>ชื่อผู้เช่า:</strong> ${escapeHtml(bill.tenant)}</div>
+      <div><strong>เบอร์โทร:</strong> ${escapeHtml(bill.phone || '-')}</div>
+    </div>
+    <table style="width:100%; border-collapse:collapse; margin-bottom:20px;">
+      <tr><td style="padding:8px; border-bottom:1px solid #ddd;">ค่าเช่าห้อง</td><td style="text-align:right; padding:8px; border-bottom:1px solid #ddd;">${money(bill.rent)} บาท</td></tr>
+      <tr><td style="padding:8px; border-bottom:1px solid #ddd;">ค่าไฟฟ้า</td><td style="text-align:right; padding:8px; border-bottom:1px solid #ddd;">${money(bill.electric)} บาท</td></tr>
+      <tr><td style="padding:8px; border-bottom:1px solid #ddd;">ค่าน้ำ</td><td style="text-align:right; padding:8px; border-bottom:1px solid #ddd;">${money(bill.water)} บาท</td></tr>
+      ${bill.other ? `<tr><td style="padding:8px; border-bottom:1px solid #ddd;">ค่าอื่นๆ</td><td style="text-align:right; padding:8px; border-bottom:1px solid #ddd;">${money(bill.other)} บาท</td></tr>` : ''}
+      <tr style="font-weight:bold; font-size:18px;"><td style="padding:12px 8px;">รวมทั้งสิ้น</td><td style="text-align:right; padding:12px 8px;">${money(bill.total)} บาท</td></tr>
+    </table>
+    <p style="margin-top:30px; text-align:right;">ลงชื่อผู้รับเงิน .................................</p>
+    <p style="text-align:center; color:#888; font-size:12px; margin-top:40px;">วันที่พิมพ์: ${new Date().toLocaleString('th-TH')}</p>
+  `;
+
+  window.print();
+  setTimeout(() => { doc.style.display = 'none'; }, 500);
+}
+
+function deleteBill(billId) {
+  if (!confirm('⚠️ ต้องการลบบิลนี้ใช่หรือไม่?')) return;
+  billRecords = billRecords.filter(b => b.id !== billId);
+  saveAllData();
+  initBillsPage();
   updateDashboard();
 }
 
 function renderBills() {
   const tbody = document.getElementById('bills-tbody');
-  const filter = document.getElementById('filter-month').value;
-  let list = [...billRecords].sort((a, b) => b.month.localeCompare(a.month) || a.roomId.localeCompare(b.roomId));
-  if (filter) list = list.filter(b => b.month === filter);
+  const filterMonth = document.getElementById('filter-month').value;
+  
+  let list = billRecords.slice().sort((a,b) => {
+    if (a.month !== b.month) return b.month.localeCompare(a.month);
+    return a.roomId.localeCompare(b.roomId);
+  });
 
-  if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color:var(--g);padding:24px;">ยังไม่มีบิล กรุณาสร้างบิลก่อน</td></tr>';
+  if (filterMonth) list = list.filter(b => b.month === filterMonth);
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color:var(--g); padding:24px;">ยังไม่มีบิล กรุณาสร้างบิลก่อน</td></tr>';
     return;
   }
 
   tbody.innerHTML = list.map(b => {
-    const due = Math.max(0, (b.total || 0) - (b.paid || 0));
-    const status = due <= 0 ? 'จ่ายครบ' : (b.paid > 0 ? 'จ่ายบางส่วน' : 'ค้างชำระ');
-    const badgeClass = due <= 0 ? 'paid' : (b.paid > 0 ? 'partial' : 'due');
-    return `<tr>
-      <td><strong>${escapeHtml(b.roomId)}</strong><br><small>${escapeHtml(b.tenant)}</small></td>
+    let statusText, statusClass;
+    if (b.status === 'paid') { statusText = 'ชำระแล้ว'; statusClass = 'paid'; }
+    else if (b.status === 'partial') { statusText = 'บางส่วน'; statusClass = 'partial'; }
+    else { statusText = 'ค้างชำระ'; statusClass = 'due'; }
+
+    return `
+    <tr>
+      <td><strong>ห้อง ${escapeHtml(b.roomId)}</strong><br><small>${escapeHtml(b.tenant)}</small></td>
       <td>${localMonth(b.month)}</td>
       <td class="text-right">${money(b.total)}</td>
       <td class="text-right">${money(b.paid)}</td>
-      <td class="text-right">${money(due)}</td>
-      <td class="text-center"><span class="badge ${badgeClass}">${status}</span></td>
-      <td class="text-right no-print">
-        <button class="btn-sm btn-success" onclick="payBill('${b.id}')">💳 รับเงิน</button>
-        <button class="btn-sm btn-outline" onclick="printBill('${b.id}')">🖨️ พิมพ์</button>
-        <button class="btn-sm btn-danger" onclick="deleteBill('${b.id}')">🗑️</button>
+      <td class="text-right">${money(b.total - b.paid)}</td>
+      <td class="text-center"><span class="badge ${statusClass}">${statusText}</span></td>
+      <td class="text-right">
+        ${b.status !== 'paid' ? `<button class="btn-sm btn-success" onclick="payBill(${b.id})">รับเงิน</button>` : ''}
+        <button class="btn-sm btn-outline" onclick="printBill(${b.id})">พิมพ์</button>
+        <button class="btn-sm btn-danger" onclick="deleteBill(${b.id})">ลบ</button>
       </td>
     </tr>`;
   }).join('');
 }
 
-function payBill(billId) {
-  const bill = billRecords.find(b => b.id == billId);
-  if (!bill) return;
-  const due = Math.max(0, (bill.total || 0) - (bill.paid || 0));
-  const amount = parseFloat(prompt(`ยอดค้าง: ${money(due)} บาท\nกรอกจำนวนเงินที่ได้รับ:`, money(due)));
-  if (!amount || amount <= 0) return;
-  if (amount > due) { alert('⚠️ จำนวนเงินมากกว่ายอดค้างชำระ'); return; }
-
-  bill.paid = (bill.paid || 0) + amount;
-  notificationRecords.unshift({
-    time: new Date().toISOString(),
-    roomId: bill.roomId,
-    tenant: bill.tenant,
-    month: bill.month,
-    amount: amount,
-    status: bill.paid >= bill.total ? 'ชำระครบ' : 'ชำระบางส่วน'
-  });
-  saveAllData();
-  alert('✅ บันทึกการชำระเงินเรียบร้อย');
-  renderBills();
-  updateDashboard();
-}
-
-function printBill(billId) {
-  const bill = billRecords.find(b => b.id == billId);
-  if (!bill) return;
-  const doc = document.getElementById('bill-document');
-  doc.style.display = 'block';
-  doc.innerHTML = `
-    <div style="text-align:center;margin-bottom:20px;">
-      <h2>ใบแจ้งค่าใช้จ่ายห้องพัก</h2>
-      <p style="color:#666;">เดือน ${localMonth(bill.month)}</p>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-      <strong>ห้อง:</strong><span>${escapeHtml(bill.roomId)}</span>
-      <strong>ผู้เช่า:</strong><span>${escapeHtml(bill.tenant)}</span>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-      <strong>เบอร์ติดต่อ:</strong><span>${escapeHtml(bill.phone)}</span>
-      <strong>วันที่ออกบิล:</strong><span>${new Date().toLocaleDateString('th-TH')}</span>
-    </div>
-    <hr>
-    <div style="display:flex;justify-content:space-between;padding:6px 0;">
-      <span>ค่าเช่าห้อง</span><span>${money(bill.rent)} บาท</span>
-    </div>
-    <div style="display:flex;justify-content:space-between;padding:6px 0;">
-      <span>ค่าไฟฟ้า</span><span>${money(bill.electric)} บาท</span>
-    </div>
-    <div style="display:flex;justify-content:space-between;padding:6px 0;">
-      <span>ค่าน้ำ</span><span>${money(bill.water)} บาท</span>
-    </div>
-    <hr>
-    <div style="display:flex;justify-content:space-between;font-size:18px;font-weight:bold;padding:10px 0;">
-      <span>รวมทั้งสิ้น</span><span>${money(bill.total)} บาท</span>
-    </div>
-    <div style="display:flex;justify-content:space-between;padding:6px 0;color:var(--success);">
-      <span>ชำระแล้ว</span><span>${money(bill.paid)} บาท</span>
-    </div>
-    <div style="display:flex;justify-content:space-between;padding:6px 0;color:var(--danger);">
-      <span>คงเหลือ</span><span>${money(Math.max(0, bill.total - bill.paid))} บาท</span>
-    </div>
-    <div style="margin-top:40px;display:flex;justify-content:space-between;">
-      <div>.........................<br>ผู้รับเงิน</div>
-      <div>.........................<br>ผู้ชำระเงิน</div>
-    </div>
-  `;
-  window.print();
-  doc.style.display = 'none';
-}
-
-function deleteBill(id) {
-  if (!confirm('⚠️ ต้องการลบบิลนี้หรือไม่?')) return;
-  billRecords = billRecords.filter(b => b.id != id);
-  saveAllData();
-  renderBills();
-  updateDashboard();
-}
-
-// ========== ประวัติแจ้งเตือน/รับเงิน ==========
+// ========== แจ้งเตือน/ประวัติการรับเงิน ==========
 function renderNotifications() {
   const tbody = document.getElementById('notifications-tbody');
-  if (!notificationRecords.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color:var(--g);padding:24px;">ยังไม่มีประวัติการรับเงิน</td></tr>';
+  if (notificationRecords.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color:var(--g); padding:24px;">ยังไม่มีประวัติการรับเงิน</td></tr>';
     return;
   }
-  tbody.innerHTML = notificationRecords.map(n => `<tr>
-    <td>${localDate(n.time)}</td>
-    <td>${escapeHtml(n.roomId)}</td>
-    <td>${escapeHtml(n.tenant)}</td>
-    <td>${localMonth(n.month)}</td>
-    <td class="text-right">${money(n.amount)}</td>
-    <td><span class="badge ${n.status === 'ชำระครบ' ? 'paid' : 'partial'}">${escapeHtml(n.status)}</span></td>
-  </tr>`).join('');
+
+  tbody.innerHTML = notificationRecords.map(n => {
+    let statusText, statusClass;
+    if (n.status === 'paid') { statusText = 'ชำระเต็ม'; statusClass = 'paid'; }
+    else if (n.status === 'partial') { statusText = 'บางส่วน'; statusClass = 'partial'; }
+    else { statusText = 'ค้างชำระ'; statusClass = 'due'; }
+
+    return `
+    <tr>
+      <td>${localDate(n.timestamp)}</td>
+      <td>ห้อง ${escapeHtml(n.roomId)}</td>
+      <td>${escapeHtml(n.tenant)}</td>
+      <td>${localMonth(n.month)}</td>
+      <td class="text-right">${money(n.amount)}</td>
+      <td><span class="badge ${statusClass}">${statusText}</span></td>
+    </tr>`;
+  }).join('');
 }
 
 function exportNotificationsCSV() {
+  if (notificationRecords.length === 0) { alert('ไม่มีข้อมูลที่จะส่งออก'); return; }
   const rows = [['วันเวลา','ห้อง','ผู้เช่า','เดือน','จำนวนเงิน','สถานะ']];
   notificationRecords.forEach(n => rows.push([
-    localDate(n.time), n.roomId, n.tenant, localMonth(n.month), money(n.amount), n.status
+    localDate(n.timestamp),
+    `ห้อง ${n.roomId}`,
+    n.tenant,
+    localMonth(n.month),
+    money(n.amount),
+    n.status === 'paid' ? 'ชำระเต็ม' : n.status === 'partial' ? 'บางส่วน' : 'ค้างชำระ'
   ]));
-  downloadCSV(rows, 'ประวัติการรับเงิน');
+  downloadCSV(rows, `ประวัติการรับเงิน-${localDateYmd()}.csv`);
 }
 
 function clearNotifications() {
-  if (!confirm('⚠️ ต้องการล้างประวัติทั้งหมดหรือไม่? ไม่สามารถกู้คืนได้!')) return;
+  if (!confirm('⚠️ ต้องการล้างประวัติการรับเงินทั้งหมดใช่หรือไม่?\n⚠️ การดำเนินการนี้ไม่สามารถกู้คืนได้')) return;
   notificationRecords = [];
   saveAllData();
   renderNotifications();
+  alert('✅ ล้างประวัติสำเร็จ');
 }
 
 // ========== รายรับ-รายจ่าย ==========
-function renderIncomeExpense() {
-  document.getElementById('ie-date').value = localDateYmd();
-  const tbody = document.getElementById('ie-tbody');
-  const filter = document.getElementById('ie-month').value;
-  let list = [...incomeExpenseRecords].sort((a, b) => b.date.localeCompare(a.date));
-  if (filter) list = list.filter(r => r.date.startsWith(filter));
-
-  if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="color:var(--g);padding:24px;">ยังไม่มีรายการ</td></tr>';
-  } else {
-    tbody.innerHTML = list.map(r => `<tr>
-      <td>${r.date}</td>
-      <td>${escapeHtml(r.desc)}</td>
-      <td class="text-right">${r.type==='income'?money(r.amount):'-'}</td>
-      <td class="text-right">${r.type==='expense'?money(r.amount):'-'}</td>
-      <td class="text-right no-print">
-        <button class="btn-sm btn-danger" onclick="deleteIERecord('${r.id}')">🗑️</button>
-      </td>
-    </tr>`).join('');
-  }
-
-  const totalIncome = list.filter(r=>r.type==='income').reduce((s,r)=>s+r.amount,0);
-  const totalExpense = list.filter(r=>r.type==='expense').reduce((s,r)=>s+r.amount,0);
-  document.getElementById('ie-total-income').textContent = money(totalIncome);
-  document.getElementById('ie-total-expense').textContent = money(totalExpense);
-  document.getElementById('ie-balance').textContent = money(totalIncome - totalExpense);
-
-  const allMonths = [...new Set(incomeExpenseRecords.map(r => r.date.slice(0,7)))].sort().reverse();
-  document.getElementById('ie-month').innerHTML = '<option value="">— ทุกเดือน —</option>' +
-    allMonths.map(m => `<option value="${escapeHtml(m)}">${localMonth(m)}</option>`).join('');
-}
-
 function saveIncomeExpense() {
   const type = document.getElementById('ie-type').value;
-  const date = document.getElementById('ie-date').value;
+  const date = document.getElementById('ie-date').value || localDateYmd();
   const desc = document.getElementById('ie-desc').value.trim();
-  const amount = parseFloat(document.getElementById('ie-amount').value) || 0;
-  if (!date || !desc || amount <= 0) { 
-    alert('⚠️ กรุณากรอกข้อมูลให้ครบถ้วน'); 
-    return; 
-  }
-  incomeExpenseRecords.unshift({ id: Date.now().toString(), type, date, desc, amount });
+  const amount = parseMoney(document.getElementById('ie-amount').value);
+
+  if (!desc) { alert('⚠️ กรุณาระบุรายการ'); return; }
+  if (amount <= 0) { alert('⚠️ จำนวนเงินต้องมากกว่า 0'); return; }
+
+  incomeExpenseRecords.unshift({ id: Date.now(), date, type, description: desc, amount });
   saveAllData();
+  alert('✅ บันทึกสำเร็จ!');
   document.getElementById('ie-desc').value = '';
   document.getElementById('ie-amount').value = '';
-  alert('✅ บันทึกเรียบร้อย');
   renderIncomeExpense();
 }
 
-function deleteIERecord(id) {
-  if (!confirm('⚠️ ต้องการลบรายการนี้หรือไม่?')) return;
+function deleteIncomeExpense(id) {
+  if (!confirm('⚠️ ต้องการลบรายการนี้ใช่หรือไม่?')) return;
   incomeExpenseRecords = incomeExpenseRecords.filter(r => r.id !== id);
   saveAllData();
   renderIncomeExpense();
 }
 
-function exportIECSV() {
-  const rows = [['วันที่','รายการ','รายรับ','รายจ่าย']];
-  incomeExpenseRecords.forEach(r => rows.push([
-    r.date, r.desc, r.type==='income'?money(r.amount):0, r.type==='expense'?money(r.amount):0
-  ]));
-  downloadCSV(rows, 'รายรับรายจ่าย');
-}
-// ========== จัดการอุปกรณ์ ESP32 ==========
-function renderDevices() {
-  const tbody = document.getElementById('devices-tbody');
-  document.getElementById('device-count').textContent = `ทั้งหมด ${devices.length} เครื่อง`;
-  if (!devices.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color:var(--g);padding:24px;">ยังไม่มีอุปกรณ์ที่ลงทะเบียน</td></tr>';
+function renderIncomeExpense() {
+  const tbody = document.getElementById('ie-tbody');
+  const monthSelect = document.getElementById('ie-month');
+  
+  // เติมตัวกรองเดือน
+  const allMonths = [...new Set(incomeExpenseRecords.map(r => r.date.slice(0,7)))].sort().reverse();
+  const currentValue = monthSelect.value;
+  monthSelect.innerHTML = '<option value="">— ทุกเดือน —</option>';
+  allMonths.forEach(m => monthSelect.innerHTML += `<option value="${m}">${localMonth(m)}</option>`);
+  monthSelect.value = currentValue;
+
+  let list = incomeExpenseRecords.slice();
+  if (monthSelect.value) list = list.filter(r => r.date.startsWith(monthSelect.value));
+
+  let totalIncome = 0, totalExpense = 0;
+  list.forEach(r => {
+    if (r.type === 'income') totalIncome += r.amount;
+    else totalExpense += r.amount;
+  });
+  const balance = totalIncome - totalExpense;
+
+  document.getElementById('ie-total-income').textContent = money(totalIncome);
+  document.getElementById('ie-total-expense').textContent = money(totalExpense);
+  document.getElementById('ie-balance').textContent = money(balance);
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="color:var(--g); padding:24px;">ยังไม่มีรายการ</td></tr>';
     return;
   }
-  const typeLabels = { electric:'มิเตอร์ไฟ', water:'มิเตอร์น้ำ', door:'ล็อคประตู', other:'อื่นๆ' };
-  tbody.innerHTML = devices.map((d, i) => `<tr>
-    <td>${escapeHtml(d.name)}</td>
-    <td>${escapeHtml(d.roomId||'-')}</td>
-    <td>${typeLabels[d.type] || d.type}</td>
-    <td><small>${escapeHtml(d.mac||'-')}</small></td>
-    <td><span class="badge info">ไม่เชื่อมต่อ</span></td>
-    <td class="text-right no-print">
-      <button class="btn-sm btn-danger" onclick="deleteDevice(${i})">🗑️</button>
+
+  tbody.innerHTML = list.map(r => `
+  <tr>
+    <td>${r.date}</td>
+    <td>${escapeHtml(r.description)}</td>
+    <td class="text-right" style="color:${r.type==='income'?'var(--success)':'transparent'}">${r.type==='income'?money(r.amount):''}</td>
+    <td class="text-right" style="color:${r.type==='expense'?'var(--danger)':'transparent'}">${r.type==='expense'?money(r.amount):''}</td>
+    <td class="text-right">
+      <button class="btn-sm btn-danger" onclick="deleteIncomeExpense(${r.id})">ลบ</button>
     </td>
   </tr>`).join('');
 }
 
+function exportIECSV() {
+  if (incomeExpenseRecords.length === 0) { alert('ไม่มีข้อมูลที่จะส่งออก'); return; }
+  const rows = [['วันที่','รายการ','รายรับ','รายจ่าย']];
+  incomeExpenseRecords.forEach(r => rows.push([
+    r.date,
+    r.description,
+    r.type === 'income' ? r.amount : '',
+    r.type === 'expense' ? r.amount : ''
+  ]));
+  downloadCSV(rows, `รายรับรายจ่าย-${localDateYmd()}.csv`);
+}
+
+// ========== จัดการอุปกรณ์ ==========
 function saveDevice() {
   const name = document.getElementById('device-name').value.trim();
-  const roomId = document.getElementById('device-room').value.trim();
+  const room = document.getElementById('device-room').value.trim();
   const mac = document.getElementById('device-mac').value.trim();
   const type = document.getElementById('device-type').value;
-  if (!name) { alert('⚠️ กรุณากรอกชื่ออุปกรณ์'); return; }
-  devices.push({ id: Date.now().toString(), name, roomId, mac, type, lastSeen: null });
+
+  if (!name) { alert('⚠️ กรุณาระบุชื่ออุปกรณ์'); return; }
+
+  if (editingDeviceId) {
+    const idx = devices.findIndex(d => d.id === editingDeviceId);
+    if (idx >= 0) devices[idx] = { ...devices[idx], name, room, mac, type };
+    editingDeviceId = null;
+    alert('✅ แก้ไขข้อมูลอุปกรณ์สำเร็จ');
+  } else {
+    devices.push({ id: Date.now(), name, room, mac, type, lastSeen: new Date().toISOString() });
+    alert('✅ บันทึกอุปกรณ์สำเร็จ');
+  }
+
   saveAllData();
-  alert('✅ บันทึกอุปกรณ์เรียบร้อย');
   document.getElementById('device-name').value = '';
   document.getElementById('device-room').value = '';
   document.getElementById('device-mac').value = '';
   renderDevices();
 }
 
-function deleteDevice(idx) {
-  if (!confirm('⚠️ ต้องการลบอุปกรณ์นี้หรือไม่?')) return;
-  devices.splice(idx, 1);
+function editDevice(id) {
+  const d = devices.find(x => x.id === id);
+  if (!d) return;
+  editingDeviceId = id;
+  document.getElementById('device-name').value = d.name;
+  document.getElementById('device-room').value = d.room || '';
+  document.getElementById('device-mac').value = d.mac || '';
+  document.getElementById('device-type').value = d.type;
+  document.getElementById('device-name').focus();
+}
+
+function deleteDevice(id) {
+  if (!confirm('⚠️ ต้องการลบอุปกรณ์นี้ใช่หรือไม่?')) return;
+  devices = devices.filter(d => d.id !== id);
   saveAllData();
   renderDevices();
 }
 
-// ========== รายงาน ==========
-function setReportMonth() {
-  document.getElementById('report-month').value = localMonthNow();
+function renderDevices() {
+  const tbody = document.getElementById('devices-tbody');
+  document.getElementById('device-count').textContent = `ทั้งหมด ${devices.length} เครื่อง`;
+
+  if (devices.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color:var(--g); padding:24px;">ยังไม่มีอุปกรณ์ที่ลงทะเบียน</td></tr>';
+    return;
+  }
+
+  const typeLabels = { electric: 'มิเตอร์ไฟ', water: 'มิเตอร์น้ำ', door: 'ล็อคประตู', other: 'อื่นๆ' };
+  tbody.innerHTML = devices.map(d => `
+  <tr>
+    <td><strong>${escapeHtml(d.name)}</strong></td>
+    <td>${d.room ? 'ห้อง ' + escapeHtml(d.room) : '-'}</td>
+    <td>${typeLabels[d.type] || d.type}</td>
+    <td style="font-size:12px; font-family:monospace;">${escapeHtml(d.mac || '-')}</td>
+    <td><span class="badge info">ออฟไลน์</span></td>
+    <td class="text-right">
+      <button class="btn-sm btn-outline" onclick="editDevice(${d.id})">แก้ไข</button>
+      <button class="btn-sm btn-danger" onclick="deleteDevice(${d.id})">ลบ</button>
+    </td>
+  </tr>`).join('');
 }
 
+// ========== แดชบอร์ด ==========
+function updateDashboard() {
+  const totalRooms = Object.keys(roomsData).length;
+  const occupied = Object.values(roomsData).filter(r => r.name).length;
+  const empty = totalRooms - occupied;
+
+  const thisMonth = localMonthNow();
+  const billsThisMonth = billRecords.filter(b => b.month === thisMonth);
+  const totalPaid = billsThisMonth.filter(b => b.status === 'paid').reduce((s,b) => s + b.total, 0);
+  const dueBills = billsThisMonth.filter(b => b.status !== 'paid').length;
+
+  document.getElementById('total-rooms').textContent = totalRooms;
+  document.getElementById('occupied-rooms').textContent = occupied;
+  document.getElementById('empty-rooms').textContent = empty;
+  document.getElementById('bills-this-month').textContent = billsThisMonth.length;
+  document.getElementById('total-paid').textContent = money(totalPaid);
+  document.getElementById('due-bills').textContent = dueBills;
+}
+
+// ========== รายงาน ==========
 function renderReport() {
-  const month = document.getElementById('report-month').value;
+  const monthInput = document.getElementById('report-month');
+  if (!monthInput.value) monthInput.value = localMonthNow();
+  const month = monthInput.value;
+
+  const bills = billRecords.filter(b => b.month === month);
   const content = document.getElementById('report-content');
-  if (!month) { content.innerHTML = '<p>กรุณาเลือกเดือน</p>'; return; }
 
-  const monthBills = billRecords.filter(b => b.month === month);
-  const totalRent = monthBills.reduce((s,b)=>s+(b.rent||0),0);
-  const totalElectric = monthBills.reduce((s,b)=>s+(b.electric||0),0);
-  const totalWater = monthBills.reduce((s,b)=>s+(b.water||0),0);
-  const totalAmount = monthBills.reduce((s,b)=>s+(b.total||0),0);
-  const totalPaid = monthBills.reduce((s,b)=>s+(b.paid||0),0);
-  const totalDue = totalAmount - totalPaid;
+  if (bills.length === 0) {
+    content.innerHTML = `<div class="card text-center" style="color:var(--g); padding:32px;">ไม่มีข้อมูลสำหรับเดือน ${localMonth(month)}</div>`;
+    return;
+  }
 
-  const monthIE = incomeExpenseRecords.filter(r => r.date.startsWith(month));
-  const otherIncome = monthIE.filter(r=>r.type==='income').reduce((s,r)=>s+r.amount,0);
-  const expenses = monthIE.filter(r=>r.type==='expense').reduce((s,r)=>s+r.amount,0);
+  let totalRent = 0, totalElectric = 0, totalWater = 0, totalAmount = 0, totalPaid = 0;
+  bills.forEach(b => {
+    totalRent += b.rent;
+    totalElectric += b.electric;
+    totalWater += b.water;
+    totalAmount += b.total;
+    totalPaid += b.paid;
+  });
 
   content.innerHTML = `
     <div class="card">
-      <h3>📊 รายงานประจำเดือน: ${localMonth(month)}</h3>
+      <h3>📊 สรุปเดือน ${localMonth(month)}</h3>
       <div class="grid" style="margin-top:16px;">
-        <div class="stat-card">
-          <div class="label">ค่าเช่าห้อง</div><div class="value">${money(totalRent)}</div>
-        </div>
-        <div class="stat-card">
-          <div class="label">ค่าไฟฟ้า</div><div class="value">${money(totalElectric)}</div>
-        </div>
-        <div class="stat-card">
-          <div class="label">ค่าน้ำ</div><div class="value">${money(totalWater)}</div>
-        </div>
-        <div class="stat-card highlight">
-          <div class="label">ยอดรวม</div><div class="value">${money(totalAmount)}</div>
-        </div>
+        <div class="stat-card"><div class="label">ค่าเช่ารวม</div><div class="value">${money(totalRent)}</div></div>
+        <div class="stat-card"><div class="label">ค่าไฟรวม</div><div class="value">${money(totalElectric)}</div></div>
+        <div class="stat-card"><div class="label">ค่าน้ำรวม</div><div class="value">${money(totalWater)}</div></div>
+        <div class="stat-card"><div class="label">ยอดรวมทั้งหมด</div><div class="value">${money(totalAmount)}</div></div>
+        <div class="stat-card"><div class="label">ชำระแล้ว</div><div class="value" style="color:var(--success)">${money(totalPaid)}</div></div>
+        <div class="stat-card"><div class="label">ค้างชำระ</div><div class="value" style="color:var(--danger)">${money(totalAmount - totalPaid)}</div></div>
       </div>
-      <div class="grid">
-        <div class="stat-card">
-          <div class="label">รับชำระแล้ว</div><div class="value" style="color:var(--success)">${money(totalPaid)}</div>
-        </div>
-        <div class="stat-card">
-          <div class="label">ค้างชำระ</div><div class="value" style="color:var(--danger)">${money(totalDue)}</div>
-        </div>
-        <div class="stat-card">
-          <div class="label">รายรับอื่น</div><div class="value" style="color:var(--success)">${money(otherIncome)}</div>
-        </div>
-        <div class="stat-card">
-          <div class="label">รายจ่าย</div><div class="value" style="color:var(--danger)">${money(expenses)}</div>
-        </div>
-      </div>
-      <div class="card" style="background:var(--l);margin-top:16px;">
-        <p><strong>📋 สรุป:</strong> บิลทั้งหมด ${monthBills.length} ฉบับ | ชำระครบ ${monthBills.filter(b=>(b.total||0)<=(b.paid||0)).length} ฉบับ | ค้างชำระ ${monthBills.filter(b=>(b.total||0)>(b.paid||0)).length} ฉบับ</p>
-        <p><strong>💰 ยอดสุทธิ:</strong> รวมรับสุทธิ ${money(totalPaid + otherIncome - expenses)}</p>
+    </div>
+    <div class="card">
+      <h3>📋 รายละเอียดบิล</h3>
+      <div class="overflow-auto">
+        <table>
+          <thead>
+            <tr>
+              <th>ห้อง</th><th>ผู้เช่า</th><th class="text-right">เช่า</th><th class="text-right">ไฟ</th><th class="text-right">น้ำ</th><th class="text-right">รวม</th><th class="text-right">จ่ายแล้ว</th><th class="text-center">สถานะ</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${bills.map(b => {
+              let statusClass = b.status === 'paid' ? 'paid' : b.status === 'partial' ? 'partial' : 'due';
+              let statusText = b.status === 'paid' ? 'ชำระแล้ว' : b.status === 'partial' ? 'บางส่วน' : 'ค้างชำระ';
+              return `<tr>
+                <td>${escapeHtml(b.roomId)}</td>
+                <td>${escapeHtml(b.tenant)}</td>
+                <td class="text-right">${money(b.rent)}</td>
+                <td class="text-right">${money(b.electric)}</td>
+                <td class="text-right">${money(b.water)}</td>
+                <td class="text-right">${money(b.total)}</td>
+                <td class="text-right">${money(b.paid)}</td>
+                <td class="text-center"><span class="badge ${statusClass}">${statusText}</span></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
       </div>
     </div>
   `;
 }
 
 function exportReportCSV() {
-  const month = document.getElementById('report-month').value;
-  if (!month) { alert('⚠️ กรุณาเลือกเดือน'); return; }
-  const monthBills = billRecords.filter(b => b.month === month);
-  const rows = [['ห้อง','ผู้เช่า','ค่าเช่า','ค่าไฟ','ค่าน้ำ','รวม','จ่ายแล้ว','ค้าง']];
-  monthBills.forEach(b => rows.push([
+  const month = document.getElementById('report-month').value || localMonthNow();
+  const bills = billRecords.filter(b => b.month === month);
+  if (bills.length === 0) { alert('ไม่มีข้อมูลที่จะส่งออก'); return; }
+
+  const rows = [['ห้อง','ผู้เช่า','ค่าเช่า','ค่าไฟ','ค่าน้ำ','ค่าอื่นๆ','รวม','จ่ายแล้ว','ค้าง','สถานะ']];
+  bills.forEach(b => rows.push([
     b.roomId, b.tenant, money(b.rent), money(b.electric), money(b.water),
-    money(b.total), money(b.paid), money(Math.max(0, b.total - b.paid))
+    money(b.other), money(b.total), money(b.paid), money(b.total - b.paid),
+    b.status === 'paid' ? 'ชำระแล้ว' : b.status === 'partial' ? 'บางส่วน' : 'ค้างชำระ'
   ]));
-  downloadCSV(rows, `รายงาน_${month}`);
+  downloadCSV(rows, `รายงาน-${localMonth(month)}.csv`);
 }
 
-// ========== ส่งออก/นำเข้า และเครื่องมือ ==========
+// ========== เครื่องมือส่งออกไฟล์ ==========
 function downloadCSV(rows, filename) {
-  const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const csv = rows.map(row => row.map(cell => {
+    const str = String(cell || '');
+    return str.includes(',') || str.includes('"') || str.includes('\n') 
+      ? `"${str.replace(/"/g, '""')}"` 
+      : str;
+  }).join(',')).join('\n');
+
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `${filename}.csv`;
+  link.download = filename;
   link.click();
+  URL.revokeObjectURL(link.href);
 }
 
 function exportData() {
-  const data = {
-    version: '2.0', exportedAt: new Date().toISOString(),
-    rooms: roomsData, meters: meterRecords, bills: billRecords,
-    notifications: notificationRecords, incomeExpense: incomeExpenseRecords,
-    devices: devices,
-    rates: {
-      electric: parseFloat(document.getElementById('electric-rate').value) || 5,
-      water: parseFloat(document.getElementById('water-rate').value) || 20
-    }
+  const allData = {
+    exportedAt: new Date().toISOString(),
+    version: '2.0',
+    rooms: roomsData,
+    meters: meterRecords,
+    bills: billRecords,
+    notifications: notificationRecords,
+    incomeExpense: incomeExpenseRecords,
+    devices: devices
   };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `backup_${localDateYmd()}.json`; a.click();
+  a.href = url;
+  a.download = `backup-dorm-${localDateYmd()}.json`;
+  a.click();
   URL.revokeObjectURL(url);
   alert('✅ ส่งออกข้อมูลสำเร็จ!');
 }
@@ -1768,66 +1718,59 @@ function exportData() {
 function importData(event) {
   const file = event.target.files[0];
   if (!file) return;
-  if (!confirm('⚠️ คำเตือน: ข้อมูลปัจจุบันทั้งหมดจะถูกแทนที่และไม่สามารถกู้คืนได้!\nต้องการดำเนินการต่อหรือไม่?')) {
-    event.target.value = '';
-    return;
-  }
+  if (!confirm('⚠️ ข้อมูลปัจจุบันทั้งหมดจะถูกแทนที่ ต้องการดำเนินการต่อหรือไม่?')) return;
+
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
       const data = JSON.parse(e.target.result);
-      
-      // ✅ เคลียร์ข้อมูลเก่าทั้งหมดก่อนนำเข้า
-      roomsData = {};
-      meterRecords = { electric: [], water: [] };
-      billRecords = [];
-      if (typeof notificationRecords !== 'undefined') notificationRecords = [];
-      if (typeof incomeExpenseRecords !== 'undefined') incomeExpenseRecords = [];
-      if (typeof devices !== 'undefined') devices = [];
-      
-      // ✅ นำเข้าข้อมูลใหม่ เฉพาะส่วนที่มีในไฟล์
-      if (data.rooms) roomsData = data.rooms;
-      if (data.meters) meterRecords = data.meters;
-      if (data.bills) billRecords = data.bills;
-      if (data.notifications) notificationRecords = data.notifications;
-      if (data.incomeExpense) incomeExpenseRecords = data.incomeExpense;
-      if (data.devices) devices = data.devices;
-      if (data.rates) {
-        if (data.rates.electric) document.getElementById('electric-rate').value = data.rates.electric;
-        if (data.rates.water) document.getElementById('water-rate').value = data.rates.water;
+      if (!data.rooms || !data.meters || !data.bills) {
+        throw new Error('รูปแบบไฟล์ไม่ถูกต้อง');
       }
-      
+      roomsData = data.rooms || {};
+      meterRecords = data.meters || { electric: [], water: [] };
+      billRecords = data.bills || [];
+      notificationRecords = data.notifications || [];
+      incomeExpenseRecords = data.incomeExpense || [];
+      devices = data.devices || [];
       saveAllData();
-      alert('✅ นำเข้าข้อมูลสำเร็จ! กำลังรีเฟรช...');
-      if (typeof renderAll === 'function') renderAll();
-      if (typeof updateDashboard === 'function') updateDashboard();
-    } catch {
-      alert('❌ ไฟล์ข้อมูลไม่ถูกต้อง หรือไม่ใช่ไฟล์สำรองข้อมูล');
+      renderAll();
+      alert('✅ นำเข้าข้อมูลสำเร็จ!');
+    } catch (err) {
+      alert('❌ นำเข้าไม่สำเร็จ: ' + err.message);
     }
-    event.target.value = '';
   };
   reader.readAsText(file);
+  event.target.value = '';
 }
 
+// ========== เรนเดอร์ทั้งหมด ==========
 function renderAll() {
   renderRooms();
+  renderBills();
   renderNotifications();
   renderIncomeExpense();
   renderDevices();
   updateDashboard();
 }
 
-// ========== เริ่มทำงาน ==========
+// ========== เริ่มทำงานเมื่อโหลดหน้า ==========
 window.onload = function() {
+  initDefaultPassword();
   loadAllData();
+  
   if (isLoggedIn()) {
     showPage('dashboard');
   } else {
     showPage('login');
   }
+  
+  document.getElementById('ie-date').value = localDateYmd();
 };
 </script>
 
 </body>
 </html>
-    
+        
+          
+          
