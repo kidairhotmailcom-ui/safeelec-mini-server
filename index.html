@@ -385,6 +385,18 @@
     <div id="settings-view" class="sub-section hidden">
       <h1 class="page-title">⚙️ ตั้งค่าระบบ</h1>
       <div class="card">
+  <h3>🏠 ตั้งค่าจำนวนห้องทั้งหมด</h3>
+  <div class="form-row">
+    <div>
+      <label>จำนวนห้องทั้งหมดของหอพัก</label>
+      <input type="number" id="total-rooms-setting" min="1" value="0">
+    </div>
+    <div style="align-self: flex-end;">
+      <button class="btn-primary" onclick="saveTotalRooms()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+      <div class="card">
         <h3>ข้อมูลระบบ</h3>
         <p style="margin:8px 0;"><strong>พื้นที่จัดเก็บ:</strong> ข้อมูลบันทึกในเครื่อง (Local Storage)</p>
         <p style="margin:8px 0;"><strong>รหัสผ่านผู้ดูแล:</strong> <span id="current-pass">1234</span></p>
