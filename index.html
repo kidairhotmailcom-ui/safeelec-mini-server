@@ -784,6 +784,19 @@ function initBillsPanel() {
   if (monthInp) monthInp.value = localMonthNow();
   renderBills();
 }
+function setBillNumber() {
+  let startNo = parseInt(document.getElementById('bill-start-no').value) || 1;
+  if (startNo < 1) startNo = 1;
+  localStorage.setItem('last_bill_no', (startNo - 1).toString());
+  alert(`✅ ตั้งค่าสำเร็จ\nบิลถัดไปจะเริ่มที่ B${String(startNo).padStart(3,'0')}`);
+}
+
+// ดึงเลขบิลถัดไป
+function getNextBillNumber() {
+  let lastNo = parseInt(localStorage.getItem('last_bill_no') || '0') + 1;
+  localStorage.setItem('last_bill_no', lastNo.toString());
+  return 'B' + String(lastNo).padStart(3, '0');
+}
 function createBill() {
   const roomId = document.getElementById('bill-room').value;
   const month = document.getElementById('bill-month').value;
