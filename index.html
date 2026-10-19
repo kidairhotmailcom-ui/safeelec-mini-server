@@ -515,6 +515,51 @@
 
 <script>
 // ========== ตัวแปรกลาง ==========
+const ESP_CONFIG = {
+  baseUrl: "http://192.168.1.100",
+  endpointElec: "/api/meter/electric",
+  endpointWater: "/api/meter/water"
+};
+
+let meterData = {
+  elecPrev: 0,
+  elecCurrent: 0,
+  waterPrev: 0,
+  waterCurrent: 0,
+  lastUpdate: null
+};
+
+async function fetchMeterFromESP() {
+  try {
+    const USE_MOCK_DATA = true;
+
+    if (USE_MOCK_DATA) {
+      meterData.elecPrev = 1250;
+      meterData.elecCurrent = 1286;
+      meterData.waterPrev = 420;
+      meterData.waterCurrent = 445;
+      meterData.lastUpdate = new Date();
+      console.log("📌 ใช้ข้อมูลทดสอบ — เปลี่ยนเป็น ESP จริงเมื่อพร้อม");
+      return;
+    }
+
+    const [elecRes, waterRes] = await Promise.all([
+      fetch(ESP_CONFIG.baseUrl + ESP_CONFIG.endpointElec).then(r => r.json()),
+      fetch(ESP_CONFIG.baseUrl + ESP_CONFIG.endpointWater).then(r => r.json())
+    ]);
+    
+    meterData.elecPrev = elecRes.previous || meterData.elecCurrent;
+    meterData.elecCurrent = elecRes.current || 0;
+    meterData.waterPrev = waterRes.previous || meterData.waterCurrent;
+    meterData.waterCurrent = waterRes.current || 0;
+    meterData.lastUpdate = new Date();
+    console.log("✅ อ่านค่าจาก ESP สำเร็จ");
+    
+  } catch (err) {
+    console.warn("⚠️ ไม่สามารถติดต่อ ESP ได้:", err);
+  }
+}
+
 let currentUser = null;
 let adminPassword = localStorage.getItem('admin_password') || '1234';
 let roomsData = JSON.parse(localStorage.getItem('dorm_rooms') || '{}');
