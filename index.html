@@ -107,7 +107,10 @@
       <p style="color: var(--g); margin-bottom: 24px;">กรุณาเข้าสู่ระบบผู้ดูแล</p>
       <input type="text" id="login-user" placeholder="ชื่อผู้ใช้" value="admin">
       <input type="password" id="login-pass" placeholder="รหัสผ่าน" value="1234">
-      <button class="btn-primary btn-block" onclick="doLogin()">เข้าสู่ระบบ</button>
+      <button class="btn-primary btn-block" onclick="doLogin()">เข้าสู่ระบบ</>
+      <div style="text-align:center; margin-top:16px; padding-top:16px; border-top:1px solid #eee;">
+        <a href="register-owner.html" style="color:#1e40af; text-decoration:none; font-size:14px;">🏢 ลงทะเบียนเจ้าของหอพัก</a>
+      </div>
     </div>
   </div>
 </div>
@@ -118,6 +121,7 @@
     <h2>🏢 แดชบอร์ด — ระบบหอพักคำนวณอัตโนมัติ (ESP Gateway Ready)</h2>
     <div class="nav-right">
       <span style="display:inline-flex;align-items:center;"><span class="status-indicator"></span>ระบบตรวจจับอัตโนมัติ</span>
+      <a href="customer-login.html" class="btn-outline" style="background:white; padding:6px 12px; font-size:14px; text-decoration:none;">👤 ผู้เช่า</a>
       <button class="btn-outline" style="background:white; padding:6px 12px; font-size:14px;" onclick="doLogout()">ออกจากระบบ</button>
     </div>
   </div>
