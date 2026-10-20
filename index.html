@@ -739,24 +739,32 @@ async function doLogin() {
     const email = document.getElementById('login-user').value.trim();
     const password = document.getElementById('login-pass').value;
 
+    if (!email || !password) {
+      alert('กรุณากรอกอีเมลและรหัสผ่าน');
+      return;
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
 
     if (error) {
-      alert('❌ ' + error.message);
+      alert('เข้าสู่ระบบไม่สำเร็จ: ' + error.message);
       return;
     }
 
     currentUser = data.user;
-    showPage('dashboard');
-    updateDashboard();
+
+    // ตรวจสอบผู้ใช้และเปิดหน้าระบบผ่านฟังก์ชันกลาง
+    await loadUserData();
+
   } catch (error) {
     console.error('Login error:', error);
     alert('เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อ Supabase');
   }
 }
+
 async function doLogout() {
   if (confirm('ต้องการออกจากระบบใช่หรือไม่?')) {
     await supabase.auth.signOut()
@@ -1334,27 +1342,42 @@ function switchTab(id) {
     updateDashboard();
   }
 }
+
 async function loadUserData() {
   try {
     await supabaseReady;
 
-    const { data: { user }, error } =
-      await supabase.auth.getUser();
+    const {
+      data: { user },
+      error
+    } = await supabase.auth.getUser();
 
-    if (error) {
-      console.error('ตรวจสอบผู้ใช้ไม่สำเร็จ:', error);
-    }
+    if (error) throw error;
 
     currentUser = user || null;
 
-    if (!user) {
+    if (!currentUser) {
       showPage('login');
+      return;
     }
+
+    // ผู้ใช้ล็อกอินแล้ว แสดงหน้าระบบ
+    showPage('dashboard');
+
+    // โหลดข้อมูลสรุปหน้าหลัก
+    if (typeof updateDashboard === 'function') {
+      updateDashboard();
+    }
+
+    console.log('ตรวจสอบผู้ใช้สำเร็จ:', currentUser.id);
+
   } catch (error) {
-    console.error('Supabase เริ่มต้นไม่สำเร็จ:', error);
+    console.error('โหลดข้อมูลผู้ใช้ไม่สำเร็จ:', error);
+    currentUser = null;
     showPage('login');
   }
 }
+
 // เริ่มระบบหลังจากหน้าเว็บโหลดเสร็จ
 document.addEventListener('DOMContentLoaded', async () => {
   await loadUserData() 
