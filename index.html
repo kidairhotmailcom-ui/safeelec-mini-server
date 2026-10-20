@@ -1331,9 +1331,24 @@ function switchTab(id) {
   }
 }
 async function loadUserData() {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user && !document.getElementById('page-login').classList.contains('show')) {
-    showPage('login')
+  try {
+    await supabaseReady;
+
+    const { data: { user }, error } =
+      await supabase.auth.getUser();
+
+    if (error) {
+      console.error('ตรวจสอบผู้ใช้ไม่สำเร็จ:', error);
+    }
+
+    currentUser = user || null;
+
+    if (!user) {
+      showPage('login');
+    }
+  } catch (error) {
+    console.error('Supabase เริ่มต้นไม่สำเร็จ:', error);
+    showPage('login');
   }
 }
 // เริ่มระบบหลังจากหน้าเว็บโหลดเสร็จ
