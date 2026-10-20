@@ -118,9 +118,7 @@
               owner_name: ownerName,
               owner_phone: phone
             },
-            emailRedirectTo: window.location.origin +
-              window.location.pathname.replace(/[^/]*$/, 'index.html')
-          }
+          emailRedirectTo: 'https://kidairhotmailcom-ui.github.io/safeelec-mini-server/index.html'
         });
         if (error) throw error;
         if (!data.user) {
