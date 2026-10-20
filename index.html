@@ -612,12 +612,18 @@ async function loadLastMeter(type) {
     ? (roomInfo.initElec ?? 0)
     : (roomInfo.initWater ?? 0);
 
-  if (lastInput) {
-    lastInput.value = previous
+    if (lastInput) {
+  lastInput.value = currentRecord
+    ? currentRecord.last
+    : previous
       ? previous.current
       : initial;
-  }
+}
 
+if (currentInput && currentRecord) {
+  currentInput.value = currentRecord.current;
+  calcMeter(type);
+}
   // ขอข้อมูลออนไลน์ของห้องและเดือนที่เลือก
   try {
     const online = await fetchRoomMeter(type, roomId, month);
@@ -865,6 +871,7 @@ function fillRoomSelectAll() {
 }
 
 // ========== มิเตอร์ ==========
+
 function initMeterPage(type) {
   if (type !== 'electric' && type !== 'water') return;
 
@@ -873,24 +880,46 @@ function initMeterPage(type) {
 
   if (!roomSel || !monthInp) return;
 
+  // เก็บค่าที่เลือกไว้ ไม่รีเซ็ตห้องทุกครั้งที่บันทึก
+  const oldRoom = roomSel.value;
+  const oldMonth = monthInp.value;
+
   roomSel.innerHTML = '<option value="">-- เลือกห้อง --</option>';
 
   Object.keys(roomsData).sort().forEach(id => {
-    roomSel.innerHTML +=
-      `<option value="${escapeHtml(id)}">ห้อง ${escapeHtml(id)}</option>`;
+    const option = document.createElement('option');
+    option.value = id;
+    option.textContent = `ห้อง ${id}`;
+    roomSel.appendChild(option);
   });
 
-  monthInp.value = localMonthNow();
+  if (oldRoom && roomsData[oldRoom]) {
+    roomSel.value = oldRoom;
+  }
 
-  const lastInput = document.getElementById(`${type}-last`);
-  const currentInput = document.getElementById(`${type}-current`);
-  const unitInput = document.getElementById(`${type}-unit`);
-  const totalInput = document.getElementById(`${type}-total`);
+  monthInp.value = oldMonth || localMonthNow();
 
-  if (lastInput) lastInput.value = '';
-  if (currentInput) currentInput.value = '';
-  if (unitInput) unitInput.value = '';
-  if (totalInput) totalInput.value = '';
+  // ผูกเหตุการณ์ผ่าน JavaScript เพียงจุดเดียว
+  roomSel.onchange = () => loadLastMeter(type);
+  monthInp.onchange = () => loadLastMeter(type);
+
+  renderMeters(type);
+
+  // โหลดข้อมูลเมื่อเปิดหน้า และมีห้องที่เลือกอยู่แล้ว
+  if (roomSel.value && monthInp.value) {
+    loadLastMeter(type);
+  } else {
+    const last = document.getElementById(`${type}-last`);
+    const current = document.getElementById(`${type}-current`);
+    const unit = document.getElementById(`${type}-unit`);
+    const total = document.getElementById(`${type}-total`);
+
+    if (last) last.value = '';
+    if (current) current.value = '';
+    if (unit) unit.value = '';
+    if (total) total.value = '';
+  }
+}
 
   // แสดงรายการมิเตอร์ที่บันทึกไว้
   renderMeters(type);
@@ -905,31 +934,7 @@ function initMeterPage(type) {
     loadLastMeter(type);
   };
 }
-function loadLastMeter(type) {
-  const roomId = document.getElementById(`${type}-room`)?.value;
-  const month = document.getElementById(`${type}-month`)?.value;
-  if (!roomId) {
-    document.getElementById(`${type}-last`).value = '';
-    document.getElementById(`${type}-current`).value = '';
-    document.getElementById(`${type}-unit`).value = '';
-    document.getElementById(`${type}-total`).value = '';
-    return;
-  }
-  const roomInfo = roomsData[roomId];
-  let firstValue = 0;
-  if (type === 'electric') {
-    firstValue = parseFloat(roomInfo?.initElec) || 0;
-  } else {
-    firstValue = parseFloat(roomInfo?.initWater) || 0;
-  }
-  const prevList = meterRecords[type]
-    .filter(r => r.roomId === roomId && r.month < month)
-    .sort((a, b) => b.month.localeCompare(a.month));
-  document.getElementById(`${type}-last`).value = prevList.length > 0 ? prevList[0].current : firstValue;
-  document.getElementById(`${type}-current`).value = '';
-  document.getElementById(`${type}-unit`).value = '';
-  document.getElementById(`${type}-total`).value = '';
-}
+
 function calcMeter(type) {
   const last = parseFloat(document.getElementById(`${type}-last`).value) || 0;
   const current = parseFloat(document.getElementById(`${type}-current`).value) || 0;
@@ -1217,6 +1222,10 @@ function renderSummary() {
   // ดึงข้อมูลห้องจาก roomsData
   Object.keys(roomsData).sort().forEach(roomId => {
     const room = roomsData[roomId];
+    const currentRecord = records.find(r =>
+  String(r.roomId ?? r.room) === String(roomId) &&
+  r.month === month
+);
     const roomBills = billsData.filter(b => b.roomId === roomId);
     const latestBill = roomBills.length > 0 ? roomBills[0] : null;
     
