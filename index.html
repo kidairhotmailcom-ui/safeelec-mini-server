@@ -949,20 +949,6 @@ function initMeterPage(type) {
   }
 }
 
-  // แสดงรายการมิเตอร์ที่บันทึกไว้
-  renderMeters(type);
-
-  // โหลดข้อมูลเมื่อเปลี่ยนห้อง
-  roomSel.onchange = function () {
-    loadLastMeter(type);
-  };
-
-  // โหลดข้อมูลเมื่อเปลี่ยนเดือน
-  monthInp.onchange = function () {
-    loadLastMeter(type);
-  };
-}
-
 function calcMeter(type) {
   const last = parseFloat(document.getElementById(`${type}-last`).value) || 0;
   const current = parseFloat(document.getElementById(`${type}-current`).value) || 0;
