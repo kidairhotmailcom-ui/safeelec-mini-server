@@ -640,55 +640,7 @@ async function loadLastMeter(type) {
   }
 }
 
-async function loadLastMeter(type) {
-  if (type !== "electric" && type !== "water") return;
 
-  const roomSelect = document.getElementById(`${type}-room`);
-  const monthInput = document.getElementById(`${type}-month`);
-  const lastInput = document.getElementById(`${type}-last`);
-  const currentInput = document.getElementById(`${type}-current`);
-  const unitInput = document.getElementById(`${type}-unit`);
-  const totalInput = document.getElementById(`${type}-total`);
-
-  if (!roomSelect || !monthInput) return;
-
-  const room = roomSelect.value;
-  const month = monthInput.value;
-
-  // ล้างค่าของห้องก่อนหน้า ป้องกันข้อมูลปะปนกัน
-  if (lastInput) lastInput.value = "";
-  if (currentInput) currentInput.value = "";
-  if (unitInput) unitInput.value = "";
-  if (totalInput) totalInput.value = "";
-
-  if (!room || !month) return;
-
-  // หาเลขมิเตอร์ครั้งก่อนจากข้อมูลที่บันทึกไว้
-  const records = Array.isArray(meterRecords[type])
-    ? meterRecords[type]
-    : [];
-
-  const previousRecord = records
-    .filter(r =>
-      String(r.room) === String(room) &&
-      String(r.month) < String(month)
-    )
-    .sort((a, b) =>
-      String(b.month).localeCompare(String(a.month))
-    )[0];
-
-  const roomInfo = roomsData[room];
-  const initialValue = type === "electric"
-    ? roomInfo?.initElec
-    : roomInfo?.initWater;
-
-  if (lastInput) {
-    if (previousRecord) {
-      lastInput.value = previousRecord.current ?? "";
-    } else if (initialValue !== undefined && initialValue !== null) {
-      lastInput.value = initialValue;
-    }
-  }
 
   // ดึงค่าจากเซิร์ฟเวอร์ โดยแยกห้อง ประเภท และเดือน
   try {
