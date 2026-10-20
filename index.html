@@ -1329,12 +1329,39 @@ function downloadSummary() {
   alert('✅ ดาวน์โหลดสำเร็จ! เปิดด้วย Excel หรือ Google Sheets ได้เลยครับ');
 }
 // เรียกใช้เมื่อกดปุ่ม
+
 function switchTab(id) {
-document.addEventListener('DOMContentLoaded', () => {
-  fetchMeterFromESP();
-  setInterval(fetchMeterFromESP, 60000);
+  document.querySelectorAll('.sub-section').forEach(section => {
+    section.classList.add('hidden');
+  });
+
+  const target = document.getElementById(id + '-view');
+
+  if (!target) {
+    console.error('ไม่พบหน้าที่ต้องการ:', id + '-view');
+    return;
+  }
+
+  target.classList.remove('hidden');
+
+  if (id === 'summary') {
+    renderSummary();
+  }
+
+  if (id === 'dashboard') {
+    updateDashboard();
+  }
+}
+
+// เริ่มระบบหลังจากหน้าเว็บโหลดเสร็จ
+document.addEventListener('DOMContentLoaded', function () {
+  if (typeof fetchMeterFromESP === 'function') {
+    fetchMeterFromESP();
+    setInterval(fetchMeterFromESP, 60000);
+  }
 });
 </script>
 
 </body>
 </html>
+
