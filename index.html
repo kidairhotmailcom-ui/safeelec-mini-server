@@ -522,11 +522,19 @@ const ESP_CONFIG = {
 };
 
 const DORM_API = "https://safeelec-mini-server.onrender.com";
-// ===== SUPABASE =====
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
-const SUPABASE_URL = 'https://bhihjcstmamwoinmbfiy.supabase.co'
-const SUPABASE_ANON_KEY = 'sb_publishable_HzzSGnnXK1FqstRvaCXh_w_15b_1Cms'
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+// ===== SUPABASE: โหลดแบบ Dynamic Import =====
+const SUPABASE_URL = 'https://bhihjcstmamwoinmbfiy.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_HzzSGnnXK1FqstRvaCXh_w_15b_1Cms';
+
+let supabase = null;
+
+const supabaseReady = import(
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+).then(({ createClient }) => {
+  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  console.log('Supabase พร้อมใช้งาน');
+  return supabase;
+});
 
 let meterData = {
   elecPrev: null,
