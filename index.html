@@ -1499,7 +1499,7 @@ function switchTab(id) {
 
     // แสดงหน้าล็อกอินเสมอเมื่อเปิดเว็บ
     // ไม่เปิด Dashboard อัตโนมัติ
-    showPage('login');
+    showPage(currentUser ? 'dashboard' : 'login');
 
   } catch (error) {
     console.error('ตรวจสอบผู้ใช้ไม่สำเร็จ:', error);
