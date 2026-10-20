@@ -720,21 +720,20 @@ function money(num) {
 }
 
 // ========== ระบบเข้าสู่ระบบ ==========
-function doLogin() {
-  const user = document.getElementById('login-user').value.trim();
-  const pass = document.getElementById('login-pass').value;
-  if (user === 'admin' && pass === adminPassword) {
-    currentUser = user;
-    showPage('dashboard');
-    updateDashboard();
-  } else {
-    alert('❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
-  }
+async function doLogin() {
+  const email = document.getElementById('login-user').value.trim();
+  const password = document.getElementById('login-pass').value;
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error) return alert('❌ ' + error.message)
+  currentUser = data.user
+  showPage('dashboard')
+  updateDashboard()
 }
-function doLogout() {
+async function doLogout() {
   if (confirm('ต้องการออกจากระบบใช่หรือไม่?')) {
-    currentUser = null;
-    showPage('login');
+    await supabase.auth.signOut()
+    currentUser = null
+    showPage('login')
   }
 }
 function showPage(name) {
