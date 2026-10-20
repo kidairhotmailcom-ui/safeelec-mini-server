@@ -1498,23 +1498,12 @@ async function loadUserData() {
 
     currentUser = user || null;
 
-    if (!currentUser) {
-      showPage('login');
-      return;
-    }
-
-    // ผู้ใช้ล็อกอินแล้ว แสดงหน้าระบบ
-    showPage('dashboard');
-
-    // โหลดข้อมูลสรุปหน้าหลัก
-    if (typeof updateDashboard === 'function') {
-      updateDashboard();
-    }
-
-    console.log('ตรวจสอบผู้ใช้สำเร็จ:', currentUser.id);
+    // แสดงหน้าล็อกอินเสมอเมื่อเปิดเว็บ
+    // ไม่เปิด Dashboard อัตโนมัติ
+    showPage('login');
 
   } catch (error) {
-    console.error('โหลดข้อมูลผู้ใช้ไม่สำเร็จ:', error);
+    console.error('ตรวจสอบผู้ใช้ไม่สำเร็จ:', error);
     currentUser = null;
     showPage('login');
   }
