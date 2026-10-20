@@ -573,70 +573,102 @@ async function fetchRoomMeter(type, room, month) {
 }
 
 // โหลดมิเตอร์ของห้องและเดือนที่เลือก
+
 async function loadLastMeter(type) {
-  const roomSelect = document.getElementById(`${type}-room`);
-  const monthInput = document.getElementById(`${type}-month`);
+  if (type !== 'electric' && type !== 'water') return;
 
-  if (!roomSelect || !monthInput) return;
-
-  const room = roomSelect.value;
-  const month = monthInput.value;
-
+  const roomSel = document.getElementById(`${type}-room`);
+  const monthInp = document.getElementById(`${type}-month`);
   const lastInput = document.getElementById(`${type}-last`);
   const currentInput = document.getElementById(`${type}-current`);
   const unitInput = document.getElementById(`${type}-unit`);
   const totalInput = document.getElementById(`${type}-total`);
 
-  if (lastInput) lastInput.value = "";
-  if (currentInput) currentInput.value = "";
-  if (unitInput) unitInput.value = "";
-  if (totalInput) totalInput.value = "";
+  if (!roomSel || !monthInp) return;
 
-  if (!room || !month) return;
+  const roomId = roomSel.value;
+  const month = monthInp.value;
 
-  // ใช้ข้อมูลที่บันทึกไว้ในระบบเดิมก่อน
+  if (lastInput) lastInput.value = '';
+  if (currentInput) currentInput.value = '';
+  if (unitInput) unitInput.value = '';
+  if (totalInput) totalInput.value = '';
+
+  if (!roomId || !month) return;
+
+  // หาค่ามิเตอร์เดือนก่อนของห้องเดียวกันจากข้อมูลที่บันทึกในเครื่อง
   const records = meterRecords[type] || [];
+
   const previous = records
-    .filter(r => String(r.room) === String(room) && r.month < month)
+    .filter(r =>
+      String(r.roomId ?? r.room) === String(roomId) &&
+      r.month < month
+    )
     .sort((a, b) => b.month.localeCompare(a.month))[0];
 
-  const roomInfo = roomsData[room];
-  const initial = type === "electric"
-    ? roomInfo?.initElec
-    : roomInfo?.initWater;
+  const roomInfo = roomsData[roomId] || {};
+
+  const initial = type === 'electric'
+    ? (roomInfo.initElec ?? 0)
+    : (roomInfo.initWater ?? 0);
 
   if (lastInput) {
-    const value = previous
+    lastInput.value = previous
       ? previous.current
-      : (initial ?? "");
-    lastInput.value = value;
+      : initial;
   }
 
-  // ดึงค่าปัจจุบันจากระบบออนไลน์
+  // ขอข้อมูลออนไลน์ของห้องและเดือนที่เลือก
   try {
-    const online = await fetchRoomMeter(type, room, month);
+    const online = await fetchRoomMeter(type, roomId, month);
 
-    if (online) {
-      const previousValue = online.previous;
-      const currentValue = online.current;
+    // ป้องกันผลตอบกลับของห้องเก่ามาทับห้องที่เพิ่งเลือก
+    if (
+      roomSel.value !== roomId ||
+      monthInp.value !== month
+    ) return;
 
-      if (previousValue !== null && previousValue !== undefined &&
-          lastInput && !previous) {
-        lastInput.value = previousValue;
-      }
+    if (!online || typeof online !== 'object') return;
 
-      if (currentValue !== null && currentValue !== undefined &&
-          currentInput) {
-        currentInput.value = currentValue;
-      }
+    // รองรับข้อมูลที่ API ส่งกลับเป็น previous/current
+    const previousOnline = online.previous;
+    const currentOnline = online.current;
 
-      if (currentInput && currentInput.value !== "") {
-        calcMeter(type);
-      }
+    if (
+      !previous &&
+      previousOnline !== null &&
+      previousOnline !== undefined &&
+      typeof previousOnline !== 'object' &&
+      lastInput
+    ) {
+      lastInput.value = previousOnline;
     }
+
+    if (
+      currentOnline !== null &&
+      currentOnline !== undefined &&
+      typeof currentOnline !== 'object' &&
+      Number.isFinite(Number(currentOnline)) &&
+      currentInput
+    ) {
+      currentInput.value = Number(currentOnline);
+      calcMeter(type);
+    }
+
+    console.log('ผลอ่านมิเตอร์ออนไลน์:', {
+      type,
+      room: roomId,
+      month,
+      response: online
+    });
+
   } catch (error) {
-    console.warn("ยังไม่มีข้อมูลออนไลน์สำหรับมิเตอร์", type, room, error);
-    // ยังเปิดหน้าและใช้ข้อมูลที่บันทึกไว้ในเครื่องได้
+    console.error('อ่านมิเตอร์ออนไลน์ไม่สำเร็จ:', {
+      type,
+      room: roomId,
+      month,
+      error
+    });
   }
 }
 
