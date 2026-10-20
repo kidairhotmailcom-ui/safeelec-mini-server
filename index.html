@@ -721,13 +721,29 @@ function money(num) {
 
 // ========== ระบบเข้าสู่ระบบ ==========
 async function doLogin() {
-  const email = document.getElementById('login-user').value.trim();
-  const password = document.getElementById('login-pass').value;
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-  if (error) return alert('❌ ' + error.message)
-  currentUser = data.user
-  showPage('dashboard')
-  updateDashboard()
+  try {
+    await supabaseReady;
+
+    const email = document.getElementById('login-user').value.trim();
+    const password = document.getElementById('login-pass').value;
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      alert('❌ ' + error.message);
+      return;
+    }
+
+    currentUser = data.user;
+    showPage('dashboard');
+    updateDashboard();
+  } catch (error) {
+    console.error('Login error:', error);
+    alert('เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อ Supabase');
+  }
 }
 async function doLogout() {
   if (confirm('ต้องการออกจากระบบใช่หรือไม่?')) {
