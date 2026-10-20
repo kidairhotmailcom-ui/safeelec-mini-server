@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เข้าสู่ระบบผู้เช่า</title>
+  <style>
+    * { box-sizing: border-box; font-family: sans-serif; }
+    body { background: #f0f4f8; margin: 0; padding: 20px; }
+    .container { max-width: 400px; margin: 60px auto; }
+    .card { background: white; padding: 32px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }
+    h1 { color: #1e40af; margin-bottom: 8px; font-size: 22px; }
+    p { color: #6b7280; margin-bottom: 24px; }
+    input { width: 100%; padding: 12px; margin-bottom: 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px; }
+    .btn-primary { width: 100%; padding: 12px; background: #1e40af; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+    .btn-back { display: inline-block; margin-top: 16px; color: #6b7280; text-decoration: none; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>👤 เข้าสู่ระบบผู้เช่า</h1>
+      <p>กรุณากรอกข้อมูลเพื่อเข้าดูข้อมูล</p>
+      <input type="text" id="cus-user" placeholder="ห้องที่ / ชื่อผู้เช่า">
+      <input type="password" id="cus-pass" placeholder="รหัสผ่าน">
+      <button class="btn-primary" onclick="doCustomerLogin()">เข้าสู่ระบบ</button>
+      <a href="index.html" class="btn-back">← กลับหน้าหลัก</a>
+    </div>
+  </div>
+  <script>
+    function doCustomerLogin() {
+      const user = document.getElementById('cus-user').value;
+      const pass = document.getElementById('cus-pass').value;
+      if (!user || !pass) {
+        alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+        return;
+      }
+      alert('✅ เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับคุณ ' + user);
+    }
+  </script>
+</body>
+</html>
