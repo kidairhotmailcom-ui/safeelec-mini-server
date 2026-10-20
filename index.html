@@ -1499,10 +1499,10 @@ function switchTab(id) {
 
     // แสดงหน้าล็อกอินเสมอเมื่อเปิดเว็บ
     // ไม่เปิด Dashboard อัตโนมัติ
-    showPage(currentUser ? 'dashboard' : 'login');
+    showPage('login');
 
   } catch (error) {
-    console.error('ตรวจสอบผู้ใช้ไม่สำเร็จ:', error);
+    console.error('ตรวจสอบ okผู้ใช้ไม่สำเร็จ:', error);
     currentUser = null;
     showPage('login');
   }
