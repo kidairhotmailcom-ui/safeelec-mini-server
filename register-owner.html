@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ลงทะเบียนเจ้าของหอพัก</title>
+  <style>
+    * { box-sizing: border-box; font-family: sans-serif; }
+    body { background: #f0f4f8; margin: 0; padding: 20px; }
+    .container { max-width: 420px; margin: 40px auto; }
+    .card { background: white; padding: 32px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    h1 { color: #1e40af; margin-bottom: 8px; font-size: 22px; text-align: center; }
+    p { color: #6b7280; margin-bottom: 24px; text-align: center; }
+    label { display: block; margin-bottom: 6px; font-weight: 500; color: #374151; font-size: 14px; }
+    input { width: 100%; padding: 12px; margin-bottom: 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px; }
+    .btn-primary { width: 100%; padding: 12px; background: #1e40af; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: 500; }
+    .btn-primary:hover { opacity: 0.95; }
+    .btn-back { display: inline-block; margin-top: 16px; color: #6b7280; text-decoration: none; font-size: 14px; text-align: center; width: 100%; }
+    .divider { text-align: center; margin: 20px 0; color: #9ca3af; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>🏢 ลงทะเบียนเจ้าของหอพัก</h1>
+      <p>กรุณากรอกข้อมูลเพื่อสร้างบัญชี</p>
+      
+      <label>ชื่อหอพัก</label>
+      <input type="text" id="dorm-name" placeholder="เช่น หอพักสุขสบาย">
+      
+      <label>ชื่อ-นามสกุล ผู้ดูแล</label>
+      <input type="text" id="owner-name" placeholder="กรุณากรอกชื่อของคุณ">
+      
+      <label>อีเมล</label>
+      <input type="email" id="owner-email" placeholder="example@email.com">
+      
+      <label>เบอร์โทรศัพท์</label>
+      <input type="tel" id="owner-phone" placeholder="08x-xxx-xxxx">
+      
+      <label>ตั้งรหัสผ่าน</label>
+      <input type="password" id="owner-pass" placeholder="อย่างน้อย 6 ตัวอักษร">
+      
+      <label>ยืนยันรหัสผ่าน</label>
+      <input type="password" id="owner-pass2" placeholder="กรอกรหัสผ่านอีกครั้ง">
+      
+      <button class="btn-primary" onclick="registerOwner()">✅ สมัครสมาชิก</button>
+      
+      <a href="index.html" class="btn-back">← กลับหน้าหลัก</a>
+    </div>
+  </div>
+
+  <script>
+    function registerOwner() {
+      const dormName = document.getElementById('dorm-name').value.trim();
+      const name = document.getElementById('owner-name').value.trim();
+      const email = document.getElementById('owner-email').value.trim();
+      const phone = document.getElementById('owner-phone').value.trim();
+      const pass = document.getElementById('owner-pass').value;
+      const pass2 = document.getElementById('owner-pass2').value;
+      
+      if (!dormName || !name || !email || !phone || !pass || !pass2) {
+        alert('⚠️ กรุณากรอกข้อมูลให้ครบถ้วน');
+        return;
+      }
+      if (pass !== pass2) {
+        alert('⚠️ รหัสผ่านไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง');
+        return;
+      }
+      if (pass.length < 6) {
+        alert('⚠️ รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+        return;
+      }
+      
+      alert('✅ ลงทะเบียนสำเร็จ!\nยินดีต้อนรับคุณ ' + name + ' (' + dormName + ')');
+      window.location.href = 'index.html';
+    }
+  </script>
+</body>
+</html>
