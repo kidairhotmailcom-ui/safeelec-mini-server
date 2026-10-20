@@ -1484,8 +1484,7 @@ function switchTab(id) {
     updateDashboard();
   }
 }
-
-async function loadUserData() {
+ async function loadUserData() {
   try {
     await supabaseReady;
 
@@ -1508,7 +1507,6 @@ async function loadUserData() {
     showPage('login');
   }
 }
-
 // เริ่มระบบหลังจากหน้าเว็บโหลดเสร็จ
 document.addEventListener('DOMContentLoaded', async () => {
   await loadUserData() 
