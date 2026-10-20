@@ -1133,45 +1133,103 @@ function getNextBillNumber() {
   localStorage.setItem('last_bill_no', lastNo.toString());
   return 'B' + String(lastNo).padStart(3, '0');
 }
-function createBill() {
+
+async function createBill() {
   const roomId = document.getElementById('bill-room').value;
   const month = document.getElementById('bill-month').value;
-  
-  if (!roomId) { alert('⚠️ กรุณาเลือกห้อง'); return; }
-  if (!month) { alert('⚠️ กรุณาเลือกเดือน/ปี'); return; }
-  
-  if (billsData.some(b => b.roomId === roomId && b.month === month)) {
+
+  if (!roomId) {
+    alert('⚠️ กรุณาเลือกห้อง');
+    return;
+  }
+  if (!month) {
+    alert('⚠️ กรุณาเลือกเดือน/ปี');
+    return;
+  }
+  if (!currentUser) {
+    alert('กรุณาเข้าสู่ระบบก่อนสร้างบิล');
+    return;
+  }
+
+  if (billsData.some(b =>
+    String(b.roomId ?? b.room_id) === String(roomId) &&
+    b.month === month
+  )) {
     alert('⚠️ บิลสำหรับห้องนี้ในเดือนนี้มีอยู่แล้ว');
     return;
   }
-  
+
   const roomInfo = roomsData[roomId];
-  const elecRec = meterRecords.electric.find(r => r.roomId === roomId && r.month === month);
-  const waterRec = meterRecords.water.find(r => r.roomId === roomId && r.month === month);
-  
-  const rent = roomInfo.price || 0;
-  const elecTotal = elecRec ? elecRec.total : 0;
-  const waterTotal = waterRec ? waterRec.total : 0;
+
+  if (!roomInfo) {
+    alert('❌ ไม่พบข้อมูลห้องพัก กรุณาตรวจสอบข้อมูลห้องก่อน');
+    return;
+  }
+
+  const elecRec = meterRecords.electric.find(r =>
+    String(r.roomId ?? r.room_id) === String(roomId) &&
+    r.month === month
+  );
+
+  const waterRec = meterRecords.water.find(r =>
+    String(r.roomId ?? r.room_id) === String(roomId) &&
+    r.month === month
+  );
+
+  const rent = Number(roomInfo.price) || 0;
+  const elecTotal = Number(elecRec?.total) || 0;
+  const waterTotal = Number(waterRec?.total) || 0;
   const total = rent + elecTotal + waterTotal;
-  
-  const bill = {
-    id: getNextBillNumber(),
-    roomId,
-    month,
-    tenantName: roomInfo.name || 'ไม่ระบุ',
-    rent,
-    electric: elecTotal,
-    water: waterTotal,
-    total,
-    status: 'ค้าง'
-  };
-  
-  billsData.unshift(bill);
-  saveAllData();
-  alert('✅ สร้างบิลสำเร็จ!');
-  renderBills();
-  updateDashboard();
+
+  const billNo = String(getNextBillNumber());
+
+  try {
+    await supabaseReady;
+
+    const { data, error } = await supabase
+      .from('dorm_bills')
+      .insert({
+        user_id: currentUser.id,
+        bill_no: billNo,
+        room_id: String(roomId),
+        month: month,
+        rent: rent,
+        electric: elecTotal,
+        water: waterTotal,
+        total: total,
+        status: 'ค้าง'
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const bill = {
+      id: data.id,
+      billNo: data.bill_no,
+      roomId: data.room_id,
+      month: data.month,
+      tenantName: roomInfo.name || 'ไม่ระบุ',
+      rent: Number(data.rent) || 0,
+      electric: Number(data.electric) || 0,
+      water: Number(data.water) || 0,
+      total: Number(data.total) || 0,
+      status: data.status || 'ค้าง'
+    };
+
+    billsData.unshift(bill);
+    saveAllData();
+
+    alert('✅ สร้างบิลและบันทึกลง Supabase สำเร็จ');
+    renderBills();
+    updateDashboard();
+
+  } catch (error) {
+    console.error('สร้างบิลไม่สำเร็จ:', error);
+    alert('❌ สร้างบิลไม่สำเร็จ: ' + error.message);
+  }
 }
+
 function renderBills() {
   const tbody = document.getElementById('bills-tbody');
   if (!tbody) return;
