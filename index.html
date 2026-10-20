@@ -1005,27 +1005,76 @@ function calcMeter(type) {
   document.getElementById(`${type}-unit`).value = unit;
   document.getElementById(`${type}-total`).value = money(total);
 }
-function saveMeter(type) {
+
+async function saveMeter(type) {
+  if (type !== 'electric' && type !== 'water') {
+    alert('ไม่พบประเภทมิเตอร์ที่ถูกต้อง');
+    return;
+  }
+
   const roomId = document.getElementById(`${type}-room`).value;
   const month = document.getElementById(`${type}-month`).value;
   const last = parseFloat(document.getElementById(`${type}-last`).value) || 0;
   const current = parseFloat(document.getElementById(`${type}-current`).value) || 0;
   const rate = parseFloat(document.getElementById(`${type}-rate`).value) || 0;
-  
-  if (!roomId) { alert('⚠️ กรุณาเลือกห้อง'); return; }
-  if (!month) { alert('⚠️ กรุณาเลือกเดือน/ปี'); return; }
-  if (current < last) { alert('⚠️ มิเตอร์เดือนนี้ต้องมากกว่าหรือเท่ากับเดือนก่อน'); return; }
-  
-  const unit = Math.max(0, current - last);
+
+  if (!roomId) {
+    alert('⚠️ กรุณาเลือกห้อง');
+    return;
+  }
+  if (!month) {
+    alert('⚠️ กรุณาเลือกเดือน/ปี');
+    return;
+  }
+  if (current < last) {
+    alert('⚠️ มิเตอร์เดือนนี้ต้องมากกว่าหรือเท่ากับเดือนก่อน');
+    return;
+  }
+  if (!currentUser) {
+    alert('กรุณาเข้าสู่ระบบก่อนบันทึกข้อมูล');
+    return;
+  }
+
+  const unit = current - last;
   const total = unit * rate;
-  
-  meterRecords[type] = meterRecords[type].filter(r => !(r.roomId === roomId && r.month === month));
-  meterRecords[type].push({ roomId, month, last, current, unit, rate, total });
-  
-  saveAllData();
-  alert('✅ บันทึกสำเร็จ!');
-  initMeterPage(type);
+  const table = type === 'electric' ? 'dorm_electric' : 'dorm_water';
+
+  try {
+    await supabaseReady;
+
+    const { error } = await supabase
+      .from(table)
+      .insert({
+        user_id: currentUser.id,
+        room_id: roomId,
+        month: month,
+        last_meter: last,
+        current_meter: current,
+        unit: unit,
+        rate: rate,
+        total: total
+      });
+
+    if (error) throw error;
+
+    meterRecords[type] = meterRecords[type].filter(
+      r => !(String(r.roomId) === String(roomId) && r.month === month)
+    );
+
+    meterRecords[type].push({
+      roomId, month, last, current, unit, rate, total
+    });
+
+    saveAllData();
+    alert('✅ บันทึกข้อมูลมิเตอร์ขึ้น Supabase สำเร็จ');
+    initMeterPage(type);
+
+  } catch (error) {
+    console.error('บันทึกมิเตอร์ไม่สำเร็จ:', error);
+    alert('❌ บันทึกมิเตอร์ไม่สำเร็จ: ' + error.message);
+  }
 }
+
 function renderMeters(type) {
   const tbody = document.getElementById(`${type}-tbody`);
   if (!tbody) return;
