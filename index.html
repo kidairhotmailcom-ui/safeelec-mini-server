@@ -835,20 +835,43 @@ function fillRoomSelectAll() {
 // ========== มิเตอร์ ==========
 function initMeterPage(type) {
   if (type !== 'electric' && type !== 'water') return;
+
   const roomSel = document.getElementById(`${type}-room`);
   const monthInp = document.getElementById(`${type}-month`);
+
   if (!roomSel || !monthInp) return;
-  
+
   roomSel.innerHTML = '<option value="">-- เลือกห้อง --</option>';
+
   Object.keys(roomsData).sort().forEach(id => {
-    roomSel.innerHTML += `<option value="${escapeHtml(id)}">ห้อง ${escapeHtml(id)}</option>`;
+    roomSel.innerHTML +=
+      `<option value="${escapeHtml(id)}">ห้อง ${escapeHtml(id)}</option>`;
   });
+
   monthInp.value = localMonthNow();
-  document.getElementById(`${type}-last`).value = '';
-  document.getElementById(`${type}-current`).value = '';
-  document.getElementById(`${type}-unit`).value = '';
-  document.getElementById(`${type}-total`).value = '';
+
+  const lastInput = document.getElementById(`${type}-last`);
+  const currentInput = document.getElementById(`${type}-current`);
+  const unitInput = document.getElementById(`${type}-unit`);
+  const totalInput = document.getElementById(`${type}-total`);
+
+  if (lastInput) lastInput.value = '';
+  if (currentInput) currentInput.value = '';
+  if (unitInput) unitInput.value = '';
+  if (totalInput) totalInput.value = '';
+
+  // แสดงรายการมิเตอร์ที่บันทึกไว้
   renderMeters(type);
+
+  // โหลดข้อมูลเมื่อเปลี่ยนห้อง
+  roomSel.onchange = function () {
+    loadLastMeter(type);
+  };
+
+  // โหลดข้อมูลเมื่อเปลี่ยนเดือน
+  monthInp.onchange = function () {
+    loadLastMeter(type);
+  };
 }
 function loadLastMeter(type) {
   const roomId = document.getElementById(`${type}-room`)?.value;
