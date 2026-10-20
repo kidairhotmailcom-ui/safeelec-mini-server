@@ -847,23 +847,58 @@ function hideAddRoomForm() {
   document.getElementById('room-form-card').classList.add('hidden');
   editingRoomId = null;
 }
-function saveRoomData() {
+
+async function saveRoomData() {
   const id = document.getElementById('room-id').value.trim();
   const price = parseFloat(document.getElementById('room-price').value) || 0;
   const name = document.getElementById('tenant-name').value.trim();
   const espIp = document.getElementById('esp-ip').value.trim();
   const initElec = parseFloat(document.getElementById('init-elec').value) || 0;
   const initWater = parseFloat(document.getElementById('init-water').value) || 0;
-  
-  if (!id) { alert('⚠️ กรุณากรอกเลขห้อง'); return; }
-  
-  roomsData[id] = { price, name, espIp, initElec, initWater };
-  saveAllData();
-  alert('✅ บันทึกสำเร็จ!');
-  hideAddRoomForm();
-  renderRoomsTable();
-  updateDashboard();
+
+  if (!id) {
+    alert('⚠️ กรุณากรอกเลขห้อง');
+    return;
+  }
+
+  if (!currentUser) {
+    alert('กรุณาเข้าสู่ระบบก่อนบันทึกข้อมูล');
+    return;
+  }
+
+  try {
+    await supabaseReady;
+
+    const { error } = await supabase
+      .from('dorm_rooms')
+      .upsert({
+        user_id: currentUser.id,
+        room_id: id,
+        price: price,
+        tenant_name: name,
+        esp_ip: espIp,
+        init_elec: initElec,
+        init_water: initWater
+      }, {
+        onConflict: 'user_id,room_id'
+      });
+
+    if (error) throw error;
+
+    roomsData[id] = { price, name, espIp, initElec, initWater };
+    saveAllData();
+
+    alert('✅ บันทึกห้องพักขึ้น Supabase สำเร็จ');
+    hideAddRoomForm();
+    renderRoomsTable();
+    updateDashboard();
+
+  } catch (error) {
+    console.error('บันทึกห้องพักไม่สำเร็จ:', error);
+    alert('❌ บันทึกไม่สำเร็จ: ' + error.message);
+  }
 }
+
 function deleteRoom(id) {
   if (!confirm(`⚠️ ต้องการลบห้อง ${id} ใช่หรือไม่?`)) return;
   delete roomsData[id];
