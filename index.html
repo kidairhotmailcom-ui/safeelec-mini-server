@@ -833,6 +833,7 @@ let editingRoomId = null;
 function showAddRoomForm(id = null) {
   editingRoomId = id;
   document.getElementById('room-form-card').classList.remove('hidden');
+  
   if (id) {
     document.getElementById('room-form-title').textContent = 'แก้ไขข้อมูลห้อง: ' + id;
     const r = roomsData[id];
@@ -843,6 +844,7 @@ function showAddRoomForm(id = null) {
     document.getElementById('esp-ip').value = r.espIp || '';
     document.getElementById('init-elec').value = r.initElec || 0;
     document.getElementById('init-water').value = r.initWater || 0;
+    document.getElementById('room-pass').value = r.password || ''; // ✅ ย้ายมาใน if ด้วย
   } else {
     document.getElementById('room-form-title').textContent = 'บันทึกข้อมูลห้องพัก';
     document.getElementById('room-id').value = '';
@@ -852,7 +854,7 @@ function showAddRoomForm(id = null) {
     document.getElementById('esp-ip').value = '';
     document.getElementById('init-elec').value = 0;
     document.getElementById('init-water').value = 0;
-    document.getElementById('room-pass').value = r.password || '';  // ✅ ใส่ตรงนี้
+    document.getElementById('room-pass').value = ''; // ✅ ใส่ค่าว่างตรงนี้แทน
   }
 }
 function hideAddRoomForm() {
