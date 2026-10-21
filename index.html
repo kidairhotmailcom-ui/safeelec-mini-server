@@ -613,9 +613,14 @@ async function loadLastMeter(type) {
 
   if (!roomId || !month) return;
 
-  // หาค่ามิเตอร์เดือนก่อนของห้องเดียวกันจากข้อมูลที่บันทึกในเครื่อง
+  // หาข้อมูลเดือนเดียวกันก่อน
   const records = meterRecords[type] || [];
+  const currentRecord = records.find(r =>
+    String(r.roomId ?? r.room) === String(roomId) &&
+    r.month === month
+  );
 
+  // หาค่าล่าสุดของเดือนก่อน
   const previous = records
     .filter(r =>
       String(r.roomId ?? r.room) === String(roomId) &&
@@ -624,77 +629,48 @@ async function loadLastMeter(type) {
     .sort((a, b) => b.month.localeCompare(a.month))[0];
 
   const roomInfo = roomsData[roomId] || {};
-
   const initial = type === 'electric'
     ? (roomInfo.initElec ?? 0)
     : (roomInfo.initWater ?? 0);
 
-    if (lastInput) {
-  lastInput.value = currentRecord
-    ? currentRecord.last
-    : previous
-      ? previous.current
-      : initial;
-}
+  // กำหนดค่ามิเตอร์เดือนก่อน
+  if (lastInput) {
+    lastInput.value = currentRecord
+      ? currentRecord.last
+      : previous
+        ? previous.current
+        : initial;
+  }
 
-if (currentInput && currentRecord) {
-  currentInput.value = currentRecord.current;
-  calcMeter(type);
-}
-  // ขอข้อมูลออนไลน์ของห้องและเดือนที่เลือก
+  // ถ้ามีข้อมูลเดือนนี้แล้ว แสดงค่ามิเตอร์ปัจจุบันด้วย
+  if (currentInput && currentRecord) {
+    currentInput.value = currentRecord.current;
+    calcMeter(type);
+  }
+
+  // ดึงข้อมูลออนไลน์
   try {
     const online = await fetchRoomMeter(type, roomId, month);
-
-    // ป้องกันผลตอบกลับของห้องเก่ามาทับห้องที่เพิ่งเลือก
-    if (
-      roomSel.value !== roomId ||
-      monthInp.value !== month
-    ) return;
-
+    
+    if (roomSel.value !== roomId || monthInp.value !== month) return;
     if (!online || typeof online !== 'object') return;
 
-    // รองรับข้อมูลที่ API ส่งกลับเป็น previous/current
     const previousOnline = online.previous;
     const currentOnline = online.current;
 
-    if (
-      !previous &&
-      previousOnline !== null &&
-      previousOnline !== undefined &&
-      typeof previousOnline !== 'object' &&
-      lastInput
-    ) {
+    if (!currentRecord && previousOnline !== null && previousOnline !== undefined && typeof previousOnline !== 'object' && lastInput) {
       lastInput.value = previousOnline;
     }
 
-    if (
-      currentOnline !== null &&
-      currentOnline !== undefined &&
-      typeof currentOnline !== 'object' &&
-      Number.isFinite(Number(currentOnline)) &&
-      currentInput
-    ) {
+    if (currentOnline !== null && currentOnline !== undefined && typeof currentOnline !== 'object' && Number.isFinite(Number(currentOnline)) && currentInput) {
       currentInput.value = Number(currentOnline);
       calcMeter(type);
     }
 
-    console.log('ผลอ่านมิเตอร์ออนไลน์:', {
-      type,
-      room: roomId,
-      month,
-      response: online
-    });
-
   } catch (error) {
-    console.error('อ่านมิเตอร์ออนไลน์ไม่สำเร็จ:', {
-      type,
-      room: roomId,
-      month,
-      error
-    });
+    console.error('อ่านมิเตอร์ออนไลน์ไม่สำเร็จ:', error);
   }
 }
-
 let currentUser = null;
 let adminPassword = localStorage.getItem('admin_password') || '1234';
 let roomsData = JSON.parse(localStorage.getItem('dorm_rooms') || '{}');
