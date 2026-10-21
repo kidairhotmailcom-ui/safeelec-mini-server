@@ -1108,12 +1108,9 @@ function setBillNumber() {
   alert(`✅ ตั้งค่าสำเร็จ\nบิลถัดไปจะเริ่มที่ ${previewNo}\n💡 หมายเหตุ: ระบบจะนับต่อจากบิลล่าสุดอัตโนมัติ`);
 }
     // ✅ ดึงเลขล่าสุดจาก Supabase โดยตรง — ไม่สนใจในเครื่อง
- 
-async function createBill() {
-   const roomId = document.getElementById('bill-room').value;
-   const month = document.getElementById('bill-month').value;
-
-  const billNo = String(nextBillNo).padStart(3, '0');
+ async function createBill() {
+  const roomId = document.getElementById('bill-room').value;
+  const month = document.getElementById('bill-month').value;
 
   if (!roomId) {
     alert('⚠️ กรุณาเลือกห้อง');
@@ -1158,7 +1155,14 @@ async function createBill() {
   const waterTotal = Number(waterRec?.total) || 0;
   const total = rent + elecTotal + waterTotal;
 
-  const billNo = await getNextBillNumber();
+  // ✅ สร้างเลขบิล — นับจากข้อมูลที่มีอยู่
+  const nextBillNo = billsData.reduce((max, bill) => {
+    const raw = bill.billNo || bill.bill_no || '';
+    const num = parseInt(String(raw).replace(/\D/g, ''), 10);
+    return Number.isFinite(num) ? Math.max(max, num) : max;
+  }, 0) + 1;
+
+  const billNo = 'B' + String(nextBillNo).padStart(3, '0');
 
   try {
     await supabaseReady;
