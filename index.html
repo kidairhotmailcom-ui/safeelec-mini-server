@@ -1110,9 +1110,7 @@ function setBillNumber() {
     // ✅ ดึงเลขล่าสุดจาก Supabase โดยตรง — ไม่สนใจในเครื่อง
  
 async function createBill() {
-  // สร้างเลขที่บิลถัดไป เริ่มต้นที่ 001
  const nextBillNo = billsData.reduce((max, bill) => {
-  // เช็คทั้ง billNo และ bill_no (จาก Supabase)
   const raw = bill.billNo || bill.bill_no || '';
   const num = parseInt(String(raw).replace(/\D/g, ''), 10);
   return Number.isFinite(num) ? Math.max(max, num) : max;
