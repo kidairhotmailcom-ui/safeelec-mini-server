@@ -622,14 +622,12 @@ async function loadLastMeter(type) {
 
   if (!roomId || !month) return;
 
-  // หาข้อมูลเดือนเดียวกันก่อน
   const records = meterRecords[type] || [];
   const currentRecord = records.find(r =>
     String(r.roomId ?? r.room) === String(roomId) &&
     r.month === month
   );
 
-  // หาค่าล่าสุดของเดือนก่อน
   const previous = records
     .filter(r =>
       String(r.roomId ?? r.room) === String(roomId) &&
@@ -642,7 +640,6 @@ async function loadLastMeter(type) {
     ? (roomInfo.initElec ?? 0)
     : (roomInfo.initWater ?? 0);
 
-  // กำหนดค่ามิเตอร์เดือนก่อน
   if (lastInput) {
     lastInput.value = currentRecord
       ? currentRecord.last
@@ -651,13 +648,11 @@ async function loadLastMeter(type) {
         : initial;
   }
 
-  // ถ้ามีข้อมูลเดือนนี้แล้ว แสดงค่ามิเตอร์ปัจจุบันด้วย
   if (currentInput && currentRecord) {
     currentInput.value = currentRecord.current;
     calcMeter(type);
   }
 
-  // ดึงข้อมูลออนไลน์
   try {
     const online = await fetchRoomMeter(type, roomId, month);
     
@@ -680,6 +675,8 @@ async function loadLastMeter(type) {
     console.error('อ่านมิเตอร์ออนไลน์ไม่สำเร็จ:', error);
   }
 }
+
+// ========== ตัวแปรกลางระบบ ==========
 let currentUser = null;
 let adminPassword = localStorage.getItem('admin_password') || '1234';
 let roomsData = JSON.parse(localStorage.getItem('dorm_rooms') || '{}');
@@ -716,6 +713,38 @@ function money(num) {
   return parseFloat(num || 0).toFixed(2).replace(/\.00$/, '');
 }
 
+// ========== สลับหน้าเว็บ (ใช้อันเดิมของคุณ แก้ไขให้รองรับ login/dashboard) ==========
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('show'));
+  document.getElementById('page-' + name).classList.add('show');
+}
+
+// ========== โหลดข้อมูลผู้ใช้ / ตรวจสอบสิทธิ์ ==========
+async function loadUserData() {
+  await supabaseReady;
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (session) {
+    currentUser = session.user;
+    showPage('dashboard');
+    console.log('เข้าสู่ระบบสำเร็จ:', currentUser.email);
+  }
+}
+
+async function checkAuth() {
+  await supabaseReady;
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (session) {
+    currentUser = session.user;
+    showPage('dashboard');
+  } else {
+    showPage('login');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', checkAuth);
+
 // ========== ระบบเข้าสู่ระบบ ==========
 async function doLogin() {
   try {
@@ -740,8 +769,6 @@ async function doLogin() {
     }
 
     currentUser = data.user;
-
-    // ตรวจสอบผู้ใช้และเปิดหน้าระบบผ่านฟังก์ชันกลาง
     await loadUserData();
 
   } catch (error) {
@@ -752,15 +779,12 @@ async function doLogin() {
 
 async function doLogout() {
   if (confirm('ต้องการออกจากระบบใช่หรือไม่?')) {
-    await supabase.auth.signOut()
-    currentUser = null
-    showPage('login')
+    await supabase.auth.signOut();
+    currentUser = null;
+    showPage('login');
   }
 }
-function showPage(name) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('show'));
-  document.getElementById('page-' + name).classList.add('show');
-}
+
 function switchSection(name) {
   document.querySelectorAll('.sub-section').forEach(s => s.classList.add('hidden'));
   document.getElementById(name).classList.remove('hidden');
