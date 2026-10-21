@@ -1486,39 +1486,6 @@ function switchTab(id) {
     updateDashboard();
   }
 }
- async function doLogin() {
-  alert('กำลังตรวจสอบการเข้าสู่ระบบ');
-
-  try {
-    await supabaseReady;
-
-    const email = document.getElementById('login-user').value.trim();
-    const password = document.getElementById('login-pass').value;
-
-    if (!email || !password) {
-      alert('กรุณากรอกอีเมลและรหัสผ่าน');
-      return;
-    }
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (error) {
-      alert('เข้าสู่ระบบไม่สำเร็จ: ' + error.message);
-      console.error('Login error:', error);
-      return;
-    }
-
-    currentUser = data.user;
-    showPage('dashboard');
-
-  } catch (error) {
-    console.error('Login error:', error);
-    alert('เข้าสู่ระบบไม่สำเร็จ: ' + (error.message || error));
-  }
- }
 // เริ่มระบบหลังจากหน้าเว็บโหลดเสร็จ
 document.addEventListener('DOMContentLoaded', async () => {
   await loadUserData() 
