@@ -1051,6 +1051,7 @@ async function saveMeter(type) {
     console.error('บันทึกมิเตอร์ไม่สำเร็จ:', error);
     alert('❌ บันทึกมิเตอร์ไม่สำเร็จ: ' + error.message);
   }
+}
 function renderMeters(type) {
   const tbody = document.getElementById(`${type}-tbody`);
   if (!tbody) return;
