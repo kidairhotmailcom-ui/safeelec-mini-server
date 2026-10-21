@@ -1165,7 +1165,7 @@ async function createBill() {
   const waterTotal = Number(waterRec?.total) || 0;
   const total = rent + elecTotal + waterTotal;
 
-  const billNo = String(getNextBillNumber());
+  const billNo = await getNextBillNumber();
 
   try {
     await supabaseReady;
