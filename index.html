@@ -928,23 +928,28 @@ function deleteRoom(id) {
 }
 function renderRoomsTable() {
   const tbody = document.getElementById('rooms-tbody');
-  const ids = Object.keys(roomsData).sort();
+  const ids = Object.keys(roomsData || {}).sort(); // ป้องกัน roomsData เป็น null
+  
   if (ids.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center" style="color:#888; padding:20px;">ยังไม่มีข้อมูลห้อง</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center" style="color:#888; padding:20px;">ยังไม่มีข้อมูลห้อง</td></tr>';
     return;
   }
+  
   tbody.innerHTML = ids.map(id => {
-    const r = roomsData[id];
-    const status = r.name ? '<span class="badge full">มีผู้เช่า</span>' : '<span class="badge empty">ว่าง</span>';
+    const r = roomsData[id] || {}; // ป้องกัน r เป็น undefined
+    const status = r.name 
+      ? '<span class="badge full">มีผู้เช่า</span>' 
+      : '<span class="badge empty">ว่าง</span>';
+    
     return `
       <tr>
         <td><strong>${escapeHtml(id)}</strong></td>
-        <td>${escapeHtml(r.name) || '-'}</td>
-        <td class="text-right">${money(r.price)}</td>
-        <td>${escapeHtml(r.espIp) || '-'}</td>
+        <td>${escapeHtml(r.name || '-')}</td>
+        <td class="text-right">${money(r.price || 0)}</td>
+        <td>${escapeHtml(r.espIp || '-')}</td>
         <td class="text-right">${r.initElec || 0}</td>
         <td class="text-right">${r.initWater || 0}</td>
-        <td>${escapeHtml(r.password || '-')}</td>  <!-- ✅ ใส่ตรงนี้ -->
+        <td>${escapeHtml(r.password || '-')}</td>
         <td>${status}</td>
         <td class="no-print">
           <button class="btn-sm btn-outline" onclick="showAddRoomForm('${escapeHtml(id)}')">แก้ไข</button>
