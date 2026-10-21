@@ -1257,7 +1257,7 @@ function renderBills() {
     const statusClass = b.status === 'ชำระแล้ว' ? 'paid' : 'due';
     return `
       <tr>
-        <td>${b.id}</td>
+        <td>${escapeHtml(b.billNo)}</td>
         <td>${escapeHtml(b.roomId)}</td>
         <td>${localMonth(b.month)}</td>
         <td class="text-right">${money(b.rent)}</td>
