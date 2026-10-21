@@ -1127,13 +1127,25 @@ function setBillNumber() {
   alert(`✅ ตั้งค่าสำเร็จ\nบิลถัดไปจะเริ่มที่ B${String(startNo).padStart(3,'0')}`);
 }
 
-// ดึงเลขบิลถัดไป
+// ดึงเลขบิลถัดไป — นับจากบิลล่าสุดในระบบ
 function getNextBillNumber() {
-  let lastNo = parseInt(localStorage.getItem('last_bill_no') || '0') + 1;
-  localStorage.setItem('last_bill_no', lastNo.toString());
-  return 'B' + String(lastNo).padStart(3, '0');
+  if (billsData.length === 0) {
+    return 'B001'; // ถ้ายังไม่มีบิลเลย เริ่มที่ B001
+  }
+  
+  // หาเลขลำดับสูงสุดจาก bill_no ที่มีอยู่
+  let maxNum = 0;
+  billsData.forEach(bill => {
+    const match = bill.billNo?.match(/^B(\d+)$/);
+    if (match) {
+      const num = parseInt(match[1]);
+      if (num > maxNum) maxNum = num;
+    }
+  });
+  
+  const nextNum = maxNum + 1;
+  return 'B' + String(nextNum).padStart(3, '0');
 }
-
 async function createBill() {
   const roomId = document.getElementById('bill-room').value;
   const month = document.getElementById('bill-month').value;
