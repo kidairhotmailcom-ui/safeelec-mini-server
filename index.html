@@ -1114,28 +1114,16 @@ async function getNextBillNumber() {
     await supabaseReady;
     
     // ✅ ดึงเลขล่าสุดจาก Supabase โดยตรง — ไม่สนใจในเครื่อง
-    const { data, error } = await supabase
-      .from('dorm_bills')
-      .select('bill_no')
-      .order('bill_no', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) throw error;
-
-    let nextNum = 1;
-    if (data?.bill_no) {
-      const match = data.bill_no.match(/^B(\d+)$/);
-      if (match) nextNum = parseInt(match[1]) + 1;
-    }
-    
-    return 'B' + String(nextNum).padStart(3, '0');
-    
-  } catch (err) {
-    console.error('ดึงเลขบิลล่าสุดไม่สำเร็จ:', err);
-    return 'B999'; // สำรอง ถ้าผิดพลาด
+ async function getNextBillNumber() {
+  try {
+    await supabaseReady;
+    // ให้ Supabase จัดการลำดับให้ — ไม่มีวันซ้ำ ไม่ต้องกลัวลบแล้วขาด
+    const { data } = await supabase.rpc('next_bill_number');
+    return 'B' + String(data).padStart(3, '0');
+  } catch {
+    return 'B001';
   }
-}
+} 
 async function createBill() {
   const roomId = document.getElementById('bill-room').value;
   const month = document.getElementById('bill-month').value;
