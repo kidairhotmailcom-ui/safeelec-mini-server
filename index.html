@@ -1109,11 +1109,16 @@ function setBillNumber() {
 }
 
 // ดึงเลขบิลถัดไป — นับจากบิลล่าสุดในระบบ
-// ลบอันเกิด ใช้อันนี้แทน
 function getNextBillNumber() {
   const d = new Date();
-  const timeStr = d.getTime().toString().slice(-8);
-  return 'B' + timeStr;
+  const yy = d.getFullYear().toString().slice(-2);
+  let maxNum = 0;
+  // อ่านจากทั้งในเครื่องและใน Supabase ดึงล่าสุด
+  billsData.forEach(bill => {
+    const match = bill.billNo?.match(/^B(\d+)$/);
+    if (match) maxNum = Math.max(maxNum, parseInt(match[1]));
+  });
+  return 'B' + String(maxNum + 1).padStart(3, '0');
 }
 async function createBill() {
   const roomId = document.getElementById('bill-room').value;
