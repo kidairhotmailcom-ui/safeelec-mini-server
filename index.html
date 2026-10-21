@@ -852,6 +852,7 @@ function showAddRoomForm(id = null) {
     document.getElementById('esp-ip').value = '';
     document.getElementById('init-elec').value = 0;
     document.getElementById('init-water').value = 0;
+    document.getElementById('room-pass').value = r.password || '';  // ✅ ใส่ตรงนี้
   }
 }
 function hideAddRoomForm() {
@@ -936,6 +937,7 @@ function renderRoomsTable() {
         <td>${escapeHtml(r.espIp) || '-'}</td>
         <td class="text-right">${r.initElec || 0}</td>
         <td class="text-right">${r.initWater || 0}</td>
+        <td>${escapeHtml(r.password || '-')}</td>  <!-- ✅ ใส่ตรงนี้ -->
         <td>${status}</td>
         <td class="no-print">
           <button class="btn-sm btn-outline" onclick="showAddRoomForm('${escapeHtml(id)}')">แก้ไข</button>
