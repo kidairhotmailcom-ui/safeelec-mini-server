@@ -1109,23 +1109,11 @@ function setBillNumber() {
 }
 
 // ดึงเลขบิลถัดไป — นับจากบิลล่าสุดในระบบ
+// ลบอันเกิด ใช้อันนี้แทน
 function getNextBillNumber() {
-  if (billsData.length === 0) {
-    return 'B001'; // ถ้ายังไม่มีบิลเลย เริ่มที่ B001
-  }
-  
-  // หาเลขลำดับสูงสุดจาก bill_no ที่มีอยู่
-  let maxNum = 0;
-  billsData.forEach(bill => {
-    const match = bill.billNo?.match(/^B(\d+)$/);
-    if (match) {
-      const num = parseInt(match[1]);
-      if (num > maxNum) maxNum = num;
-    }
-  });
-  
-  const nextNum = maxNum + 1;
-  return 'B' + String(nextNum).padStart(3, '0');
+  const d = new Date();
+  const timeStr = d.getTime().toString().slice(-8);
+  return 'B' + timeStr;
 }
 async function createBill() {
   const roomId = document.getElementById('bill-room').value;
@@ -1251,21 +1239,42 @@ function renderBills() {
     `;
   }).join('');
 }
-function markBillPaid(billId) {
+async function markBillPaid(billId) {
   const bill = billsData.find(b => b.id === billId);
-  if (bill) {
+  if (!bill) return;
+  try {
+    await supabaseReady;
+    const { error } = await supabase
+      .from('dorm_bills')
+      .update({ status: 'ชำระแล้ว' })
+      .eq('id', billId);
+    if (error) throw error;
     bill.status = 'ชำระแล้ว';
     saveAllData();
     renderBills();
     updateDashboard();
+  } catch (error) {
+    console.error('อัปเดตสถานะไม่สำเร็จ:', error);
+    alert('⚠️ อัปเดตสถานะไม่สำเร็จ: ' + error.message);
   }
 }
-function deleteBill(billId) {
+async function deleteBill(billId) {
   if (!confirm('⚠️ ต้องการลบบิลนี้ ใช่หรือไม่?')) return;
-  billsData = billsData.filter(b => b.id !== billId);
-  saveAllData();
-  renderBills();
-  updateDashboard();
+  try {
+    await supabaseReady;
+    const { error } = await supabase
+      .from('dorm_bills')
+      .delete()
+      .eq('id', billId);
+    if (error) throw error;
+    billsData = billsData.filter(b => b.id !== billId);
+    saveAllData();
+    renderBills();
+    updateDashboard();
+  } catch (error) {
+    console.error('ลบบิลไม่สำเร็จ:', error);
+    alert('❌ ลบบิลไม่สำเร็จ: ' + error.message);
+  }
 }
 function printBill(billId) {
   const bill = billsData.find(b => b.id === billId);
