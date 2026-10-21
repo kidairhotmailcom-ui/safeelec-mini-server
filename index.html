@@ -1039,12 +1039,12 @@ async function saveMeter(type) {
   const total = unit * rate;
   const table = type === 'electric' ? 'dorm_electric' : 'dorm_water';
 
-  try {
+    try {
     await supabaseReady;
 
     const { error } = await supabase
       .from(table)
-      .insert({
+      .upsert({
         user_id: currentUser.id,
         room_id: roomId,
         month: month,
@@ -1053,6 +1053,8 @@ async function saveMeter(type) {
         unit: unit,
         rate: rate,
         total: total
+      }, {
+        onConflict: 'user_id, room_id, month'
       });
 
     if (error) throw error;
@@ -1073,8 +1075,6 @@ async function saveMeter(type) {
     console.error('บันทึกมิเตอร์ไม่สำเร็จ:', error);
     alert('❌ บันทึกมิเตอร์ไม่สำเร็จ: ' + error.message);
   }
-}
-
 function renderMeters(type) {
   const tbody = document.getElementById(`${type}-tbody`);
   if (!tbody) return;
