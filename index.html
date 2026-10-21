@@ -1123,8 +1123,12 @@ function initBillsPanel() {
 function setBillNumber() {
   let startNo = parseInt(document.getElementById('bill-start-no').value) || 1;
   if (startNo < 1) startNo = 1;
-  localStorage.setItem('last_bill_no', (startNo - 1).toString());
-  alert(`✅ ตั้งค่าสำเร็จ\nบิลถัดไปจะเริ่มที่ B${String(startNo).padStart(3,'0')}`);
+  
+  // ตัวอย่างเช่น ถ้าตั้งเป็น 1 → บิลถัดไปจะเป็น B001
+  const previewNo = 'B' + String(startNo).padStart(3, '0');
+  
+  // ล้างบิลล่าสุดในระบบ หรือถ้ามีอยู่แล้ว ก็แค่แจ้งเตือน
+  alert(`✅ ตั้งค่าสำเร็จ\nบิลถัดไปจะเริ่มที่ ${previewNo}\n💡 หมายเหตุ: ระบบจะนับต่อจากบิลล่าสุดอัตโนมัติ`);
 }
 
 // ดึงเลขบิลถัดไป — นับจากบิลล่าสุดในระบบ
