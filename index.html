@@ -874,49 +874,44 @@ async function saveRoomData() {
   const espIp = document.getElementById('esp-ip').value.trim();
   const initElec = parseFloat(document.getElementById('init-elec').value) || 0;
   const initWater = parseFloat(document.getElementById('init-water').value) || 0;
-  const roomPass = document.getElementById('room-pass').value.trim() || '1234'; // ✅ เพิ่มบรรทัดนี้
+  const roomPass = document.getElementById('room-pass').value.trim() || '';
 
   if (!id) {
     alert('⚠️ กรุณากรอกเลขห้อง');
     return;
   }
 
-  if (!currentUser) {
-    alert('กรุณาเข้าสู่ระบบก่อนบันทึกข้อมูล');
-    return;
+  // ✅ บันทึกลงเครื่องก่อน — ทำงานได้ทันที ไม่ต้องรอระบบล็อกอิน
+  roomsData[id] = { price, name, espIp, initElec, initWater, password: roomPass };
+  saveAllData();
+
+  // ✅ ถ้ามีการเข้าสู่ระบบอยู่แล้ว ค่อยส่งขึ้น Supabase
+  if (currentUser) {
+    try {
+      await supabaseReady;
+      const { error } = await supabase
+        .from('dorm_rooms')
+        .upsert({
+          user_id: currentUser.id,
+          room_id: id,
+          price: price,
+          tenant_name: name,
+          esp_ip: espIp,
+          init_elec: initElec,
+          init_water: initWater
+        }, { onConflict: 'user_id,room_id' });
+
+      if (error) throw error;
+      console.log('ซิงค์ข้อมูลขึ้นเซิร์ฟเวอร์สำเร็จ');
+    } catch (err) {
+      console.warn('⚠️ บันทึกในเครื่องสำเร็จ แต่ซิงค์ขึ้นเซิร์ฟเวอร์ไม่ได้:', err.message);
+    }
   }
 
-  try {
-    await supabaseReady;
-
-    const { error } = await supabase
-      .from('dorm_rooms')
-      .upsert({
-        user_id: currentUser.id,
-        room_id: id,
-        price: price,
-        tenant_name: name,
-        esp_ip: espIp,
-        init_elec: initElec,
-        init_water: initWater
-      }, {
-        onConflict: 'user_id,room_id'
-      });
-
-    if (error) throw error;
-
-    roomsData[id] = { price, name, espIp, initElec, initWater };
-    saveAllData();
-
-    alert('✅ บันทึกห้องพักขึ้น Supabase สำเร็จ');
-    hideAddRoomForm();
-    renderRoomsTable();
-    updateDashboard();
-
-  } catch (error) {
-    console.error('บันทึกห้องพักไม่สำเร็จ:', error);
-    alert('❌ บันทึกไม่สำเร็จ: ' + error.message);
-  }
+  alert('✅ บันทึกข้อมูลสำเร็จ!');
+  hideAddRoomForm();
+  renderRoomsTable();
+  updateDashboard();
 }
 
 function deleteRoom(id) {
