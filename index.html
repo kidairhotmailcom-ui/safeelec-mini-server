@@ -866,6 +866,7 @@ async function saveRoomData() {
   const espIp = document.getElementById('esp-ip').value.trim();
   const initElec = parseFloat(document.getElementById('init-elec').value) || 0;
   const initWater = parseFloat(document.getElementById('init-water').value) || 0;
+  const roomPass = document.getElementById('room-pass').value.trim() || '1234'; // ✅ เพิ่มบรรทัดนี้
 
   if (!id) {
     alert('⚠️ กรุณากรอกเลขห้อง');
