@@ -1110,13 +1110,10 @@ function setBillNumber() {
     // ✅ ดึงเลขล่าสุดจาก Supabase โดยตรง — ไม่สนใจในเครื่อง
  
 async function createBill() {
-  const nextBillNo = billsData.reduce((max, bill) => {
-    const raw = bill.billNo || bill.bill_no || '';
-    const num = parseInt(String(raw).replace(/\D/g, ''), 10);
-    return Number.isFinite(num) ? Math.max(max, num) : max;
-  }, 0) + 1;
+   const roomId = document.getElementById('bill-room').value;
+   const month = document.getElementById('bill-month').value;
 
-  const billNo = 'B' + String(nextBillNo).padStart(3, '0');
+  const billNo = String(nextBillNo).padStart(3, '0');
 
   if (!roomId) {
     alert('⚠️ กรุณาเลือกห้อง');
