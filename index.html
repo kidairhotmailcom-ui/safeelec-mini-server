@@ -1294,7 +1294,7 @@ function printBill(billId) {
   const bill = billsData.find(b => b.id === billId);
   if (!bill) return;
   
-  document.getElementById('doc-billno').textContent = bill.id;
+  document.getElementById('doc-billno').textContent = bill.billNo;
   document.getElementById('doc-room').textContent = bill.roomId;
   document.getElementById('doc-tenant').textContent = bill.tenantName;
   document.getElementById('doc-month').textContent = localMonth(bill.month);
