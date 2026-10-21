@@ -1107,12 +1107,6 @@ function setBillNumber() {
   // ล้างบิลล่าสุดในระบบ หรือถ้ามีอยู่แล้ว ก็แค่แจ้งเตือน
   alert(`✅ ตั้งค่าสำเร็จ\nบิลถัดไปจะเริ่มที่ ${previewNo}\n💡 หมายเหตุ: ระบบจะนับต่อจากบิลล่าสุดอัตโนมัติ`);
 }
-
-// ดึงเลขบิลถัดไป — นับจากบิลล่าสุดในระบบ
-async function getNextBillNumber() {
-  try {
-    await supabaseReady;
-    
     // ✅ ดึงเลขล่าสุดจาก Supabase โดยตรง — ไม่สนใจในเครื่อง
  async function getNextBillNumber() {
   try {
