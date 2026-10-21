@@ -1484,27 +1484,37 @@ function switchTab(id) {
     updateDashboard();
   }
 }
- async function loadUserData() {
+ async function doLogin() {
+  alert('กำลังตรวจสอบการเข้าสู่ระบบ');
+
   try {
     await supabaseReady;
 
-    const {
-      data: { user },
-      error
-    } = await supabase.auth.getUser();
+    const email = document.getElementById('login-user').value.trim();
+    const password = document.getElementById('login-pass').value;
 
-    if (error) throw error;
+    if (!email || !password) {
+      alert('กรุณากรอกอีเมลและรหัสผ่าน');
+      return;
+    }
 
-    currentUser = user || null;
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
 
-    // แสดงหน้าล็อกอินเสมอเมื่อเปิดเว็บ
-    // ไม่เปิด Dashboard อัตโนมัติ
-    showPage('login');
+    if (error) {
+      alert('เข้าสู่ระบบไม่สำเร็จ: ' + error.message);
+      console.error('Login error:', error);
+      return;
+    }
+
+    currentUser = data.user;
+    showPage('dashboard');
 
   } catch (error) {
-    console.error('ตรวจสอบ okผู้ใช้ไม่สำเร็จ:', error);
-    currentUser = null;
-    showPage('login');
+    console.error('Login error:', error);
+    alert('เข้าสู่ระบบไม่สำเร็จ: ' + (error.message || error));
   }
 }
 // เริ่มระบบหลังจากหน้าเว็บโหลดเสร็จ
