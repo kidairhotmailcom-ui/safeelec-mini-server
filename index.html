@@ -1108,16 +1108,7 @@ function setBillNumber() {
   alert(`✅ ตั้งค่าสำเร็จ\nบิลถัดไปจะเริ่มที่ ${previewNo}\n💡 หมายเหตุ: ระบบจะนับต่อจากบิลล่าสุดอัตโนมัติ`);
 }
     // ✅ ดึงเลขล่าสุดจาก Supabase โดยตรง — ไม่สนใจในเครื่อง
- async function getNextBillNumber() {
-  try {
-    await supabaseReady;
-    // ให้ Supabase จัดการลำดับให้ — ไม่มีวันซ้ำ ไม่ต้องกลัวลบแล้วขาด
-    const { data } = await supabase.rpc('next_bill_number');
-    return 'B' + String(data).padStart(3, '0');
-  } catch {
-    return 'B001';
-  }
-} 
+ 
 async function createBill() {
   const roomId = document.getElementById('bill-room').value;
   const month = document.getElementById('bill-month').value;
