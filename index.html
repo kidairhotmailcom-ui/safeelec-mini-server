@@ -1516,7 +1516,7 @@ function switchTab(id) {
     console.error('Login error:', error);
     alert('เข้าสู่ระบบไม่สำเร็จ: ' + (error.message || error));
   }
-}
+ }
 // เริ่มระบบหลังจากหน้าเว็บโหลดเสร็จ
 document.addEventListener('DOMContentLoaded', async () => {
   await loadUserData() 
@@ -1525,6 +1525,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     setInterval(fetchMeterFromESP, 60000);
   }
 });
+  function loadSettings() {
+  // จำนวนห้อง
+  const savedRooms = localStorage.getItem('dorm_total_rooms');
+  const roomsInput = document.getElementById('total-rooms-setting');
+  if (roomsInput && savedRooms) {
+    roomsInput.value = savedRooms;
+    totalRoomsCount = parseInt(savedRooms) || 0;
+  }
+
+  // เลขบิลเริ่มต้น
+  const lastNo = parseInt(localStorage.getItem('last_bill_no') || '0') + 1;
+  const billInput = document.getElementById('bill-start-no');
+  if (billInput) {
+    billInput.value = lastNo;
+  }
+}
+
+// ทำงานทันทีตอนเปิดหน้าเว็บ
+document.addEventListener('DOMContentLoaded', loadSettings);
+
 </script>
 
 </body>
