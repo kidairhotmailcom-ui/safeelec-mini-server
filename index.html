@@ -151,50 +151,55 @@
     </div>
 
     <!-- แท็บย่อยที่ 2: จัดการทะเบียนห้องและบอร์ด ESP IP -->
-    <div id="rooms-view" class="sub-section hidden">
-      <div class="between mb"><h1 class="page-title">🚪 ข้อมูลห้องพักและที่อยู่ไอพี IoT</h1><button class="btn-success" onclick="showAddRoomForm()">+ เพิ่มห้องใหม่</button></div>
-      <div id="room-form-card" class="card hidden">
-        <h3 id="room-form-title" class="mb">บันทึกข้อมูลห้องพัก</h3>
-        <div class="form-row">
-          <input type="text" id="room-id" placeholder="เลขห้อง (เช่น 101)">
-          <input type="number" id="room-price" placeholder="ค่าเช่าต่อเดือน">
-          <input type="text" id="tenant-name" placeholder="ชื่อผู้เช่า (เว้นว่างหากไม่มี)">
-          <input type="text" id="room-pass" placeholder="🔑 รหัสผ่านผู้เช่า (เช่น 1234)">
-        </div>
-        <div class="form-row mt">
-          <input type="text" id="esp-ip" placeholder="ที่อยู่ IP ของบอร์ด ESP เช่น 192.168.1.101">
-        </div>
-        <div class="form-row mt">
-          <div><label><small>ตั้งค่ามิเตอร์ไฟเริ่มต้นของห้อง</small></label><input type="number" id="init-elec" value="0"></div>
-          <div><label><small>ตั้งค่ามิเตอร์น้ำเริ่มต้นของห้อง</small></label><input type="number" id="init-water" value="0"></div>
-        </div>
-                <div class="between mt">
-          <button class="btn-outline" onclick="hideAddRoomForm()">ยกเลิก</button>
-          <button class="btn-success" onclick="saveRoomData()">💾 บันทึกห้อง</button>
-        </div>
-      </div>
-      <div class="overflow-auto">
-        <table>
-          <thead>
-            <tr>
-              <th>ห้อง</th>
-              <th>ผู้เช่า</th>
-              <th>ค่าเช่า/เดือน</th>
-              <th>IP ESP32</th>
-              <th>มิเตอร์ไฟเริ่มต้น</th>
-              <th>มิเตอร์น้ำเริ่มต้น</th>
-              <th class="no-print">จัดการ</th>
-              <th>สถานะ</th>
-              <th class="no-print">จัดการ</th>
-            </tr>
-          </thead>
-          <tbody id="rooms-tbody">
-            <tr><td colspan="8" class="text-center" style="color:#888; padding:20px;">ยังไม่มีข้อมูลห้อง</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+<div id="rooms-view" class="sub-section hidden">
+  <div class="between mb">
+    <h1 class="page-title">🚪 ข้อมูลห้องพักและที่อยู่ไอพี IoT</h1>
+    <button class="btn-success" onclick="showAddRoomForm()">+ เพิ่มห้องใหม่</button>
+  </div>
 
+  <!-- ฟอร์มเพิ่ม/แก้ไขห้อง -->
+  <div id="room-form-card" class="card hidden">
+    <h3 id="room-form-title" class="mb">บันทึกข้อมูลห้องพัก</h3>
+    <div class="form-row">
+      <input type="text" id="room-id" placeholder="เลขห้อง (เช่น 101)">
+      <input type="number" id="room-price" placeholder="ค่าเช่าต่อเดือน">
+      <input type="text" id="tenant-name" placeholder="ชื่อผู้เช่า (เว้นว่างหากไม่มี)">
+      <input type="text" id="room-pass" placeholder="🔑 รหัสผ่านผู้เช่า (เช่น 1234)">
+    </div>
+    <div class="form-row mt-sm">
+      <input type="text" id="esp-ip" placeholder="ที่อยู่ IP บอร์ด ESP (เช่น 192.168.1.100)">
+      <input type="number" id="init-elec" placeholder="เลขมิเตอร์ไฟฟ้าเริ่มต้น">
+      <input type="number" id="init-water" placeholder="เลขมิเตอร์น้ำเริ่มต้น">
+    </div>
+    <div class="form-actions mt">
+      <button class="btn-secondary" onclick="hideRoomForm()">ยกเลิก</button>
+      <button class="btn-primary" onclick="saveRoomData()">💾 บันทึกข้อมูล</button>
+    </div>
+  </div>
+
+  <!-- ตารางแสดงรายการห้อง -->
+  <div class="card mt">
+    <div class="table-responsive">
+      <table id="rooms-table" class="full-width">
+        <thead>
+          <tr>
+            <th>เลขห้อง</th>
+            <th>ค่าเช่า</th>
+            <th>ผู้เช่า</th>
+            <th>รหัสผ่าน</th>
+            <th>IP ESP</th>
+            <th>มิเตอร์ไฟ</th>
+            <th>มิเตอร์น้ำ</th>
+            <th>จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="rooms-list-body">
+          <!-- แสดงรายการห้องที่นี่ด้วย JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
     <!-- แท็บย่อยที่ 3: บันทึกมิเตอร์และสร้างบิล -->
     <div id="billing-view" class="sub-section hidden">
       <h1 class="page-title">📄 บันทึกมิเตอร์และจัดการบิล</h1>
