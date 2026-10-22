@@ -21,41 +21,43 @@
     <div class="card">
       <h1>👤 เข้าสู่ระบบผู้เช่า</h1>
       <p>กรุณากรอกข้อมูลเพื่อเข้าดูข้อมูล</p>
-      <input type="text" id="cus-user" placeholder="ห้องที่ / ชื่อผู้เช่า">
+      <input type="text" id="cus-user" placeholder="เลขห้อง">
       <input type="password" id="cus-pass" placeholder="รหัสผ่าน">
       <button class="btn-primary" onclick="doCustomerLogin()">เข้าสู่ระบบ</button>
       <a href="index.html" class="btn-back">← กลับหน้าหลัก</a>
     </div>
   </div>
+
   <script>
-    function customerLogin() {
-  const roomId = document.getElementById('room-number').value.trim();
-  const password = document.getElementById('room-password').value;
+    function doCustomerLogin() {
+      const user = document.getElementById('cus-user').value.trim();
+      const pass = document.getElementById('cus-pass').value;
 
-  if (!roomId || !password) {
-    alert('กรุณากรอกเลขห้องและรหัสผ่าน');
-    return;
-  }
+      if (!user || !pass) {
+        alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+        return;
+      }
 
-  const rooms = JSON.parse(localStorage.getItem('dorm_rooms') || '{}');
-  const room = rooms[roomId];
+      const rooms = JSON.parse(localStorage.getItem('dorm_rooms') || '{}');
 
-  if (!room) {
-    alert('❌ ไม่พบห้องนี้ในระบบ');
-    return;
-  }
+      if (!rooms[user]) {
+        alert('ไม่พบห้องนี้ในระบบ');
+        return;
+      }
 
-  if (room.password === password) {
-    localStorage.setItem('current_tenant', JSON.stringify({
-      roomId: roomId,
-      name: room.name || 'ผู้เช่า'
-    }));
-    alert('✅ เข้าสู่ระบบสำเร็จ');
-    window.location.href = 'tenant-dashboard.html';
-  } else {
-    alert('❌ รหัสผ่านไม่ถูกต้อง');
-  }
-}
+      if (rooms[user].password !== pass) {
+        alert('รหัสผ่านไม่ถูกต้อง');
+        return;
+      }
+
+      localStorage.setItem('current_tenant', JSON.stringify({
+        roomId: user,
+        name: rooms[user].name || 'ผู้เช่า'
+      }));
+
+      alert('✅ เข้าสู่ระบบสำเร็จ!');
+      window.location.href = 'tenant-dashboard.html';
+    }
   </script>
 </body>
 </html>
