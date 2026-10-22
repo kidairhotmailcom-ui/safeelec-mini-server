@@ -1600,7 +1600,57 @@ async function syncBillsFromCloud() {
     console.warn('⚠️ ใช้ข้อมูลในเครื่อง:', e.message);
   }
 }
+// ========== ตรวจสิทธิ์: เป็นเจ้าของไหม? ==========
+function isOwner() {
+  const role = localStorage.getItem('user_role');
+  return role === 'owner';
+}
 
+// ========== ผู้เช่าแจ้งชำระเงิน ==========
+async function submitPayment(billId) {
+  const proofUrl = prompt('วางลิงก์รูปสลิป/หลักฐานการชำระเงิน:');
+  if (!proofUrl) return;
+
+  try {
+    await supabaseReady;
+    const { error } = await supabase
+      .from('dorm_bills')
+      .update({
+        status: 'รอตรวจสอบ',
+        payment_proof_url: proofUrl,
+        paid_at: new Date().toISOString()
+      })
+      .eq('id', billId);
+
+    if (error) throw error;
+    alert('✅ แจ้งชำระเงินสำเร็จ! รอเจ้าของตรวจสอบ');
+    await syncBillsFromCloud();
+  } catch (e) {
+    alert('❌ ไม่สามารถแจ้งได้: ' + e.message);
+  }
+}
+
+// ========== เจ้าของยืนยันการชำระ ==========
+async function confirmPayment(billId) {
+  if (!confirm('ยืนยันว่าได้รับเงินแล้ว?')) return;
+  
+  try {
+    await supabaseReady;
+    const { error } = await supabase
+      .from('dorm_bills')
+      .update({
+        status: 'ชำระแล้ว',
+        confirmed_at: new Date().toISOString()
+      })
+      .eq('id', billId);
+
+    if (error) throw error;
+    alert('✅ ยืนยันสำเร็จ!');
+    await syncBillsFromCloud();
+  } catch (e) {
+    alert('❌ ไม่สามารถยืนยันได้: ' + e.message);
+  }
+}
 // ✅ จากนั้นแก้บรรทัด DOMContentLoaded เป็นแบบนี้
 document.addEventListener('DOMContentLoaded', async () => {
   await loadUserData();
