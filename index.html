@@ -1626,11 +1626,13 @@ async function syncBillsFromCloud() {
         billNo: d.bill_no,
         roomId: d.room_id,
         month: d.month,
+        bankInfo: d.bank_info,        // ✅ เพิ่มตรงนี้
+        qrCodeUrl: d.qr_code_url,      // ✅ เพิ่มตรงนี้
         rent: Number(d.rent) || 0,
         electric: Number(d.electric) || 0,
         water: Number(d.water) || 0,
         total: Number(d.total) || 0,
-        status: d.status || 'ค้าง'
+        status: d.status || 'รอชำระ'
       }));
       saveAllData();
       renderBills();
