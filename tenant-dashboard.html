@@ -13,6 +13,7 @@
     .info-box { background: #eff6ff; padding: 16px; border-radius: 8px; margin-bottom: 16px; }
     .info-box h3 { font-size: 14px; color: #3b82f6; margin-bottom: 8px; }
     .info-box p { font-size: 18px; font-weight: bold; color: #1e40af; }
+    .total { color: #dc2626; font-size: 20px; }
     .btn-logout { width: 100%; padding: 12px; background: #ef4444; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 10px; }
   </style>
 </head>
@@ -32,6 +33,26 @@
         <h3>สถานะ</h3>
         <p style="color: #16a34a;">✅ เข้าพักอยู่</p>
       </div>
+      <div class="info-box">
+        <h3>ค่าห้องพัก</h3>
+        <p id="show-room-price">-</p>
+      </div>
+      <div class="info-box">
+        <h3>ค่าน้ำ</h3>
+        <p id="show-water-price">-</p>
+      </div>
+      <div class="info-box">
+        <h3>ค่าไฟ</h3>
+        <p id="show-electric-price">-</p>
+      </div>
+      <div class="info-box">
+        <h3>กำหนดชำระภายในวันที่</h3>
+        <p id="show-duedate">-</p>
+      </div>
+      <div class="info-box">
+        <h3>ยอดรวมที่ต้องชำระ</h3>
+        <p class="total" id="show-total">-</p>
+      </div>
       <button class="btn-logout" onclick="logout()">ออกจากระบบ</button>
     </div>
   </div>
@@ -46,6 +67,21 @@
       }
       document.getElementById('show-room').textContent = tenant.roomId;
       document.getElementById('show-name').textContent = tenant.name;
+
+      // 👇 ปรับราคาและวันที่ตรงนี้ได้เลย 👇
+      const roomPrice = 2500;
+      const waterPrice = 150;
+      const electricPrice = 320;
+      const dueDate = "25 ตุลาคม 2569";
+      // 👆 จบส่วนที่แก้ไขได้ 👆
+
+      const total = roomPrice + waterPrice + electricPrice;
+
+      document.getElementById('show-room-price').textContent = roomPrice.toLocaleString() + " บาท";
+      document.getElementById('show-water-price').textContent = waterPrice.toLocaleString() + " บาท";
+      document.getElementById('show-electric-price').textContent = electricPrice.toLocaleString() + " บาท";
+      document.getElementById('show-duedate').textContent = dueDate;
+      document.getElementById('show-total').textContent = total.toLocaleString() + " บาท";
     }
 
     function logout() {
