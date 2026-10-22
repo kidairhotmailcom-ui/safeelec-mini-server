@@ -906,7 +906,8 @@ async function saveRoomData() {
           tenant_name: name,
           esp_ip: espIp,
           init_elec: initElec,
-          init_water: initWater
+          init_water: initWater,
+          password: roomPass       
         }, { onConflict: 'user_id,room_id' });
 
       if (error) throw error;
