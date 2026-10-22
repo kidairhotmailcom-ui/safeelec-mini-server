@@ -28,15 +28,34 @@
     </div>
   </div>
   <script>
-    function doCustomerLogin() {
-      const user = document.getElementById('cus-user').value;
-      const pass = document.getElementById('cus-pass').value;
-      if (!user || !pass) {
-        alert('กรุณากรอกข้อมูลให้ครบถ้วน');
-        return;
-      }
-      alert('✅ เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับคุณ ' + user);
-    }
+    function customerLogin() {
+  const roomId = document.getElementById('room-number').value.trim();
+  const password = document.getElementById('room-password').value;
+
+  if (!roomId || !password) {
+    alert('กรุณากรอกเลขห้องและรหัสผ่าน');
+    return;
+  }
+
+  const rooms = JSON.parse(localStorage.getItem('dorm_rooms') || '{}');
+  const room = rooms[roomId];
+
+  if (!room) {
+    alert('❌ ไม่พบห้องนี้ในระบบ');
+    return;
+  }
+
+  if (room.password === password) {
+    localStorage.setItem('current_tenant', JSON.stringify({
+      roomId: roomId,
+      name: room.name || 'ผู้เช่า'
+    }));
+    alert('✅ เข้าสู่ระบบสำเร็จ');
+    window.location.href = 'tenant-dashboard.html';
+  } else {
+    alert('❌ รหัสผ่านไม่ถูกต้อง');
+  }
+}
   </script>
 </body>
 </html>
