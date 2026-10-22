@@ -1236,7 +1236,7 @@ function setBillNumber() {
         electric: elecTotal,
         water: waterTotal,
         total: total,
-        status: 'ค้าง'
+        status: 'รอชำระ'
       })
       .select()
       .single();
@@ -1253,7 +1253,7 @@ function setBillNumber() {
       electric: Number(data.electric) || 0,
       water: Number(data.water) || 0,
       total: Number(data.total) || 0,
-      status: data.status || 'ค้าง'
+      status: data.status || 'รอชำระ'
     };
 
     billsData.unshift(bill);
