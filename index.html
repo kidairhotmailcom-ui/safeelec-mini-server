@@ -949,7 +949,22 @@ function renderRoomsTable() {
       ? '<span class="badge full">มีผู้เช่า</span>' 
       : '<span class="badge empty">ว่าง</span>';
 
-    
+   return `
+  <tr>
+    <td><strong>${escapeHtml(id)}</strong></td>           <!-- 1. เลขห้อง -->
+    <td class="text-right">${money(r.price || 0)}</td>    <!-- 2. ค่าเช่า -->
+    <td>${escapeHtml(r.name || '-')}</td>                 <!-- 3. ผู้เช่า -->
+    <td>${escapeHtml(r.password || '-')}</td>             <!-- 4. รหัสผ่าน -->
+    <td>${escapeHtml(r.espIp || '-')}</td>                <!-- 5. IP ESP -->
+    <td class="text-right">${r.initElec || 0}</td>        <!-- 6. มิเตอร์ไฟ -->
+    <td class="text-right">${r.initWater || 0}</td>       <!-- 7. มิเตอร์น้ำ -->
+    <td class="no-print">
+      ${status} 
+      <button class="btn-sm btn-outline" onclick="showAddRoomForm('${escapeHtml(id)}')">แก้ไข</button>
+      <button class="btn-sm btn-danger" onclick="deleteRoom('${escapeHtml(id)}')">ลบ</button>
+    </td>                                                  <!-- 8. จัดการ -->
+  </tr>
+`;
   }).join('');
 }
 function fillRoomSelectAll() {
