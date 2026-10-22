@@ -1282,8 +1282,9 @@ function setBillNumber() {
 function renderBills() {
   const tbody = document.getElementById('bills-tbody');
   if (!tbody) return;
+  
   if (billsData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center" style="color:#888; padding:20px;">ยังไม่มีบิล</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center" style="color:#888; padding:20px;">ยังไม่มีบิล</td></tr>';
     return;
   }
 
@@ -1294,7 +1295,6 @@ function renderBills() {
       statusText = '⏳ รอชำระ';
       statusColor = '#f59e0b';
     } else if (b.status === 'รอตรวจสอบ') {
-      // แยกข้อความแสดงตามบทบาท
       if (isOwner()) {
         statusText = '🔍 รอตรวจสลิปจากผู้เช่า';
       } else {
@@ -1335,6 +1335,7 @@ function renderBills() {
       <td>${localMonth(b.month)}</td>
       <td class="text-right">${money(b.rent)}</td>
       <td class="text-right">${money(b.electric)}</td>
+      <td class="text-right">${money(b.water)}</td>  <!-- ✅ เพิ่มค่าน้ำ -->
       <td class="text-right">${money(b.total)}</td>
       <td style="color:${statusColor}; font-weight:bold;">${statusText}</td>
       <td>${actionBtn}</td>
@@ -1409,7 +1410,7 @@ function updateDashboard() {
   const thisMonth = localMonthNow();
   const billsThisMonth = billsData.filter(b => b.month === thisMonth);
   const totalPaid = billsData.filter(b => b.status === 'ชำระแล้ว').reduce((sum, b) => sum + b.total, 0);
-  const totalDue = billsData.filter(b => b.status === 'ค้าง').reduce((sum, b) => sum + b.total, 0);
+  const totalDue = billsData.filter(b => b.status === 'รอชำระ' || b.status === 'รอตรวจสอบ').reduce((sum, b) => sum + b.total, 0); // ✅ แก้ตรงนี้
   
   // รายชื่อห้องว่าง
   const emptyRoomNames = Object.entries(roomsData)
