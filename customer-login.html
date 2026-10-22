@@ -4,6 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>เข้าสู่ระบบผู้เช่า</title>
+  <!-- ===== Supabase CDN ===== -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // 🔑 ใส่ URL และ Key ของคุณตรงนี้ เหมือนในหน้าเจ้าของ
+    const SUPABASE_URL = "ใส่ SUPABASE_URL ของคุณ";
+    const SUPABASE_KEY = "ใส่ SUPABASE_ANON_KEY ของคุณ";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  </script>
   <style>
     * { box-sizing: border-box; font-family: sans-serif; }
     body { background: #f0f4f8; margin: 0; padding: 20px; }
@@ -29,7 +37,7 @@
   </div>
 
   <script>
-    function doCustomerLogin() {
+    async function doCustomerLogin() {
       const user = document.getElementById('cus-user').value.trim();
       const pass = document.getElementById('cus-pass').value;
 
@@ -38,25 +46,38 @@
         return;
       }
 
-      const rooms = JSON.parse(localStorage.getItem('dorm_rooms') || '{}');
+      try {
+        // 🔍 ดึงข้อมูลห้องจาก Supabase
+        const { data, error } = await supabase
+          .from('dorm_rooms')
+          .select('*')
+          .eq('room_id', user)
+          .single();
 
-      if (!rooms[user]) {
-        alert('ไม่พบห้องนี้ในระบบ');
-        return;
+        if (error || !data) {
+          alert('ไม่พบห้องนี้ในระบบ');
+          return;
+        }
+
+        // ตรวจสอบรหัสผ่าน
+        if (data.room_pass !== pass) {
+          alert('รหัสผ่านไม่ถูกต้อง');
+          return;
+        }
+
+        // บันทึกข้อมูลผู้เช่าปัจจุบัน
+        localStorage.setItem('current_tenant', JSON.stringify({
+          roomId: user,
+          name: data.tenant_name || 'ผู้เช่า'
+        }));
+
+        alert('✅ เข้าสู่ระบบสำเร็จ!');
+        window.location.href = 'tenant-dashboard.html';
+
+      } catch (e) {
+        console.error('เข้าสู่ระบบผิดพลาด:', e);
+        alert('⚠️ เกิดข้อผิดพลาด: ' + e.message);
       }
-
-      if (rooms[user].password !== pass) {
-        alert('รหัสผ่านไม่ถูกต้อง');
-        return;
-      }
-
-      localStorage.setItem('current_tenant', JSON.stringify({
-        roomId: user,
-        name: rooms[user].name || 'ผู้เช่า'
-      }));
-
-      alert('✅ เข้าสู่ระบบสำเร็จ!');
-      window.location.href = 'tenant-dashboard.html';
     }
   </script>
 </body>
