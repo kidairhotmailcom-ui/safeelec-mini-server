@@ -1273,27 +1273,57 @@ function renderBills() {
   const tbody = document.getElementById('bills-tbody');
   if (!tbody) return;
   if (billsData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" class="text-center" style="color:#888; padding:20px;">ยังไม่มีบิล</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center" style="color:#888; padding:20px;">ยังไม่มีบิล</td></tr>';
     return;
   }
+
   tbody.innerHTML = billsData.map(b => {
-    const statusClass = b.status === 'ชำระแล้ว' ? 'paid' : 'due';
+    let statusText, statusColor;
+    
+    if (b.status === 'รอชำระ') {
+      statusText = '⏳ รอชำระ';
+      statusColor = '#f59e0b';
+    } else if (b.status === 'รอตรวจสอบ') {
+      statusText = '🔍 รอตรวจสอบ';
+      statusColor = '#3b82f6';
+    } else if (b.status === 'ชำระแล้ว') {
+      statusText = '✅ ชำระแล้ว';
+      statusColor = '#10b981';
+    } else {
+      statusText = b.status;
+      statusColor = '#666';
+    }
+
+    let actionBtn = '';
+    if (isOwner()) {
+      actionBtn = `
+        ${b.status === 'รอตรวจสอบ' 
+          ? `<button class="btn-sm btn-success" onclick="confirmPayment('${b.id}')">ยืนยันรับเงิน</button>` 
+          : ''}
+        <button class="btn-sm btn-outline" onclick="printBill('${b.id}')">ปริ้น</button>
+        <button class="btn-sm btn-danger" onclick="deleteBill('${b.id}')">ลบ</button>
+      `;
+    } else {
+      if (b.status === 'รอชำระ') {
+        actionBtn = `<button class="btn-sm btn-primary" onclick="submitPayment('${b.id}')">แจ้งชำระเงิน</button>`;
+      } else if (b.status === 'รอตรวจสอบ') {
+        actionBtn = `<span style="color:#3b82f6;">⏳ รอตรวจสอบ</span>`;
+      } else {
+        actionBtn = `<span style="color:#10b981;">✅ เรียบร้อย</span>`;
+      }
+    }
+
     return `
-      <tr>
-        <td>${typeof b.billNo === 'object' && b.billNo !== null ? 'B001' : escapeHtml(b.billNo)}</td>
-        <td>${escapeHtml(b.roomId)}</td>
-        <td>${localMonth(b.month)}</td>
-        <td class="text-right">${money(b.rent)}</td>
-        <td class="text-right">${money(b.electric)}</td>
-        <td class="text-right">${money(b.water)}</td>
-        <td class="text-right"><strong>${money(b.total)}</strong></td>
-        <td><span class="badge ${statusClass}">${b.status}</span></td>
-        <td class="no-print">
-          <button class="btn-sm btn-success" onclick="markBillPaid('${b.id}')">ชำระ</button>
-          <button class="btn-sm btn-outline" onclick="printBill('${b.id}')">ปริ้น</button>
-          <button class="btn-sm btn-danger" onclick="deleteBill('${b.id}')">ลบ</button>
-        </td>
-      </tr>
+    <tr>
+      <td>${typeof b.billNo === 'object' && b.billNo !== null ? 'B001' : escapeHtml(b.billNo)}</td>
+      <td>${escapeHtml(b.roomId)}</td>
+      <td>${localMonth(b.month)}</td>
+      <td class="text-right">${money(b.rent)}</td>
+      <td class="text-right">${money(b.electric)}</td>
+      <td class="text-right">${money(b.total)}</td>
+      <td style="color:${statusColor}; font-weight:bold;">${statusText}</td>
+      <td>${actionBtn}</td>
+    </tr>
     `;
   }).join('');
 }
