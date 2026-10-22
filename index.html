@@ -1476,7 +1476,7 @@ function renderSummary() {
     tbody.innerHTML += `
       <tr>
         <td>${escapeHtml(roomId)}</td>
-        <td>${escapeHtml(room.name) || '-')}</td>
+        <td>${escapeHtml(room.name || '-')}</td>
         <td>${money(rent)}</td>
         <td>${money(elecTotal)}</td>
         <td>${money(waterTotal)}</td>
