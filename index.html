@@ -1294,7 +1294,12 @@ function renderBills() {
       statusText = '⏳ รอชำระ';
       statusColor = '#f59e0b';
     } else if (b.status === 'รอตรวจสอบ') {
-      statusText = '🔍 รอตรวจสอบ';
+      // แยกข้อความแสดงตามบทบาท
+      if (isOwner()) {
+        statusText = '🔍 รอตรวจสลิปจากผู้เช่า';
+      } else {
+        statusText = '⏳ รอเจ้าของตรวจสอบ';
+      }
       statusColor = '#3b82f6';
     } else if (b.status === 'ชำระแล้ว') {
       statusText = '✅ ชำระแล้ว';
@@ -1317,7 +1322,7 @@ function renderBills() {
       if (b.status === 'รอชำระ') {
         actionBtn = `<button class="btn-sm btn-primary" onclick="submitPayment('${b.id}')">แจ้งชำระเงิน</button>`;
       } else if (b.status === 'รอตรวจสอบ') {
-        actionBtn = `<span style="color:#3b82f6;">⏳ รอตรวจสอบ</span>`;
+        actionBtn = `<span style="color:#3b82f6;">⏳ รอเจ้าของตรวจสอบ</span>`;
       } else {
         actionBtn = `<span style="color:#10b981;">✅ เรียบร้อย</span>`;
       }
