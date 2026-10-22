@@ -1570,9 +1570,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     billInput.value = lastNo;
   }
 }
+// ✅ วางก้อนนี้ตรงที่นี่
+async function syncBillsFromCloud() {
+  if (!currentUser) return;
+  try {
+    await supabaseReady;
+    const { data, error } = await supabase
+      .from('dorm_bills')
+      .select('*')
+      .order('month', { ascending: false });
 
-// ทำงานทันทีตอนเปิดหน้าเว็บ
-document.addEventListener('DOMContentLoaded', loadSettings);
+    if (!error && data) {
+      billsData = data.map(d => ({
+        id: d.id,
+        billNo: d.bill_no,
+        roomId: d.room_id,
+        month: d.month,
+        rent: Number(d.rent) || 0,
+        electric: Number(d.electric) || 0,
+        water: Number(d.water) || 0,
+        total: Number(d.total) || 0,
+        status: d.status || 'ค้าง'
+      }));
+      saveAllData();
+      renderBills();
+      console.log('✅ โหลดบิลจากเซิร์ฟเวอร์สำเร็จ');
+    }
+  } catch (e) {
+    console.warn('⚠️ ใช้ข้อมูลในเครื่อง:', e.message);
+  }
+}
+
+// ✅ จากนั้นแก้บรรทัด DOMContentLoaded เป็นแบบนี้
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadUserData();
+  await syncBillsFromCloud(); // เพิ่มบรรทัดนี้
+});
+
 
 </script>
 
