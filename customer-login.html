@@ -7,77 +7,69 @@
   <!-- ===== Supabase CDN ===== -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // 🔑 ใส่ URL และ Key ของคุณตรงนี้ เหมือนในหน้าเจ้าของ
-    const SUPABASE_URL = "ใส่ SUPABASE_URL ของคุณ";
-    const SUPABASE_KEY = "ใส่ SUPABASE_ANON_KEY ของคุณ";
+    // 🔑 ข้อมูลของคุณ
+    const SUPABASE_URL = "https://bhihjcstmamwoinmbfiy.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_HzzSGnnXK1FqstRvaCXh_w_15b_1Cms7";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   </script>
   <style>
-    * { box-sizing: border-box; font-family: sans-serif; }
-    body { background: #f0f4f8; margin: 0; padding: 20px; }
-    .container { max-width: 400px; margin: 60px auto; }
-    .card { background: white; padding: 32px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }
-    h1 { color: #1e40af; margin-bottom: 8px; font-size: 22px; }
-    p { color: #6b7280; margin-bottom: 24px; }
-    input { width: 100%; padding: 12px; margin-bottom: 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px; }
-    .btn-primary { width: 100%; padding: 12px; background: #1e40af; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
-    .btn-back { display: inline-block; margin-top: 16px; color: #6b7280; text-decoration: none; font-size: 14px; }
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0; padding: 20px; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .container { width: 100%; max-width: 420px; }
+    .card { background: white; padding: 32px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; }
+    h1 { color: #1e293b; margin-bottom: 8px; font-size: 1.5rem; }
+    p { color: #64748b; margin-bottom: 24px; font-size: 0.95rem; }
+    input { width: 100%; padding: 12px 14px; margin-bottom: 16px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1rem; }
+    input:focus { outline: none; border-color: #4f46e5; }
+    .btn-primary { width: 100%; padding: 12px; background: #4f46e5; color: white; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; font-weight: 500; transition: 0.2s; }
+    .btn-primary:hover { background: #4338ca; }
+    .btn-back { display: inline-block; margin-top: 16px; color: #64748b; text-decoration: none; font-size: 0.9rem; }
+    .btn-back:hover { color: #4f46e5; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="card">
       <h1>👤 เข้าสู่ระบบผู้เช่า</h1>
-      <p>กรุณากรอกข้อมูลเพื่อเข้าดูข้อมูล</p>
-      <input type="text" id="cus-user" placeholder="เลขห้อง">
-      <input type="password" id="cus-pass" placeholder="รหัสผ่าน">
+      <p>กรุณากรอกข้อมูลห้องเพื่อเข้าใช้งาน</p>
+      <input type="text" id="cus-user" placeholder="หมายเลขห้อง เช่น 101">
+      <input type="password" id="cus-pass" placeholder="รหัสผ่านห้อง">
       <button class="btn-primary" onclick="doCustomerLogin()">เข้าสู่ระบบ</button>
       <a href="index.html" class="btn-back">← กลับหน้าหลัก</a>
     </div>
   </div>
 
   <script>
-    async function doCustomerLogin() {
-      const user = document.getElementById('cus-user').value.trim();
-      const pass = document.getElementById('cus-pass').value;
+    function doCustomerLogin() {
+      const roomNo = document.getElementById('cus-user').value.trim();
+      const inputPass = document.getElementById('cus-pass').value;
 
-      if (!user || !pass) {
-        alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+      if (!roomNo || !inputPass) {
+        alert('⚠️ กรุณากรอกข้อมูลให้ครบถ้วน');
         return;
       }
 
-      try {
-        // 🔍 ดึงข้อมูลห้องจาก Supabase
-        const { data, error } = await supabase
-          .from('dorm_rooms')
-          .select('*')
-          .eq('room_id', user)
-          .single();
+      // ✅ ตรวจสอบจาก LocalStorage ให้ตรงกับ index.html
+      const allRooms = JSON.parse(localStorage.getItem('dorm_rooms') || '{}');
+      const roomPasswords = JSON.parse(localStorage.getItem('dorm_room_passwords') || '{}');
 
-        if (error || !data) {
-          alert('ไม่พบห้องนี้ในระบบ');
-          return;
-        }
-
-        // ตรวจสอบรหัสผ่าน
-        if (data.room_pass !== pass) {
-          alert('รหัสผ่านไม่ถูกต้อง');
-          return;
-        }
-
-        // บันทึกข้อมูลผู้เช่าปัจจุบัน
-        localStorage.setItem('current_tenant', JSON.stringify({
-          roomId: user,
-          name: data.tenant_name || 'ผู้เช่า'
-        }));
-
-        alert('✅ เข้าสู่ระบบสำเร็จ!');
-        window.location.href = 'tenant-dashboard.html';
-
-      } catch (e) {
-        console.error('เข้าสู่ระบบผิดพลาด:', e);
-        alert('⚠️ เกิดข้อผิดพลาด: ' + e.message);
+      if (!allRooms[roomNo]) {
+        alert('❌ ไม่พบหมายเลขห้องนี้ในระบบ');
+        return;
       }
+
+      // ตรวจสอบรหัสผ่าน
+      const correctPass = roomPasswords[roomNo];
+      if (correctPass && correctPass !== inputPass) {
+        alert('❌ รหัสผ่านไม่ถูกต้อง');
+        return;
+      }
+
+      // บันทึกข้อมูลผู้เช่า — ให้ตรงกับตัวแปรใน index.html
+      localStorage.setItem('tenant_current_room', roomNo);
+
+      alert('✅ เข้าสู่ระบบสำเร็จ!');
+      window.location.href = 'tenant-dashboard.html';
     }
   </script>
 </body>
