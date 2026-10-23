@@ -7,13 +7,13 @@
   <!-- ===== Supabase CDN ===== -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // 🔑 ใส่ URL และ Key เหมือนในหน้าอื่นๆ ของคุณ
-    const SUPABASE_URL = "ใส่ SUPABASE_URL ของคุณ";
-    const SUPABASE_KEY = "ใส่ SUPABASE_ANON_KEY ของคุณ";
+    // 🔑 ข้อมูลของคุณ
+    const SUPABASE_URL = "https://bhihjcstmamwoinmbfiy.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_HzzSGnnXK1FqstRvaCXh_w_15b_1Cms7";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   </script>
   <style>
-    * { box-sizing: border-box; font-family: sans-serif; margin: 0; padding: 0; }
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
     body { background: #f0f4f8; padding: 20px; }
     .container { max-width: 450px; margin: 40px auto; }
     .card { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
@@ -78,34 +78,33 @@
     let currentTenant = null;
 
     async function loadInfo() {
-      // ตรวจสอบการเข้าสู่ระบบ
-      currentTenant = JSON.parse(localStorage.getItem('current_tenant') || 'null');
-      if (!currentTenant) {
+      // ตรวจสอบการเข้าสู่ระบบ — ให้ตรงกับ customer-login.html
+      const roomNo = localStorage.getItem('tenant_current_room');
+      if (!roomNo) {
         alert('กรุณาเข้าสู่ระบบก่อน');
         window.location.href = 'customer-login.html';
         return;
       }
 
-      // แสดงข้อมูลพื้นฐานทันที
-      document.getElementById('show-room').textContent = currentTenant.roomId;
-      document.getElementById('show-name').textContent = currentTenant.name;
+      // ดึงข้อมูลห้องจาก LocalStorage
+      const allRooms = JSON.parse(localStorage.getItem('dorm_rooms') || '{}');
+      const roomInfo = allRooms[roomNo] || {};
+
+      // แสดงข้อมูลพื้นฐาน
+      document.getElementById('show-room').textContent = roomNo;
+      document.getElementById('show-name').textContent = roomInfo.name || 'ผู้เช่า';
 
       try {
-        // ดึงบิลล่าสุดของห้องนี้จาก Supabase
-        const { data: bills, error: billError } = await supabase
-          .from('dorm_bills')
-          .select('*')
-          .eq('room_id', currentTenant.roomId)
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (billError) throw billError;
+        // ดึงบิลล่าสุดของห้องนี้ — ใช้ LocalStorage ให้ตรงกับ index.html
+        const allBills = JSON.parse(localStorage.getItem('dorm_bills') || '[]');
+        const roomBills = allBills.filter(b => b.room === roomNo)
+          .sort((a, b) => b.month.localeCompare(a.month)); // เรียงล่าสุดก่อน
 
         // ซ่อนโหลด แสดงเนื้อหา
         document.getElementById('loading').style.display = 'none';
         document.getElementById('info-content').style.display = 'block';
 
-        if (!bills || bills.length === 0) {
+        if (roomBills.length === 0) {
           document.getElementById('show-status').textContent = 'ไม่มีบิล';
           document.getElementById('show-status').style.color = '#6b7280';
           document.getElementById('show-room-price').textContent = '-';
@@ -116,30 +115,30 @@
           return;
         }
 
-        // มีบิล — แสดงข้อมูลล่าสุด
-        const bill = bills[0];
+        // มีบิลล่าสุด — แสดงข้อมูล
+        const bill = roomBills[0];
 
-        // แสดงสถานะ
+        // แสดงสถานะ ให้ตรงกับ index.html
         const statusEl = document.getElementById('show-status');
-        if (bill.status === 'รอชำระ') {
+        if (bill.status === 'unpaid') {
           statusEl.textContent = '⏳ รอชำระ';
           statusEl.className = 'status-pending';
-        } else if (bill.status === 'รอตรวจสอบ') {
+        } else if (bill.status === 'pending') {
           statusEl.textContent = '⏳ รอเจ้าของตรวจสอบ';
           statusEl.style.color = '#3b82f6';
-        } else if (bill.status === 'ชำระแล้ว') {
+        } else if (bill.status === 'paid') {
           statusEl.textContent = '✅ ชำระแล้ว';
           statusEl.className = 'status-paid';
         } else {
           statusEl.textContent = bill.status;
         }
 
-        // แสดงค่าต่างๆ
-        document.getElementById('show-room-price').textContent = formatNumber(bill.rent) + ' บาท';
-        document.getElementById('show-water-price').textContent = formatNumber(bill.water_total) + ' บาท';
-        document.getElementById('show-electric-price').textContent = formatNumber(bill.electric_total) + ' บาท';
-        document.getElementById('show-month').textContent = bill.month || '-';
-        document.getElementById('show-total').textContent = formatNumber(bill.total) + ' บาท';
+        // แสดงค่าต่างๆ ให้ตรงกับชื่อฟิลด์ใน index.html
+        document.getElementById('show-room-price').textContent = formatNumber(bill.rentAmount) + ' บาท';
+        document.getElementById('show-water-price').textContent = formatNumber(bill.waterAmount) + ' บาท';
+        document.getElementById('show-electric-price').textContent = formatNumber(bill.electricAmount) + ' บาท';
+        document.getElementById('show-month').textContent = formatMonth(bill.month);
+        document.getElementById('show-total').textContent = formatNumber(bill.totalAmount) + ' บาท';
 
       } catch (e) {
         console.error('โหลดข้อมูลไม่สำเร็จ:', e);
@@ -150,10 +149,18 @@
 
     function formatNumber(num) {
       if (!num && num !== 0) return '0';
-      return Number(num).toLocaleString('th-TH');
+      return Number(num).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+    }
+
+    function formatMonth(monthStr) {
+      if (!monthStr) return '-';
+      const [y, m] = monthStr.split('-');
+      const months = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+      return months[parseInt(m)-1] + ' ' + (parseInt(y) + 543);
     }
 
     function logout() {
+      localStorage.removeItem('tenant_current_room');
       localStorage.removeItem('current_tenant');
       window.location.href = 'customer-login.html';
     }
