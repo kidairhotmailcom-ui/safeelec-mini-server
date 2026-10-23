@@ -544,7 +544,7 @@
 </div>
 
 <script>
-  // ========== ตัวแปรกลาง ==========
+// ========== ตัวแปรกลาง ==========
 const ESP_CONFIG = {
   baseUrl: "http://192.168.1.100",
   endpointElec: "/api/meter/electric",
@@ -557,18 +557,25 @@ const DORM_API = "https://safeelec-mini-server.onrender.com";
 const SUPABASE_URL = "https://bhihjcstmamwoinmbfiy.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_HzzSGnnXK1FqstRvaCXh_w_15b_1Cms";
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    storage: localStorage
+let supabase;
+
+function initSupabase() {
+  if (typeof window.supabase !== "undefined") {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        storage: localStorage
+      }
+    });
+    console.log("✅ Supabase พร้อมใช้งาน");
+    checkAuth();
+  } else {
+    setTimeout(initSupabase, 50);
   }
-});
+}
 
-console.log('Supabase พร้อมใช้งาน');
-
-// เช็คสถานะทุกครั้งที่หน้าโหลด
-checkAuth();
+initSupabase();
 
 let meterData = {
   elecPrev: null,
@@ -577,7 +584,7 @@ let meterData = {
   waterCurrent: null,
   lastUpdate: null
 };
-// แสดงเฉพาะข้อมูลที่มีจริง ไม่ใส่ค่ามิเตอร์จำลอง
+
 function displayMeterValues() {
   const el = id => document.getElementById(id);
 
@@ -598,7 +605,6 @@ function displayMeterValues() {
   if (el("electric-current")) calcMeter("electric");
   if (el("water-current")) calcMeter("water");
 }
-
 // อ่านข้อมูลจาก API ตามห้องและเดือนที่เลือก
 async function fetchRoomMeter(type, room, month) {
   if (!room || !month) return null;
