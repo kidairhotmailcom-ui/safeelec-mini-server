@@ -1592,12 +1592,21 @@ function switchTab(id) {
     updateDashboard();
   }
 }
+  // เพิ่มฟังก์ชันนี้ก่อน
+async function fetchMeterFromESP() {
+  console.log('📡 กำลังดึงข้อมูลมิเตอร์จาก ESP...');
+  // TODO: เพิ่มโค้ดเมื่อพร้อมใช้งานจริง
+}
+
 // เริ่มระบบหลังจากหน้าเว็บโหลดเสร็จ
 document.addEventListener('DOMContentLoaded', async () => {
-  await loadUserData() 
+  loadSettings();
+  await loadUserData();
+  await syncBillsFromCloud();
+  
   if (typeof fetchMeterFromESP === 'function') {
     fetchMeterFromESP();
-    setInterval(fetchMeterFromESP, 60000);
+    setInterval(fetchMeterFromESP, 60000); // ทุก 60 วินาที
   }
 });
   function loadSettings() {
