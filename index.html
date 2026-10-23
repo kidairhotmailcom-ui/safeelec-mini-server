@@ -1059,71 +1059,74 @@ async function createBill() { // เพิ่ม async ตรงนี้
   const billNo = `BILL${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}${String(Math.floor(Math.random()*1000)).padStart(3,'0')}`;
   
   // ⚠️ ใส่ user_id ที่ถูกต้อง! เอามาจากที่ไหนสักแห่ง เช่น ตอน login
-  const userId = '6b4a5472-d15d-47cf-8e4e-20754335955d';
-
-const bill = {
-  bill_no: billNo,
-  room_id: room,           // ✅ เป็น text ไม่ต้อง parseInt
-  month: month,
-  rent: rent,
-  electric: elec,
-  water: water,
-  total: totalAmount,
-  bank_info: (bank || '') + ' - ' + (bankNo || ''),  // ✅ รวมเป็นฟิลด์เดียว
-  qr_code_url: qrCodeData || null,
-  status: 'ค้าง',          // ✅ ใช้ตรงกับที่มีอยู่จริง หรือ 'ยังไม่ชำระ' ก็ได้
-  user_id: userId
-};
-
-try {
-  const { data, error } = await supabase
-    .from('dorm_bills')
-    .upsert([bill], { onConflict: 'bill_no' });
-
-  if (error) throw error;
-
-  // ✅ ส่วน localStorage ด้านล่างนี้ไม่ต้องแก้ — มันแค่เก็บไว้แสดงในหน้าเว็บ ไม่ส่งไป Supabase
-  const fullBill = {
-    id: Date.now(),
-    billNo,
-    room,
-    month,
-    dueDate: null,         // ✅ ใส่ null ไว้ เพราะไม่ใช้แล้ว
-    rentAmount: rent,
-    electricAmount: elec,
-    waterAmount: water,
-    totalAmount,
-    bankName: bank,
-    bankAccount: bankNo,
-    qrCode: qrCodeData,
-    status: 'ค้าง',
-    paidAt: null,
-    paymentProof: null,
-    createdAt: new Date().toISOString()
+  const userId = '6b4a5472-d15d-47cf-8e4e-20754335955d'; // ใช้ตัวที่มีอยู่จริงจาก Supabase
+  
+  const bill = {
+    bill_no: billNo,
+    room_id: parseInt(room),
+    month: month,
+    due_date: dueDate,
+    rent: rent,
+    electric: elec,
+    water: water,
+    total: totalAmount,
+    bank_name: bank || null,
+    bank_account: bankNo || null,
+    qr_code_url: qrCodeData || null,
+    status: 'unpaid',
+    user_id: userId
   };
 
-  if (existing) {
-    const idx = bills.findIndex(b => b.id === existing.id);
-    bills[idx] = fullBill;
-  } else {
-    bills.unshift(fullBill);
+  try {
+    // ✅ ส่งไปบันทึกที่ Supabase
+    const { data, error } = await supabase
+      .from('dorm_bills')
+      .upsert([bill], { onConflict: 'bill_no' }); // ถ้ามีเลขบิลเดิมแล้ว ให้แทนที่
+    
+    if (error) throw error;
+    
+    // บันทึกลง localStorage เหมือนเดิม เพื่อให้หน้าเว็บแสดงผลได้ไว
+    const fullBill = {
+      id: Date.now(),
+      billNo,
+      room,
+      month,
+      dueDate,
+      rentAmount: rent,
+      electricAmount: elec,
+      waterAmount: water,
+      totalAmount,
+      bankName: bank,
+      bankAccount: bankNo,
+      qrCode: qrCodeData,
+      status: 'unpaid',
+      paidAt: null,
+      paymentProof: null,
+      createdAt: new Date().toISOString()
+    };
+    
+    if (existing) {
+      const idx = bills.findIndex(b => b.id === existing.id);
+      bills[idx] = fullBill;
+    } else {
+      bills.unshift(fullBill);
+    }
+    localStorage.setItem('dorm_bills', JSON.stringify(bills));
+    
+    alert(`✅ สร้างบิลสำเร็จ!\nเลขที่บิล: ${billNo}\nรวมทั้งสิ้น: ${formatMoney(totalAmount)} บาท`);
+    
+  } catch (err) {
+    console.error(err);
+    alert('❌ บันทึกไปยัง Supabase ไม่สำเร็จ: ' + err.message);
+    return;
   }
-  localStorage.setItem('dorm_bills', JSON.stringify(bills));
-
-  alert(`✅ สร้างบิลสำเร็จ!\nเลขที่บิล: ${billNo}\nรวมทั้งสิ้น: ${formatMoney(totalAmount)} บาท`);
-
-} catch (err) {
-  console.error(err);
-  alert('❌ บันทึกไปยัง Supabase ไม่สำเร็จ: ' + err.message);
-  return;
-}
-
-document.getElementById('bill-qr').value = '';
-document.getElementById('qr-preview').style.display = 'none';
-qrCodeData = '';
-
-renderBillsTable();
-loadOwnerDashboard();
+  
+  document.getElementById('bill-qr').value = '';
+  document.getElementById('qr-preview').style.display = 'none';
+  qrCodeData = '';
+  
+  renderBillsTable();
+  loadOwnerDashboard();
 }
 
 function renderBillsTable() {
