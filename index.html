@@ -1330,7 +1330,7 @@ function renderBills() {
 
     return `
     <tr>
-      <td>${typeof b.billNo === 'object' && b.billNo !== null ? 'B001' : escapeHtml(b.billNo)}</td>
+      <td>${escapeHtml(b.billNo || 'B001')}</td>
       <td>${escapeHtml(b.roomId)}</td>
       <td>${localMonth(b.month)}</td>
       <td class="text-right">${money(b.rent)}</td>
