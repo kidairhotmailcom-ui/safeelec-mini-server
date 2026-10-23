@@ -413,7 +413,7 @@
 // =====================================================
 const SUPABASE_URL = "https://bhihjcstmamwoinmbfiy.supabase.co";
 const SUPABASE_KEY = "sb_publishable_HzzSGnnXK1FqstRvaCXh_w_15b_1Cms7";
-const { createClient } = supabase;
+const { createClient } = window.supabase;
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const STORAGE_KEYS = {
