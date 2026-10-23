@@ -413,34 +413,46 @@
 // =====================================================
 const SUPABASE_URL = "https://bhihjcstmamwoinmbfiy.supabase.co";
 const SUPABASE_KEY = "sb_publishable_HzzSGnnXK1FqstRvaCXh_w_15b_1Cms7";
-const { createClient } = window.supabase;
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// รอให้โหลดเสร็จก่อนใช้งาน
+let supabase = null;
+const supabaseReady = import(
+  "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"
+).then(({ createClient }) => {
+  supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: true }
+  });
+  console.log("✅ Supabase พร้อมใช้งาน");
+  return supabase;
+});
 
 const STORAGE_KEYS = {
-  REG_DATA: 'dorm_reg_data',
-  LICENSE_KEY: 'dorm_license_key',
-  LICENSE_VERIFIED: 'dorm_license_verified',
-  OWNER_PASSWORD: 'dorm_owner_pass',
-  OWNER_INFO: 'dorm_owner_info'
+  REG_DATA: "dorm_reg_data",
+  LICENSE_KEY: "dorm_license_key",
+  LICENSE_VERIFIED: "dorm_license_verified",
+  OWNER_PASSWORD: "dorm_owner_pass",
+  OWNER_INFO: "dorm_owner_info"
 };
 
 let currentRegistrationData = null;
-let qrCodeData = '';
+let qrCodeData = "";
 let tenantProofImages = {};
 
 // =====================================================
 // 📝 ขั้นที่ 1: ลงทะเบียนขอใช้งาน
 // =====================================================
 async function submitRegistration() {
-  const name = document.getElementById('reg-name').value.trim();
-  const address = document.getElementById('reg-address').value.trim();
-  const phone = document.getElementById('reg-phone').value.trim();
-  const email = document.getElementById('reg-email').value.trim();
-  const msgBox = document.getElementById('reg-message');
+  await supabaseReady;  // ✅ รอให้พร้อมก่อนใช้งาน
+
+  const name = document.getElementById("reg-name").value.trim();
+  const address = document.getElementById("reg-address").value.trim();
+  const phone = document.getElementById("reg-phone").value.trim();
+  const email = document.getElementById("reg-email").value.trim();
+  const msgBox = document.getElementById("reg-message");
   
   if (!name || !address || !phone) {
     msgBox.innerHTML = '<div class="license-box invalid" style="display:block">⚠️ กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน</div>';
-    msgBox.style.display = 'block';
+    msgBox.style.display = "block";
     return;
   }
   
@@ -452,61 +464,64 @@ async function submitRegistration() {
   localStorage.setItem(STORAGE_KEYS.REG_DATA, JSON.stringify(currentRegistrationData));
   
   try {
-    await supabase.from('registrations').insert([currentRegistrationData]);
+    await supabase.from("registrations").insert([currentRegistrationData]);
+    console.log("ส่งข้อมูลไปยัง Supabase สำเร็จ");
   } catch (e) {
-    console.log('บันทึกข้อมูลที่เครื่องสำเร็จ');
+    console.log("⚠️ ส่งไป Supabase ไม่ได้ แต่บันทึกที่เครื่องสำเร็จ:", e.message);
   }
   
   msgBox.innerHTML = '<div class="license-box valid" style="display:block">✅ ส่งคำขอลงทะเบียนสำเร็จ!<br><br>กรุณารอรับรหัสใบอนุญาตทางอีเมล หรือติดต่อผู้ดูแลระบบ เมื่อได้รับรหัสแล้ว กดปุ่มด้านล่าง<br><br><button onclick="showPage(\'page-enter-license\')" class="btn-success">🔑 ฉันได้รับรหัสแล้ว</button></div>';
-  msgBox.style.display = 'block';
+  msgBox.style.display = "block";
 }
 
 // =====================================================
 // 🔐 ขั้นที่ 2: ตรวจสอบรหัสใบอนุญาต
 // =====================================================
 async function verifyLicense() {
-  const key = document.getElementById('license-key').value.trim();
-  const statusBox = document.getElementById('license-status');
+  await supabaseReady;  // ✅ รอให้พร้อมก่อนใช้งาน
+
+  const key = document.getElementById("license-key").value.trim();
+  const statusBox = document.getElementById("license-status");
   
   if (!key) {
-    statusBox.className = 'license-box invalid';
-    statusBox.textContent = '⚠️ กรุณาป้อนรหัสใบอนุญาต';
+    statusBox.className = "license-box invalid";
+    statusBox.textContent = "⚠️ กรุณาป้อนรหัสใบอนุญาต";
     return;
   }
   
-  statusBox.style.display = 'block';
-  statusBox.className = 'license-box';
-  statusBox.innerHTML = '<strong>⏳ กำลังตรวจสอบ...</strong>';
+  statusBox.style.display = "block";
+  statusBox.className = "license-box";
+  statusBox.innerHTML = "<strong>⏳ กำลังตรวจสอบ...</strong>";
   
   try {
     const { data, error } = await supabase
-      .from('license_keys')
-      .select('*')
-      .eq('license_key', key)
-      .eq('is_active', true)
+      .from("license_keys")
+      .select("*")
+      .eq("license_key", key)
+      .eq("is_active", true)
       .single();
     
     if (error || !data) {
-      statusBox.className = 'license-box invalid';
-      statusBox.innerHTML = '<strong>❌ รหัสใบอนุญาตไม่ถูกต้อง หรือหมดอายุ</strong>';
+      statusBox.className = "license-box invalid";
+      statusBox.innerHTML = "<strong>❌ รหัสใบอนุญาตไม่ถูกต้อง หรือหมดอายุ</strong>";
       return;
     }
     
     localStorage.setItem(STORAGE_KEYS.LICENSE_KEY, key);
-    localStorage.setItem(STORAGE_KEYS.LICENSE_VERIFIED, 'true');
+    localStorage.setItem(STORAGE_KEYS.LICENSE_VERIFIED, "true");
     
-    statusBox.className = 'license-box valid';
-    statusBox.innerHTML = '<strong>✅ รหัสถูกต้อง!</strong><br>กำลังไปตั้งค่าบัญชี...';
+    statusBox.className = "license-box valid";
+    statusBox.innerHTML = "<strong>✅ รหัสถูกต้อง!</strong><br>กำลังไปตั้งค่าบัญชี...";
     
-    setTimeout(() => showPage('page-setup'), 1000);
+    setTimeout(() => showPage("page-setup"), 1000);
     
   } catch (err) {
-    console.error('ตรวจสอบรหัสผิดพลาด:', err);
+    console.error("ตรวจสอบรหัสผิดพลาด:", err);
     localStorage.setItem(STORAGE_KEYS.LICENSE_KEY, key);
-    localStorage.setItem(STORAGE_KEYS.LICENSE_VERIFIED, 'true');
-    statusBox.className = 'license-box valid';
-    statusBox.innerHTML = '<strong>✅ รหัสถูกต้อง!</strong><br>(โหมดทดสอบ) กำลังไปตั้งค่าบัญชี...';
-    setTimeout(() => showPage('page-setup'), 1000);
+    localStorage.setItem(STORAGE_KEYS.LICENSE_VERIFIED, "true");
+    statusBox.className = "license-box valid";
+    statusBox.innerHTML = "<strong>✅ รหัสถูกต้อง!</strong><br>(โหมดทดสอบ) กำลังไปตั้งค่าบัญชี...";
+    setTimeout(() => showPage("page-setup"), 1000);
   }
 }
 
@@ -514,32 +529,31 @@ async function verifyLicense() {
 // ⚙️ ขั้นที่ 3: ตั้งค่าบัญชี
 // =====================================================
 function completeSetup() {
-  const pass = document.getElementById('setup-pass').value;
-  const pass2 = document.getElementById('setup-pass2').value;
+  const pass = document.getElementById("setup-pass").value;
+  const pass2 = document.getElementById("setup-pass2").value;
   
   if (!pass || pass.length < 6) {
-    alert('⚠️ รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+    alert("⚠️ รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
     return;
   }
   
   if (pass !== pass2) {
-    alert('⚠️ รหัสผ่านไม่ตรงกัน');
+    alert("⚠️ รหัสผ่านไม่ตรงกัน");
     return;
   }
   
-  const regData = JSON.parse(localStorage.getItem(STORAGE_KEYS.REG_DATA) || '{}');
+  const regData = JSON.parse(localStorage.getItem(STORAGE_KEYS.REG_DATA) || "{}");
   localStorage.setItem(STORAGE_KEYS.OWNER_PASSWORD, pass);
   localStorage.setItem(STORAGE_KEYS.OWNER_INFO, JSON.stringify({
-    name: regData.name || '',
-    phone: regData.phone || '',
-    address: regData.address || '',
-    email: regData.email || ''
+    name: regData.name || "",
+    phone: regData.phone || "",
+    address: regData.address || "",
+    email: regData.email || ""
   }));
   
-  alert('✅ ตั้งค่าสำเร็จ! ยินดีต้อนรับสู่ระบบ');
-  showPage('page-choose');
+  alert("✅ ตั้งค่าสำเร็จ! ยินดีต้อนรับสู่ระบบ");
+  showPage("page-choose");
 }
-
 // =====================================================
 // 📋 ฟังก์ชันทั่วไป
 // =====================================================
