@@ -419,7 +419,7 @@ let supabase = null;
 const supabaseReady = import(
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"
 ).then(({ createClient }) => {
-  supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: { persistSession: true }
   });
   console.log("✅ Supabase พร้อมใช้งาน");
