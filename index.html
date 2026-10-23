@@ -547,29 +547,33 @@ const ESP_CONFIG = {
 
 const DORM_API = "https://safeelec-mini-server.onrender.com";
 
-// ===== SUPABASE =====
+// ===== SUPABASE — ใช้อันนี้ครับ =====
 const SUPABASE_URL = "https://bhihjcstmamwoinmbfiy.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_HzzSGnnXK1FqstRvaCXh_w_15b_1Cms";
 
 let supabase;
+let supabaseReady = false;
 let currentUser = null;
 
-const supabaseReady = new Promise((resolve) => {
-  function waitLoaded() {
-    if (typeof window.supabase !== "undefined") {
-      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: { persistSession: true, autoRefreshToken: true }
-      });
-      console.log("✅ Supabase พร้อมใช้งาน");
-      resolve(true);
-    } else {
-      setTimeout(waitLoaded, 80);
-    }
+function initSupabase() {
+  if (typeof window.supabase !== "undefined") {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    });
+    supabaseReady = true;
+    console.log("✅ Supabase พร้อมใช้งาน");
+  } else {
+    setTimeout(initSupabase, 50);
   }
-  waitLoaded();
-});
+}
 
-initSupabase();
+async function waitSupabase() {
+  while (!supabaseReady) {
+    await new Promise(resolve => setTimeout(resolve, 30));
+  }
+}
+
+document.addEventListener("DOMContentLoaded", initSupabase);
 
 let meterData = {
   elecPrev: null,
@@ -578,7 +582,6 @@ let meterData = {
   waterCurrent: null,
   lastUpdate: null
 };
-
 function displayMeterValues() {
   const el = id => document.getElementById(id);
 
