@@ -442,7 +442,7 @@ let tenantProofImages = {};
 // 📝 ขั้นที่ 1: ลงทะเบียนขอใช้งาน
 // =====================================================
 async function submitRegistration() {
-  await supabaseReady;  // ✅ รอให้พร้อมก่อนใช้งาน
+  await supabaseReady;
 
   const name = document.getElementById("reg-name").value.trim();
   const address = document.getElementById("reg-address").value.trim();
@@ -464,16 +464,39 @@ async function submitRegistration() {
   localStorage.setItem(STORAGE_KEYS.REG_DATA, JSON.stringify(currentRegistrationData));
   
   try {
-    await supabase.from("registrations").insert([currentRegistrationData]);
-    console.log("ส่งข้อมูลไปยัง Supabase สำเร็จ");
+    const { data: regData, error: regError } = await supabase
+      .from("registrations")
+      .insert([currentRegistrationData])
+      .select()
+      .single();
+
+    if (regError) throw regError;
+
+    const newKey = "KIDAIR-" + regData.id;
+
+    const { error: keyError } = await supabase
+      .from("license_keys")
+      .insert([{
+        license_key: newKey,
+        is_active: true
+      }]);
+
+    if (keyError) throw keyError;
+
+    msgBox.innerHTML = `<div class="license-box valid" style="display:block">
+      ✅ สำเร็จ!<br><br>
+      🔑 รหัสของคุณคือ: <strong>${newKey}</strong><br>
+      กรุณาจดรหัสไว้ใช้งาน<br><br>
+      <button onclick="showPage('page-enter-license')" class="btn-success">🔑 ใช้รหัสที่ได้รับ</button>
+    </div>`;
+
   } catch (e) {
-    console.log("⚠️ ส่งไป Supabase ไม่ได้ แต่บันทึกที่เครื่องสำเร็จ:", e.message);
+    msgBox.innerHTML = `<div class="license-box invalid" style="display:block">
+      ⚠️ ผิดพลาด: ${e.message}
+    </div>`;
   }
-  
-  msgBox.innerHTML = '<div class="license-box valid" style="display:block">✅ ส่งคำขอลงทะเบียนสำเร็จ!<br><br>กรุณารอรับรหัสใบอนุญาตทางอีเมล หรือติดต่อผู้ดูแลระบบ เมื่อได้รับรหัสแล้ว กดปุ่มด้านล่าง<br><br><button onclick="showPage(\'page-enter-license\')" class="btn-success">🔑 ฉันได้รับรหัสแล้ว</button></div>';
   msgBox.style.display = "block";
 }
-
 // =====================================================
 // 🔐 ขั้นที่ 2: ตรวจสอบรหัสใบอนุญาต
 // =====================================================
