@@ -452,9 +452,25 @@ async function submitRegistration() {
   const address = document.getElementById('reg-address').value.trim();
   const phone = document.getElementById('reg-phone').value.trim();
   const email = document.getElementById('reg-email').value.trim();
-  if (!name) { alert('กรุณากรอกชื่อเจ้าของหอพัก'); return; }
-  saveData(STORAGE_KEYS.REG_DATA, { name, address, phone, email, regDate: new Date().toISOString() });
-  showPage('page-enter-license');
+
+  if (!name || !address || !phone || !email) {
+    alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+    return;
+  }
+
+  try {
+    const { error } = await supabase.from('registrations').insert([
+      { name, address, phone, email, status: 'pending' }
+    ]);
+
+    if (error) throw error;
+
+    saveData(STORAGE_KEYS.REG_DATA, { name, address, phone, email, regDate: new Date().toISOString() });
+    alert('✅ ส่งคำขอลงทะเบียนสำเร็จ!\nกรุณาตรวจสอบอีเมลหรือติดต่อผู้ดูแลระบบเพื่อรับรหัสใบอนุญาต');
+    showPage('page-enter-license');
+  } catch (err) {
+    alert('❌ ผิดพลาด: ' + err.message);
+  }
 }
 
 function verifyLicense() {
