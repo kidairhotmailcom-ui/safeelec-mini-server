@@ -1158,6 +1158,14 @@ function renderBillsTable() {
     </tr>
   `).join('');
 }
+  function deleteBill(id) {
+  if (!confirm('⚠️ ต้องการลบบิลนี้ ใช่หรือไม่?')) return;
+  let bills = JSON.parse(localStorage.getItem('dorm_bills') || '[]');
+  bills = bills.filter(b => b.id !== id);
+  localStorage.setItem('dorm_bills', JSON.stringify(bills));
+  renderBillsTable();       // โหลดตารางใหม่
+  loadOwnerDashboard();     // อัปเดตสรุปยอดรวม
+}
 
 // =====================================================
 // 💵 ตรวจสอบชำระเงิน
