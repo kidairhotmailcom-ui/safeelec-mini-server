@@ -436,8 +436,6 @@ const STORAGE_KEYS = {
   ESP_DEVICES: 'esp_devices'
 };
 
-const LICENSE_KEYS = ['KIDAIR-5566-7788', 'DORM-SYSTEM-2026'];
-
 // ===== จัดการข้อมูล =====
 function saveData(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
 function loadData(key, defaultValue = null) { const d = localStorage.getItem(key); return d ? JSON.parse(d) : defaultValue; }
