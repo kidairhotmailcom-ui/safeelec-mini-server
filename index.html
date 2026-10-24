@@ -1151,8 +1151,10 @@ function renderBillsTable() {
       <td class="text-right">${formatMoney(b.waterAmount)}</td>
       <td class="text-right"><strong>${formatMoney(b.totalAmount)}</strong></td>
       <td><span class="badge ${statusBadge[b.status]}">${statusText[b.status]}</span></td>
-      <button class="btn-sm btn-info" onclick="printBill(${b.id})">🖨️ พิมพ์</button></td>
-      <td><button class="btn-sm btn-danger" onclick="deleteBill(${b.id})">ลบ</button></td>
+      <td>
+        <button class="btn-sm btn-info" onclick="printBill(${b.id})">🖨️ พิมพ์</button></td>
+        <button class="btn-sm btn-danger" onclick="deleteBill(${b.id})">ลบ</button></td>
+      <td>
     </tr>
   `).join('');
 }
