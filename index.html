@@ -1573,6 +1573,49 @@ function tenantLogout() {
     document.getElementById('tenant-pass').value = '';
   }
 }
+  function printBill(billId) {
+  const bills = JSON.parse(localStorage.getItem('dorm_bills') || '[]');
+  const bill = bills.find(b => b.id === billId);
+  if (!bill) { alert('❌ ไม่พบข้อมูลบิล'); return; }
+
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <html>
+    <head>
+      <title>บิลค่าเช่า - ${bill.billNo}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 400px; margin: 0 auto; }
+        h2 { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .row { display: flex; justify-content: space-between; padding: 4px 0; }
+        .total { font-weight: bold; font-size: 1.2rem; border-top: 1px dashed #999; margin-top: 10px; padding-top: 10px; }
+        .footer { margin-top: 30px; text-align: center; font-size: 0.8rem; color: #666; }
+      </style>
+    </head>
+    <body>
+      <h2>📋 บิลค่าเช่า</h2>
+      <p><strong>เลขที่บิล:</strong> ${bill.billNo}</p>
+      <p><strong>ห้อง:</strong> ${bill.room}</p>
+      <p><strong>เดือน:</strong> ${formatMonth(bill.month)}</p>
+      <p><strong>กำหนดชำระ:</strong> ${formatDate(bill.dueDate)}</p>
+      <hr>
+      <div class="row"><span>ค่าเช่า:</span><span>${formatMoney(bill.rentAmount)}</span></div>
+      <div class="row"><span>ค่าไฟฟ้า:</span><span>${formatMoney(bill.electricAmount)}</span></div>
+      <div class="row"><span>ค่าน้ำ:</span><span>${formatMoney(bill.waterAmount)}</span></div>
+      <div class="row total"><span>รวมทั้งสิ้น:</span><span>${formatMoney(bill.totalAmount)}</span></div>
+      <hr>
+      <p><strong>ธนาคาร:</strong> ${bill.bankName || '-'}</p>
+      <p><strong>เลขที่บัญชี:</strong> ${bill.bankAccount || '-'}</p>
+      ${bill.qrCode ? `<p><strong>QR Code:</strong><br><img src="${bill.qrCode}" style="max-width:150px"></p>` : ''}
+      <p>สถานะ: ${bill.status === 'paid' ? '✅ ชำระแล้ว' : bill.status === 'pending' ? '⏳ รอตรวจสอบ' : '⏳ รอชำระ'}</p>
+      <div class="footer">พิมพ์เมื่อ: ${new Date().toLocaleDateString('th-TH')}</div>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+  printWindow.close();
+}
 
 // =====================================================
 // 🚀 ตรวจสอบสถานะระบบเมื่อโหลดหน้า
