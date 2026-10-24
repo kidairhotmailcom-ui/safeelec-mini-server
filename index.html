@@ -447,7 +447,7 @@ function showPage(pageId) {
 }
 
 // ===== ลงทะเบียน =====
-function submitRegistration() {
+async function submitRegistration() {
   const name = document.getElementById('reg-name').value.trim();
   const address = document.getElementById('reg-address').value.trim();
   const phone = document.getElementById('reg-phone').value.trim();
