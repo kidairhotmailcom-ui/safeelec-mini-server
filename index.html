@@ -473,20 +473,45 @@ async function submitRegistration() {
   }
 }
 
-function verifyLicense() {
+async function verifyLicense() {
   const key = document.getElementById('license-key').value.trim();
   const status = document.getElementById('license-status');
-  if (LICENSE_KEYS.includes(key)) {
-    status.textContent = '✅ รหัสถูกต้อง!';
+
+  if (!key) {
+    status.textContent = '⚠️ กรุณาป้อนรหัส';
+    status.className = 'license-box invalid';
+    return;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('license_keys')
+      .select('*')
+      .eq('license_key', key)
+      .eq('is_active', true)
+      .single();
+
+    if (error || !data) {
+      status.textContent = '❌ รหัสไม่ถูกต้อง';
+      status.className = 'license-box invalid';
+      return;
+    }
+
+    if (data.valid_until && new Date() > new Date(data.valid_until)) {
+      status.textContent = '⚠️ รหัสหมดอายุแล้ว';
+      status.className = 'license-box invalid';
+      return;
+    }
+
+    status.textContent = '✅ รหัสถูกต้อง! ยินดีต้อนรับ: ' + data.name;
     status.className = 'license-box valid';
-    saveData(STORAGE_KEYS.LICENSE_VERIFIED, key);
-    setTimeout(() => showPage('page-setup'), 1000);
-  } else {
-    status.textContent = '❌ รหัสไม่ถูกต้อง';
+    saveData(STORAGE_KEYS.LICENSE_VERIFIED, data);
+    setTimeout(() => showPage('page-setup'), 1500);
+  } catch (err) {
+    status.textContent = '❌ ตรวจสอบไม่สำเร็จ';
     status.className = 'license-box invalid';
   }
 }
-
 function changeLicense() {
   localStorage.removeItem(STORAGE_KEYS.LICENSE_VERIFIED);
   showPage('page-enter-license');
