@@ -1,9 +1,11 @@
+<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ระบบจัดการหอพัก - อ่านค่ามิเตอร์อัตโนมัติจาก ESP</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
+  <!-- ✅ แก้ไขลิงก์ CDN ให้ถูกต้อง -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
@@ -270,7 +272,7 @@
       <div class="card">
         <h2>บันทึกค่ามิเตอร์ไฟฟ้า</h2>
         <div class="grid-row">
-          <div><label style="font-size:13px;color:#64748b">ห้อง</label><select id="elec-room"><option value="">-- เลือกห้อง --</option></select></div>
+          <div><label style="font-size:13px;color:#64748b">ห้อง</label><select id="elec-room"><option value="">— เลือกห้อง —</option></select></div>
           <div><label style="font-size:13px;color:#64748b">เดือน</label><input type="month" id="elec-month"></div>
           <div><label style="font-size:13px;color:#64748b">เลขก่อนหน้า</label><input type="number" step="0.01" id="elec-prev" placeholder="0"></div>
           <div><label style="font-size:13px;color:#64748b">เลขปัจจุบัน</label><input type="number" step="0.01" id="elec-curr" placeholder="0"></div>
@@ -288,7 +290,7 @@
       <div class="card">
         <h2>บันทึกค่ามิเตอร์น้ำ</h2>
         <div class="grid-row">
-          <div><label style="font-size:13px;color:#64748b">ห้อง</label><select id="water-room"><option value="">-- เลือกห้อง --</option></select></div>
+          <div><label style="font-size:13px;color:#64748b">ห้อง</label><select id="water-room"><option value="">— เลือกห้อง —</option></select></div>
           <div><label style="font-size:13px;color:#64748b">เดือน</label><input type="month" id="water-month"></div>
           <div><label style="font-size:13px;color:#64748b">เลขก่อนหน้า</label><input type="number" step="0.01" id="water-prev" placeholder="0"></div>
           <div><label style="font-size:13px;color:#64748b">เลขปัจจุบัน</label><input type="number" step="0.01" id="water-curr" placeholder="0"></div>
@@ -306,7 +308,7 @@
       <div class="card">
         <h2>สร้างบิลค่าเช่าประจำเดือน</h2>
         <div class="grid-row">
-          <div><label style="font-size:13px;color:#64748b">ห้อง</label><select id="bill-room"><option value="">-- เลือกห้อง --</option></select></div>
+          <div><label style="font-size:13px;color:#64748b">ห้อง</label><select id="bill-room"><option value="">— เลือกห้อง —</option></select></div>
           <div><label style="font-size:13px;color:#64748b">เดือน</label><input type="month" id="bill-month"></div>
           <div><label style="font-size:13px;color:#64748b">วันกำหนดชำระ</label><input type="date" id="bill-duedate"></div>
         </div>
@@ -411,7 +413,7 @@
 
 <script>
 // =====================================================
-// ⚙️ ตั้งค่าเบื้องต้น
+// ⚙️ ตั้งค่าเบื้องต้น — ✅ ต้องมาก่อนเสมอ!
 // =====================================================
 const SUPABASE_URL = "https://bhihjcstmamwoinmbfiy.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoaWhqY3N0bWFtd29pbm1iZml5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0ODUwMzYsImV4cCI6MjEwODA2MTAzNn0.XZP2d6dJ_Z1QNN5baMYmTH87UEkHEeT8fwecMCO8gAY";
@@ -511,6 +513,7 @@ async function verifyLicense() {
     status.className = 'license-box invalid';
   }
 }
+
 function changeLicense() {
   localStorage.removeItem(STORAGE_KEYS.LICENSE_VERIFIED);
   showPage('page-enter-license');
