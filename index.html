@@ -1588,7 +1588,14 @@ window.addEventListener('DOMContentLoaded', () => {
   } else {
     showPage('page-register');
   }
-  
+  function printBill(billId) {
+  const bills = JSON.parse(localStorage.getItem('dorm_bills') || '[]');
+  const bill = bills.find(b => b.id === billId);
+  if (!bill) { alert('❌ ไม่พบข้อมูลบิล'); return; }
+  const w = window.open('', '_blank', 'width=400,height=600,scrollbars=yes');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>บิลค่าเช่า - ห้อง ${bill.room}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:sans-serif;padding:30px;font-size:15px;line-height:1.6}.bill{max-width:320px;margin:0 auto}.h{text-align:center;border-bottom:2px solid #333;padding-bottom:15px;margin-bottom:15px}.h h2{font-size:18px}.r{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #ddd}.total{border-top:2px solid #333;border-bottom:none;margin-top:8px;padding-top:10px;font-weight:bold;font-size:17px}.ft{margin-top:30px;text-align:center;font-size:12px;color:#888}.qr{text-align:center;margin-top:12px}.qr img{width:140px}@media print{.np{display:none}}</style></head><body><div class="bill"><div class="h"><h2>บิลค่าเช่าหอพัก</h2><p>ห้องที่: ${bill.room}</p></div><p style="text-align:right;font-size:12px;color:#666">เลขที่บิล: ${bill.billNo}</p><div class="r"><span>เดือน:</span><span>${formatMonth(bill.month)}</span></div><div class="r"><span>กำหนดชำระ:</span><span>${formatDate(bill.dueDate)}</span></div><div class="r"><span>ค่าเช่า:</span><span>${formatMoney(bill.rentAmount)}</span></div><div class="r"><span>ค่าไฟ:</span><span>${formatMoney(bill.electricAmount)}</span></div><div class="r"><span>ค่าน้ำ:</span><span>${formatMoney(bill.waterAmount)}</span></div><div class="r total"><span>รวม:</span><span>${formatMoney(bill.totalAmount)}</span></div>${bill.bankName||bill.bankAccount?`<div style="margin-top:20px;padding-top:15px;border-top:1px solid #eee"><p>ธนาคาร: ${bill.bankName||'-'}</p><p>เลขที่บัญชี: ${bill.bankAccount||'-'}</p></div>`:''}${bill.qrCode?`<div class="qr"><img src="${bill.qrCode}"></div>`:''}<div class="ft"><p>ออกเมื่อ: ${new Date().toLocaleDateString('th-TH')}</p></div></div><div class="np" style="text-align:center;margin-top:20px"><button onclick="window.print()" style="padding:8px 16px;cursor:pointer">🖨️ พิมพ์</button> <button onclick="window.close()" style="padding:8px 16px;cursor:pointer">ปิด</button></div></body></html>`);
+  w.document.close();
+}
   const today = new Date();
   const currentMonth = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
   const dueDate = new Date(today.getFullYear(), today.getMonth()+1, 5).toISOString().split('T')[0];
