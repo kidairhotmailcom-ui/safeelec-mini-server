@@ -1254,9 +1254,7 @@ function updateRoomDropdowns() {
     });
 }
 
-// =====================================================
-// 👤 ผู้เช่า — แสดงบิล
-// =====================================================
+// ✅ ฝั่งผู้เช่า: แสดงบิล + ข้อมูลโอน + อัปโหลดสลิป
 function renderTenantBills(roomNo) {
     const bills = loadData(STORAGE.BILLS, []).filter(b => b.room === roomNo);
     const paymentInfo = loadData('dorm_payment_info', {});
@@ -1290,7 +1288,17 @@ function renderTenantBills(roomNo) {
                 ${paymentInfo.accountOwner ? `<p><strong>ชื่อบัญชี:</strong> ${paymentInfo.accountOwner}</p>` : ''}
                 ${qrData ? `<div style="text-align:center; margin-top:12px;"><img src="${qrData}" style="max-width:160px; border-radius:8px;"><p style="font-size:12px; color:#065f46; margin-top:4px;">📱 สแกนเพื่อชำระเงิน</p></div>` : ''}
             </div>
-            ` : ''}
+            
+            <div style="margin-top:16px; padding:12px; background:#fffbeb; border-radius:8px; border:1px solid #fcd34d;">
+                <h4 style="margin:0 0 10px 0; color:#92400e;">📤 แจ้งชำระเงิน</h4>
+                <p style="margin:6px 0; font-size:14px;">อัปโหลดรูปสลิป/หลักฐานการโอน:</p>
+                <input type="file" id="slip-${b.id || b.billNo}" accept="image/*">
+                <button type="button" onclick="uploadSlip('${b.id || b.billNo}')" style="margin-top:8px; padding:8px 16px; background:#16a34a; color:white; border:none; border-radius:6px; cursor:pointer;">📤 ส่งหลักฐาน & แจ้งชำระแล้ว</button>
+            </div>
+            ` : `
+            <p style="color:#16a34a; font-weight:bold; text-align:center; margin-top:16px;">✅ ชำระเงินแล้ว</p>
+            ${b.slipImage ? `<div style="margin-top:8px; text-align:center;"><p style="font-size:13px; color:#666;">📷 หลักฐานการโอน:</p><img src="${b.slipImage}" style="max-width:200px; border-radius:6px; margin-top:4px;"></div>` : ''}
+            `}
             
             <p style="text-align:right;margin-top:12px;">
                 <span class="badge ${b.paid ? 'badge-success' : 'badge-warning'}">${b.paid ? '✅ ชำระแล้ว' : '⏳ รอชำระ'}</span>
@@ -1299,6 +1307,37 @@ function renderTenantBills(roomNo) {
     });
     container.innerHTML = html;
 }
+
+// 📤 อัปโหลดสลิปและแจ้งชำระแล้ว
+function uploadSlip(billId) {
+    const fileInput = document.getElementById(`slip-${billId}`);
+    if (!fileInput || !fileInput.files[0]) {
+        alert('❌ กรุณาเลือกรูปสลิปก่อน');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const slipImage = e.target.result;
+        
+        const bills = loadData(STORAGE.BILLS, []);
+        const idx = bills.findIndex(b => (b.id === billId) || (b.billNo === billId));
+        
+        if (idx !== -1) {
+            bills[idx].paid = true;
+            bills[idx].slipImage = slipImage;
+            bills[idx].paidAt = new Date().toLocaleString('th-TH');
+            saveData(STORAGE.BILLS, bills);
+            
+            alert('✅ ส่งหลักฐานสำเร็จ! ขอบคุณครับ');
+            location.reload();
+        } else {
+            alert('❌ ไม่พบบิลนี้');
+        }
+    };
+    reader.readAsDataURL(fileInput.files[0]);
+}
+
 // 💳 บันทึกข้อมูลการรับชำระเงิน
 function savePaymentInfo() {
     try {
@@ -1361,6 +1400,7 @@ function previewQR(input) {
         reader.readAsDataURL(input.files[0]);
     }
 }
+
 // เรียกใช้เมื่อโหลดหน้า
 document.addEventListener('DOMContentLoaded', () => {
     updateRoomDropdowns();
