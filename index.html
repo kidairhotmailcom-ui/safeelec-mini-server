@@ -955,10 +955,20 @@ function renderBillList() {
             <td>${b.elecCost.toLocaleString()}</td>
             <td>${b.waterCost.toLocaleString()}</td>
             <td style="font-weight:bold">${b.total.toLocaleString()}</td>
-            <td><span class="badge ${b.paid ? 'badge-success' : 'badge-warning'}">${b.paid ? 'ชำระแล้ว' : 'รอชำระ'}</span></td>
             <td>
-                ${!b.paid ? `<button class="btn-sm btn-success" onclick="markPaid(${b.id})">ชำระแล้ว</button>` : ''}
-                <button class="btn-sm btn-danger" onclick="deleteBill(${b.id})">ลบ</button>
+                <span class="badge ${b.paid ? 'badge-success' : b.pending ? 'badge-warning' : 'badge-secondary'}">
+                    ${b.paid ? '✅ ชำระแล้ว' : b.pending ? '⏳ รอยืนยัน' : '⏳ รอชำระ'}
+                </span>
+            </td>
+            <td>
+                ${b.pending && !b.paid ? `
+                    ${b.slipImage ? `<a href="${b.slipImage}" target="_blank" class="btn-sm btn-info">ดูสลิป</a>` : ''}
+                    <button class="btn-sm btn-success" onclick="confirmPayment('${b.id || b.billNo}')">✅ ยืนยัน</button>
+                ` : ''}
+                ${!b.paid && !b.pending ? `
+                    <button class="btn-sm btn-success" onclick="markPaid('${b.id || b.billNo}')">ชำระแล้ว</button>
+                ` : ''}
+                <button class="btn-sm btn-danger" onclick="deleteBill('${b.id || b.billNo}')">ลบ</button>
             </td>
         </tr>`;
     });
@@ -966,6 +976,22 @@ function renderBillList() {
     container.innerHTML = html;
 }
 
+// ✅ เจ้าของห้องยืนยันการชำระเงิน
+function confirmPayment(billId) {
+    if (!confirm('✅ ยืนยันว่าชำระเงินถูกต้อง?')) return;
+    
+    const bills = loadData(STORAGE.BILLS, []);
+    const idx = bills.findIndex(b => (b.id === billId) || (b.billNo === billId));
+    
+    if (idx !== -1) {
+        bills[idx].paid = true;
+        bills[idx].pending = false;
+        bills[idx].confirmedAt = new Date().toLocaleString('th-TH');
+        saveData(STORAGE.BILLS, bills);
+        alert('✅ ยืนยันสำเร็จ! บิลนี้เป็นชำระแล้ว');
+        renderBillList();
+    }
+}
 function markPaid(id) {
     const bills = loadData(STORAGE.BILLS, []);
     const idx = bills.findIndex(b => b.id === id);
