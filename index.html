@@ -482,6 +482,11 @@ function getLicenseDisplay(license) {
 // =====================================================
 // 📝 ลงทะเบียน
 // =====================================================
+
+
+// =====================================================
+// 🔑 ตรวจสอบรหัสใบอนุญาต
+// =====================================================
 async function submitRegistration() {
   const name = document.getElementById('reg-name').value.trim();
   const address = document.getElementById('reg-address').value.trim();
@@ -496,13 +501,9 @@ async function submitRegistration() {
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return msg.innerHTML = '<p style="color:#ef4444">⚠️ รูปแบบอีเมลไม่ถูกต้อง</p>';
 
   saveData(STORAGE_KEYS.REG_DATA, { name, address, phone, email, regDate: new Date().toISOString() });
-  alert('✅ ข้อมูลถูกบันทึกแล้ว!\nรหัสทดลองใช้งาน: DEMO2026');
+  alert('✅ บันทึกข้อมูลสำเร็จ!\n📞 กรุณาติดต่อผู้ให้บริการ เพื่อขอรับรหัสใบอนุญาตใช้งาน');
   showPage('page-enter-license');
 }
-
-// =====================================================
-// 🔑 ตรวจสอบรหัสใบอนุญาต
-// =====================================================
 async function verifyLicense() {
   const key = document.getElementById('license-key').value.trim();
   const status = document.getElementById('license-status');
