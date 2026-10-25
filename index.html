@@ -636,45 +636,115 @@ function showPage(pageId) {
 // =====================================================
 async function submitRegistration() {
   console.log('▶️ เรียกใช้ submitRegistration()');
-  
-  const name = document.getElementById('reg-name').value.trim();
-  const address = document.getElementById('reg-address').value.trim();
-  const phone = document.getElementById('reg-phone').value.trim();
-  const email = document.getElementById('reg-email').value.trim();
+
+  const nameEl = document.getElementById('reg-name');
+  const addressEl = document.getElementById('reg-address');
+  const phoneEl = document.getElementById('reg-phone');
+  const emailEl = document.getElementById('reg-email');
   const msg = document.getElementById('reg-message');
-  
-  if (!msg) {
-    alert('❌ ไม่พบช่องแสดงข้อความ');
+
+  if (!nameEl || !addressEl || !phoneEl || !msg) {
+    alert('ไม่พบช่องกรอกข้อมูลลงทะเบียน กรุณาตรวจสอบ HTML');
     return;
   }
-  msg.innerHTML = '';
 
-  if (!name) return msg.innerHTML = '<p style="color:#ef4444;padding:8px;margin:0;">⚠️ กรุณากรอกชื่อเจ้าของหอพัก</p>';
-  if (!address) return msg.innerHTML = '<p style="color:#ef4444;padding:8px;margin:0;">⚠️ กรุณากรอกที่อยู่หอพัก</p>';
-  if (!phone || !/^[0-9]{9,10}$/.test(phone)) return msg.innerHTML = '<p style="color:#ef4444;padding:8px;margin:0;">⚠️ เบอร์โทรต้องเป็นตัวเลข 9-10 หลัก</p>';
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return msg.innerHTML = '<p style="color:#ef4444;padding:8px;margin:0;">⚠️ รูปแบบอีเมลไม่ถูกต้อง</p>';
+  const name = nameEl.value.trim();
+  const address = addressEl.value.trim();
+  const phone = phoneEl.value.trim();
+  const email = emailEl ? emailEl.value.trim() : '';
+
+  const showMessage = (message, color = '#ef4444') => {
+    msg.textContent = message;
+    msg.style.color = color;
+    msg.style.padding = '8px';
+  };
+
+  if (!name) return showMessage('⚠️ กรุณากรอกชื่อเจ้าของหอพัก');
+  if (!address) return showMessage('⚠️ กรุณากรอกที่อยู่หอพัก');
+  if (!/^[0-9]{9,10}$/.test(phone)) {
+    return showMessage('⚠️ เบอร์โทรต้องเป็นตัวเลข 9-10 หลัก');
+  }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return showMessage('⚠️ รูปแบบอีเมลไม่ถูกต้อง');
+  }
+
+  if (
+    typeof supabase === 'undefined' ||
+    !supabase ||
+    typeof supabase.from !== 'function'
+  ) {
+    console.error('Supabase client ยังไม่พร้อมใช้งาน');
+    return showMessage('❌ เชื่อมต่อ Supabase ไม่สำเร็จ กรุณาตรวจสอบการโหลดไลบรารี');
+  }
+
+  const button = document.querySelector(
+    'button[onclick="submitRegistration()"]'
+  );
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'กำลังส่งข้อมูล...';
+  }
 
   try {
-    saveData(STORAGE_KEYS.REG_DATA, {
+    showMessage('กำลังส่งข้อมูลไปยัง Supabase...', '#2563eb');
+
+    const registration = {
       name: name,
       address: address,
       phone: phone,
-      email: email,
-      regDate: new Date().toISOString()
+      email: email || null,
+      status: 'pending'
+    };
+
+    const { error } = await supabase
+      .from('registrations')
+      .insert([registration]);
+
+    if (error) {
+      console.error('Supabase registration error:', error);
+      throw error;
+    }
+
+    // สำรองข้อมูลในเครื่องหลัง Supabase รับข้อมูลสำเร็จแล้วเท่านั้น
+    const saved = saveData(STORAGE_KEYS.REG_DATA, {
+      ...registration,
+      regDate: new Date().toISOString(),
+      syncedToSupabase: true
     });
-    
-    msg.innerHTML = '<p style="color:#10b981;padding:8px;margin:0;">✅ บันทึกข้อมูลสำเร็จ!</p>';
-    
-    setTimeout(function() {
-      alert('✅ บันทึกข้อมูลสำเร็จ!\n\n📞 กรุณาติดต่อผู้ให้บริการ เพื่อขอรับรหัสใบอนุญาตใช้งาน');
+
+    if (!saved) {
+      console.warn('Supabase บันทึกแล้ว แต่สำรองข้อมูลในเครื่องไม่สำเร็จ');
+    }
+
+    showMessage(
+      '✅ ส่งคำขอลงทะเบียนไปยัง Supabase สำเร็จ สถานะ: รอตรวจสอบ',
+      '#059669'
+    );
+
+    setTimeout(() => {
+      alert(
+        'ส่งคำขอลงทะเบียนสำเร็จ\n' +
+        'กรุณาติดต่อผู้ให้บริการเพื่อดำเนินการเรื่องใบอนุญาต'
+      );
       showPage('page-enter-license');
-    }, 600);
-    
+    }, 800);
+
   } catch (err) {
-    msg.innerHTML = '<p style="color:#ef4444;padding:8px;margin:0;">❌ ผิดพลาด: ' + err.message + '</p>';
+    console.error('❌ ลงทะเบียนไม่สำเร็จ:', err);
+
+    const detail = err && err.message
+      ? err.message
+      : String(err);
+
+    showMessage('❌ ส่งข้อมูลไม่สำเร็จ: ' + detail);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = '📤 ส่งคำขอลงทะเบียน';
+    }
   }
 }
-
 // =====================================================
 // 🔑 ฟังก์ชันตรวจสอบรหัสใบอนุญาต
 // =====================================================
