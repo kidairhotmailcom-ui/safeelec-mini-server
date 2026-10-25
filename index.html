@@ -429,6 +429,224 @@
 
 <script>
 // =====================================================
+// 🔍 ระบบตรวจสอบเชิงลึก — ตรวจสอบจุดสำคัญทั้งหมด
+// =====================================================
+function deepCheckSystem() {
+  console.log('\n' + '='.repeat(60));
+  console.log('🔍 ระบบตรวจสอบเชิงลึก — เริ่มการวิเคราะห์');
+  console.log('='.repeat(60));
+  
+  const result = {
+    passed: [],
+    warning: [],
+    error: [],
+    suggestions: []
+  };
+
+  // ════════════════════════════════════════════════════
+  // ส่วนที่ 1: ตรวจสอบตัวแปรหลักของระบบ
+  // ════════════════════════════════════════════════════
+  console.log('\n📌 ส่วนที่ 1: ตรวจสอบตัวแปรหลัก');
+  
+  if (typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS) {
+    result.passed.push('✅ พบตัวแปร STORAGE_KEYS (คีย์สำหรับบันทึกข้อมูล)');
+    
+    const requiredKeys = ['REG_DATA', 'LICENSE_VERIFIED', 'OWNER_PASSWORD', 'ROOMS'];
+    requiredKeys.forEach(key => {
+      if (STORAGE_KEYS[key]) {
+        result.passed.push(`   ✅ พบคีย์: ${key} = "${STORAGE_KEYS[key]}"`);
+      } else {
+        result.error.push(`❌ ไม่พบคีย์สำคัญ: ${key} ภายใน STORAGE_KEYS`);
+        result.suggestions.push(`→ ตรวจสอบว่ามี '${key}: ชื่อตัวแปร' ภายใน const STORAGE_KEYS = { ... }`);
+      }
+    });
+  } else {
+    result.error.push('❌ ไม่พบตัวแปร STORAGE_KEYS เลย!');
+    result.suggestions.push('→ ตรวจสอบว่ามีโค้ด: const STORAGE_KEYS = { ... } อยู่ก่อนฟังก์ชันตรวจสอบ');
+  }
+
+  if (typeof USE_OFFLINE_MODE !== 'undefined') {
+    result.passed.push(`✅ USE_OFFLINE_MODE = ${USE_OFFLINE_MODE}`);
+  } else {
+    result.warning.push('⚠️ ไม่พบ USE_OFFLINE_MODE — อาจไม่มีผลกระทบถ้าไม่ใช้ระบบนี้');
+  }
+
+  // ════════════════════════════════════════════════════
+  // ส่วนที่ 2: ตรวจสอบฟังก์ชันหลักและตำแหน่ง
+  // ════════════════════════════════════════════════════
+  console.log('\n🔧 ส่วนที่ 2: ตรวจสอบฟังก์ชันหลัก');
+  
+  const coreFunctions = [
+    { name: 'saveData', desc: 'บันทึกข้อมูลลงเครื่อง' },
+    { name: 'loadData', desc: 'อ่านข้อมูลจากเครื่อง' },
+    { name: 'showPage', desc: 'เปลี่ยนหน้าเว็บ' },
+    { name: 'submitRegistration', desc: 'ส่งข้อมูลลงทะเบียน' },
+    { name: 'verifyLicense', desc: 'ตรวจสอบรหัสใบอนุญาต' }
+  ];
+
+  coreFunctions.forEach(fn => {
+    if (typeof window[fn.name] === 'function') {
+      result.passed.push(`✅ ${fn.name}() — พร้อมใช้งาน (${fn.desc})`);
+    } else {
+      result.error.push(`❌ ไม่พบฟังก์ชัน: ${fn.name}() — จำเป็นต้องมี!`);
+      result.suggestions.push(`→ เพิ่มโค้ดฟังก์ชัน: function ${fn.name}(...) { ... } ก่อนเรียกใช้`);
+    }
+  });
+
+  // ════════════════════════════════════════════════════
+  // ส่วนที่ 3: ตรวจสอบองค์ประกอบบนหน้าเว็บ (DOM Elements)
+  // ════════════════════════════════════════════════════
+  console.log('\n📄 ส่วนที่ 3: ตรวจสอบช่องกรอกและปุ่มบนหน้าเว็บ');
+  
+  const elements = [
+    { id: 'reg-name', desc: 'ช่องกรอกชื่อเจ้าของหอพัก', page: 'หน้าลงทะเบียน' },
+    { id: 'reg-address', desc: 'ช่องกรอกที่อยู่', page: 'หน้าลงทะเบียน' },
+    { id: 'reg-phone', desc: 'ช่องกรอกเบอร์โทร', page: 'หน้าลงทะเบียน' },
+    { id: 'reg-email', desc: 'ช่องกรอกอีเมล', page: 'หน้าลงทะเบียน', optional: true },
+    { id: 'reg-message', desc: 'กล่องแสดงข้อความแจ้งเตือน', page: 'หน้าลงทะเบียน' },
+    { id: 'license-key', desc: 'ช่องกรอกรหัสใบอนุญาต', page: 'หน้ายืนยันรหัส' },
+    { id: 'license-status', desc: 'กล่องแสดงผลตรวจสอบรหัส', page: 'หน้ายืนยันรหัส' }
+  ];
+
+  elements.forEach(el => {
+    const found = document.getElementById(el.id);
+    if (found) {
+      result.passed.push(`✅ ${el.id} — พบแล้ว (${el.desc})`);
+    } else {
+      if (el.optional) {
+        result.warning.push(`⚠️ ไม่พบ ${el.id} (${el.desc}) — ไม่จำเป็น ระบบยังทำงานได้`);
+      } else {
+        result.error.push(`❌ ไม่พบ ${el.id} — ในหน้า ${el.page}`);
+        result.suggestions.push(`→ เพิ่มในส่วน HTML ของหน้า ${el.page}:\n   <input type="text" id="${el.id}" placeholder="${el.desc}">`);
+      }
+    }
+  });
+
+  // ตรวจสอบปุ่ม
+  const buttons = [
+    { selector: 'button[onclick="submitRegistration()"]', desc: 'ปุ่มส่งคำขอลงทะเบียน', page: 'หน้าลงทะเบียน' },
+    { selector: 'button[onclick="verifyLicense()"]', desc: 'ปุ่มยืนยันรหัส', page: 'หน้ายืนยันรหัส' }
+  ];
+
+  buttons.forEach(btn => {
+    const found = document.querySelector(btn.selector);
+    if (found) {
+      result.passed.push(`✅ ${btn.desc} — พบแล้ว เรียกใช้ถูกต้อง`);
+    } else {
+      result.error.push(`❌ ไม่พบ ${btn.desc} ในหน้า ${btn.page}`);
+      result.suggestions.push(`→ เพิ่มใน HTML:\n   <button onclick="${btn.selector.match(/onclick="([^"]+)"/)[1]}">ข้อความบนปุ่ม</button>`);
+    }
+  });
+
+  // ════════════════════════════════════════════════════
+  // ส่วนที่ 4: ตรวจสอบข้อมูลที่บันทึกไว้ในเครื่อง
+  // ════════════════════════════════════════════════════
+  console.log('\n💾 ส่วนที่ 4: ตรวจสอบข้อมูลที่บันทึกไว้');
+  
+  try {
+    if (typeof STORAGE_KEYS !== 'undefined') {
+      const regData = localStorage.getItem(STORAGE_KEYS.REG_DATA);
+      const licenseVerified = localStorage.getItem(STORAGE_KEYS.LICENSE_VERIFIED);
+      
+      if (regData) {
+        result.passed.push('✅ พบข้อมูลลงทะเบียนที่บันทึกไว้แล้ว');
+        try {
+          const parsed = JSON.parse(regData);
+          result.passed.push(`   📋 ชื่อ: ${parsed.name || 'ไม่ระบุ'}, วันที่: ${parsed.regDate || 'ไม่ระบุ'}`);
+        } catch(e) {}
+      } else {
+        result.warning.push('⚠️ ยังไม่มีข้อมูลลงทะเบียน — ปกติสำหรับผู้ใช้ใหม่');
+      }
+      
+      if (licenseVerified) {
+        result.passed.push('✅ มีการยืนยันใบอนุญาตแล้ว — ผ่านขั้นตอนนี้แล้ว');
+      } else {
+        result.warning.push('⚠️ ยังไม่ได้ยืนยันใบอนุญาต — ปกติในขั้นตอนนี้');
+      }
+    }
+  } catch (e) {
+    result.warning.push('⚠️ ไม่สามารถเข้าถึงข้อมูลในเครื่องได้ — อาจถูกบล็อกโดยเบราว์เซอร์');
+  }
+
+  // ════════════════════════════════════════════════════
+  // สรุปผล
+  // ════════════════════════════════════════════════════
+  console.log('\n' + '='.repeat(60));
+  console.log('📊 สรุปผลการตรวจสอบ');
+  console.log('='.repeat(60));
+  console.log(`✅ ผ่าน: ${result.passed.length} รายการ`);
+  console.log(`⚠️ คำเตือน: ${result.warning.length} รายการ`);
+  console.log(`❌ ผิดพลาด: ${result.error.length} รายการ`);
+  
+  if (result.passed.length > 0) {
+    console.log('\n✅ รายการที่ปกติ:');
+    result.passed.forEach(p => console.log('  ' + p));
+  }
+  
+  if (result.warning.length > 0) {
+    console.log('\n⚠️ คำเตือน:');
+    result.warning.forEach(w => console.log('  ' + w));
+  }
+  
+  if (result.error.length > 0) {
+    console.log('\n❌ ปัญหาที่ต้องแก้:');
+    result.error.forEach(e => console.log('  ' + e));
+    console.log('\n💡 คำแนะนำในการแก้ไข:');
+    result.suggestions.forEach(s => console.log('  ' + s));
+  } else {
+    console.log('\n🎉 ไม่พบปัญหาร้ายแรง! ระบบพร้อมใช้งาน');
+  }
+  
+  // แสดงผลในหน้าเว็บ
+  let alertMsg = `🔍 ผลการตรวจสอบระบบ\n`;
+  alertMsg += `${'─'.repeat(25)}\n`;
+  alertMsg += `✅ ปกติ: ${result.passed.length} รายการ\n`;
+  alertMsg += `⚠️ คำเตือน: ${result.warning.length} รายการ\n`;
+  alertMsg += `❌ ผิดพลาด: ${result.error.length} รายการ\n\n`;
+  
+  if (result.error.length > 0) {
+    alertMsg += `❌ ต้องแก้:\n`;
+    result.error.forEach(e => alertMsg += `• ${e.replace(/^❌ /, '')}\n`);
+    alertMsg += `\n💡 เปิด F12 → แท็บ Console ดูคำแนะนำละเอียด`;
+  } else {
+    alertMsg += `🎉 ทุกอย่างปกติแล้ว!\nลองกดปุ่มอีกครั้งได้เลย`;
+  }
+  
+  alert(alertMsg);
+  
+  return result;
+}
+
+// เพิ่มปุ่มตรวจสอบ
+function addDeepCheckButton() {
+  if (document.getElementById('deep-check-btn')) return;
+  
+  const btn = document.createElement('button');
+  btn.id = 'deep-check-btn';
+  btn.innerHTML = '🔍 ตรวจสอบระบบเชิงลึก';
+  btn.style.cssText = `
+    position: fixed;
+    top: 60px;
+    right: 10px;
+    z-index: 99999;
+    padding: 10px 16px;
+    background: #059669;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  `;
+  btn.onmouseover = () => btn.style.background = '#047857';
+  btn.onmouseout = () => btn.style.background = '#059669';
+  btn.onclick = deepCheckSystem;
+  document.body.appendChild(btn);
+}
+
+window.addEventListener('load', addDeepCheckButton);
+// =====================================================
 // ⚙️ ตั้งค่าระบบ
 // =====================================================
 const USE_OFFLINE_MODE = true;
