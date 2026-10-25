@@ -1013,7 +1013,6 @@ async function fetchFromESP(device) {
       roomNo: device.roomNo,
       electric: { prev: Number((Math.random() * 200 + 100).toFixed(2)), curr: Number((Math.random() * 500 + 350).toFixed(2)) },
       water: { prev: Number((Math.random() * 50 + 10).toFixed(1)), curr: Number((Math.random() * 80 + 25).toFixed(1)) },
-      timestamp: new date ().
       // จำลองค่าถ้าเชื่อมต่อไม่ได้
     timestamp: new Date().toISOString()
   };
