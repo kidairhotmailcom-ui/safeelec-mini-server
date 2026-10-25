@@ -389,6 +389,18 @@
         <p><strong>วันที่ลงทะเบียน:</strong> <span id="setting-reg-date">-</span></p>
         <p><strong>ชื่อเจ้าของหอพัก:</strong> <span id="setting-customer-name">-</span></p>
         <p><strong>เบอร์ติดต่อ:</strong> <span id="setting-customer-phone">-</span></p>
+        <hr style="margin:16px 0">
+        <h3>💳 ข้อมูลการรับชำระเงิน</h3>
+        <label>ชื่อธนาคาร</label>
+        <input type="text" id="bank-name" placeholder="เช่น ธ.ไทยพาณิชย์">
+        <label>เลขบัญชี</label>
+        <input type="text" id="bank-account" placeholder="xxx-xxxxxx-x">
+        <label>ชื่อบัญชี</label>
+        <input type="text" id="account-owner" placeholder="นาย ก ข ค">
+        <label>QR Code รับเงิน</label>
+        <input type="file" id="qr-upload" accept="image/*" onchange="previewQR(this)">
+        <img id="qr-preview" style="max-width:180px; margin-top:10px; border-radius:8px; display:none;">
+        <button onclick="savePaymentInfo()" class="btn-success" style="margin-top:10px">💾 บันทึกข้อมูลการชำระเงิน</button>
       </div>
       
       <div class="card">
