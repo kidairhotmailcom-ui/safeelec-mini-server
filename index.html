@@ -1308,7 +1308,7 @@ function renderTenantBills(roomNo) {
     container.innerHTML = html;
 }
 
-// 📤 อัปโหลดสลิปและแจ้งชำระแล้ว
+// 📤 ผู้เช่าส่งสลิป → สถานะเป็นรอตรวจสอบ
 function uploadSlip(billId) {
     const fileInput = document.getElementById(`slip-${billId}`);
     if (!fileInput || !fileInput.files[0]) {
@@ -1324,45 +1324,17 @@ function uploadSlip(billId) {
         const idx = bills.findIndex(b => (b.id === billId) || (b.billNo === billId));
         
         if (idx !== -1) {
-            bills[idx].paid = true;
+            bills[idx].pending = true;      // ✅ รอเจ้าของยืนยัน
             bills[idx].slipImage = slipImage;
-            bills[idx].paidAt = new Date().toLocaleString('th-TH');
+            bills[idx].submittedAt = new Date().toLocaleString('th-TH');
             saveData(STORAGE.BILLS, bills);
             
-            alert('✅ ส่งหลักฐานสำเร็จ! ขอบคุณครับ');
+            alert('✅ ส่งสลิปเรียบร้อย! รอเจ้าของห้องตรวจสอบนะครับ');
             location.reload();
-        } else {
-            alert('❌ ไม่พบบิลนี้');
         }
     };
     reader.readAsDataURL(fileInput.files[0]);
 }
-
-// 💳 บันทึกข้อมูลการรับชำระเงิน
-function savePaymentInfo() {
-    try {
-        const bankName = document.getElementById('bank-name');
-        const bankAccount = document.getElementById('bank-account');
-        const accountOwner = document.getElementById('account-owner');
-        
-        if (!bankName || !bankAccount || !accountOwner) {
-            alert('❌ ไม่พบช่องกรอกข้อมูล!');
-            return;
-        }
-        
-        const paymentInfo = {
-            bankName: bankName.value.trim(),
-            bankAccount: bankAccount.value.trim(),
-            accountOwner: accountOwner.value.trim()
-        };
-        
-        localStorage.setItem('dorm_payment_info', JSON.stringify(paymentInfo));
-        alert('✅ บันทึกข้อมูลการชำระเงินสำเร็จ!');
-    } catch (err) {
-        alert('❌ ผิดพลาด: ' + err.message);
-    }
-}
-
 // 💳 โหลดข้อมูลบัญชีมาแสดง
 function loadPaymentInfo() {
     try {
