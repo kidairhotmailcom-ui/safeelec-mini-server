@@ -1285,7 +1285,48 @@ function renderTenantBills(roomNo) {
     });
     container.innerHTML = html;
 }
+function renderTenantBills(roomNo) {
+    const bills = loadData(STORAGE.BILLS, []).filter(b => b.room === roomNo);
+    const paymentInfo = loadData('dorm_payment_info', {});
+    const qrData = localStorage.getItem('dorm_qr_base64') || '';
+    const container = document.getElementById('tenant-bills');
+    
+    if (bills.length === 0) {
+        container.innerHTML = '<p style="color:#64748b;text-align:center;padding:20px;">ยังไม่มีข้อมูลค่าใช้จ่าย</p>';
+        return;
+    }
 
+    let html = '';
+    bills.forEach(b => {
+        html += `
+        <div class="bill-card">
+            <p><strong>เลขที่บิล:</strong> ${b.billNo}</p>
+            <p><strong>ห้อง:</strong> ${b.room}</p>
+            <p><strong>เดือน:</strong> ${b.month}</p>
+            <hr>
+            <p>ค่าเช่าห้อง: ${b.rent.toLocaleString()} บาท</p>
+            <p>ค่าไฟฟ้า: ${b.elecCost.toLocaleString()} บาท</p>
+            <p>ค่าน้ำ: ${b.waterCost.toLocaleString()} บาท</p>
+            <hr>
+            <p style="font-size:18px;font-weight:bold;color:#4f46e5;text-align:right;">รวมทั้งสิ้น: ${b.total.toLocaleString()} บาท</p>
+            
+            ${!b.paid ? `
+            <div style="margin-top:16px; padding:12px; background:#f0fdf4; border-radius:8px; border:1px solid #a7f0c5;">
+                <h4 style="margin:0 0 8px 0; color:#065f46;">💳 ข้อมูลการโอนเงิน</h4>
+                ${paymentInfo.bankName ? `<p><strong>ธนาคาร:</strong> ${paymentInfo.bankName}</p>` : ''}
+                ${paymentInfo.bankAccount ? `<p><strong>เลขบัญชี:</strong> ${paymentInfo.bankAccount}</p>` : ''}
+                ${paymentInfo.accountOwner ? `<p><strong>ชื่อบัญชี:</strong> ${paymentInfo.accountOwner}</p>` : ''}
+                ${qrData ? `<div style="text-align:center; margin-top:12px;"><img src="${qrData}" style="max-width:160px; border-radius:8px;"><p style="font-size:12px; color:#065f46; margin-top:4px;">📱 สแกนเพื่อชำระเงิน</p></div>` : ''}
+            </div>
+            ` : ''}
+            
+            <p style="text-align:right;margin-top:12px;">
+                <span class="badge ${b.paid ? 'badge-success' : 'badge-warning'}">${b.paid ? '✅ ชำระแล้ว' : '⏳ รอชำระ'}</span>
+            </p>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
 // เรียกใช้เมื่อโหลดหน้า
 document.addEventListener('DOMContentLoaded', () => {
     updateRoomDropdowns();
