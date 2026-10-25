@@ -647,8 +647,6 @@ function printBill(billId) {
   printWin.print();
 }
 
-// ===== 📡 ฟังก์ชัน ESP32 =====
-// ✅ ฟังก์ชันที่แก้ไขแล้ว
 function registerESPDevice() {
   const deviceId = document.getElementById('esp-device-id').value.trim();
   const roomNo = document.getElementById('esp-room').value.trim();
@@ -675,7 +673,6 @@ function registerESPDevice() {
   renderESPDevices();
 }
 
-// ✅ เพิ่มฟังก์ชันที่ขาดหาย
 async function fetchFromESP(device) {
   try {
     if (device.ip) {
@@ -693,7 +690,6 @@ async function fetchFromESP(device) {
       }
     }
     
-    // 🧪 โหมดทดลอง (เมื่อไม่พบอุปกรณ์จริง)
     return {
       success: true,
       data: {
@@ -728,7 +724,6 @@ async function readAndSaveFromESP(device) {
   const d = result.data;
   const month = new Date().toISOString().slice(0, 7);
   
-  // บันทึกค่าไฟ
   if (d.electric && d.electric.curr > d.electric.prev) {
     const elecData = loadData(STORAGE_KEYS.ELECTRIC, []);
     elecData.push({
@@ -743,7 +738,6 @@ async function readAndSaveFromESP(device) {
     saveData(STORAGE_KEYS.ELECTRIC, elecData);
   }
   
-  // บันทึกค่าน้ำ
   if (d.water && d.water.curr > d.water.prev) {
     const waterData = loadData(STORAGE_KEYS.WATER, []);
     waterData.push({
@@ -758,7 +752,6 @@ async function readAndSaveFromESP(device) {
     saveData(STORAGE_KEYS.WATER, waterData);
   }
   
-  // อัปเดตเวลาซิงค์ล่าสุด
   const idx = espDevices.findIndex(x => x.deviceId === device.deviceId);
   if (idx > -1) {
     espDevices[idx].lastSync = new Date().toISOString();
@@ -823,7 +816,6 @@ function deleteESPDevice(index) {
   renderESPDevices();
 }
 
-// ✅ ฟังก์ชันอื่นๆ ที่จำเป็นต้องมี
 function renderAll() {
   renderDashboard();
   renderRoomsUI();
@@ -842,7 +834,7 @@ function populateRoomSelects() {
   ['elec-room', 'water-room', 'bill-room'].forEach(id => {
     const sel = document.getElementById(id);
     if (!sel) return;
-    sel.innerHTML = '<option value="">-- เลือกห้อง --</option>';
+    sel.innerHTML = '<option value="">— เลือกห้อง —</option>';
     rooms.forEach(r => sel.innerHTML += `<option value="${r}">${r}</option>`);
   });
 }
@@ -868,6 +860,12 @@ function renderDashboard() {
   
   const pendingProof = bills.filter(b => b.status === 'pending_confirm').length;
   document.getElementById('pending-proof').textContent = pendingProof;
+  
+  document.getElementById('device-count').textContent = espDevices.length;
+  const lastSync = espDevices.length > 0 && espDevices[espDevices.length - 1].lastSync 
+    ? new Date(espDevices[espDevices.length - 1].lastSync).toLocaleString('th-TH') 
+    : '-';
+  document.getElementById('last-esp-sync').textContent = lastSync;
 }
 
 function renderRoomsUI() {
@@ -950,6 +948,26 @@ function deleteRoom(no) {
   renderRoomsUI();
   renderDashboard();
   populateRoomSelects();
+}
+
+function renderESPDevices() {
+  const tbody = document.getElementById('esp-devices-table');
+  tbody.innerHTML = '';
+  espDevices.forEach((d, i) => {
+    const syncText = d.lastSync ? new Date(d.lastSync).toLocaleString('th-TH') : '-';
+    tbody.innerHTML += `
+      <tr>
+        <td>${d.deviceId}</td>
+        <td>${d.roomNo}</td>
+        <td>${d.ip || '-'}</td>
+        <td>${syncText}</td>
+        <td>
+          <button class="btn-sm btn-info" onclick="readSingleESP(${i})">อ่านค่า</button>
+          <button class="btn-sm btn-danger" onclick="deleteESPDevice(${i})">ลบ</button>
+        </td>
+      </tr>
+    `;
+  });
 }
 
 function renderElectricUI() {
@@ -1331,7 +1349,7 @@ function renderSettingsUI() {
   const regData = loadData(STORAGE_KEYS.REG_DATA, {});
   const license = loadData(STORAGE_KEYS.LICENSE_VERIFIED, '-');
   
-  document.getElementById('setting-license').textContent = license;
+  document.getElementById('setting-license').textContent = typeof license === 'object' ? license.license_key || '-' : license;
   document.getElementById('setting-reg-date').textContent = regData.regDate ? new Date(regData.regDate).toLocaleString('th-TH') : '-';
   document.getElementById('setting-customer-name').textContent = regData.name || '-';
   document.getElementById('setting-customer-phone').textContent = regData.phone || '-';
