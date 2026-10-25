@@ -1135,6 +1135,7 @@ function loadSettingsPage() {
     if (el('setting-customer-phone')) el('setting-customer-phone').textContent = reg.phone || '-';
     
     renderRoomPasswordTable();
+    loadPaymentInfo();  
 }
 
 function renderRoomPasswordTable() {
