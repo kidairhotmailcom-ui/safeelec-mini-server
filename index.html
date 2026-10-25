@@ -750,26 +750,6 @@ if (window.supabase) {
   supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
-// =====================================================
-// 🔑 ตรวจสอบรหัสใบอนุญาต
-// =====================================================
-async function submitRegistration() {
-  const name = document.getElementById('reg-name').value.trim();
-  const address = document.getElementById('reg-address').value.trim();
-  const phone = document.getElementById('reg-phone').value.trim();
-  const email = document.getElementById('reg-email').value.trim();
-  const msg = document.getElementById('reg-message');
-  msg.innerHTML = '';
-
-  if (!name) return msg.innerHTML = '<p style="color:#ef4444">⚠️ กรุณากรอกชื่อเจ้าของหอพัก</p>';
-  if (!address) return msg.innerHTML = '<p style="color:#ef4444">⚠️ กรุณากรอกที่อยู่หอพัก</p>';
-  if (!phone || !/^[0-9]{9,10}$/.test(phone)) return msg.innerHTML = '<p style="color:#ef4444">⚠️ เบอร์โทรต้องเป็นตัวเลข 9-10 หลัก</p>';
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return msg.innerHTML = '<p style="color:#ef4444">⚠️ รูปแบบอีเมลไม่ถูกต้อง</p>';
-
-  saveData(STORAGE_KEYS.REG_DATA, { name, address, phone, email, regDate: new Date().toISOString() });
-  alert('✅ บันทึกข้อมูลสำเร็จ!\n📞 กรุณาติดต่อผู้ให้บริการ เพื่อขอรับรหัสใบอนุญาตใช้งาน');
-  showPage('page-enter-license');
-}
 async function verifyLicense() {
   const key = document.getElementById('license-key').value.trim();
   const status = document.getElementById('license-status');
