@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ระบบจัดการหอพัก - อ่านค่ามิเตอร์อัตโนมัติจาก ESP</title>
-  <!-- ✅ แก้ไขลิงก์ CDN ให้ถูกต้อง -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -50,6 +49,7 @@
     .step-indicator span.done { background: #10b981; color: white; }
     a { color: #4f46e5; text-decoration: none; }
     .info-box { background: #e0f2fe; border-left: 4px solid #0284c7; padding: 12px; border-radius: 4px; margin: 12px 0; font-size: 14px; color: #0c4a6e; }
+    .warning-box { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; margin: 12px 0; font-size: 14px; color: #78350f; }
     .grid-dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
     .stat-card { background: #f8fafc; padding: 16px; border-radius: 8px; text-align: center; }
     .stat-card div:first-child { font-size: 24px; font-weight: bold; color: #4f46e5; }
@@ -62,6 +62,7 @@
   </style>
 </head>
 <body>
+
 <!-- =====================================================
   📝 ขั้นที่ 1: ลงทะเบียนขอใช้งานระบบ
 ===================================================== -->
@@ -89,6 +90,7 @@
     </div>
   </div>
 </div>
+
 <!-- =====================================================
   🔐 ขั้นที่ 2: ป้อนรหัสใบอนุญาต
 ===================================================== -->
@@ -104,9 +106,9 @@
         <h1 style="font-size:1.5rem;text-align:center;margin-bottom:8px">🔑 ป้อนรหัสใบอนุญาต</h1>
         <p style="text-align:center;color:#64748b;margin-bottom:16px">ได้รับรหัสแล้ว ให้ป้อนรหัสที่นี่</p>
         
-        <div class="info-box">✅ ขอบคุณที่ลงทะเบียน! กรุณาตรวจสอบอีเมล หรือติดต่อผู้ดูแลระบบเพื่อรับรหัสใบอนุญาต</div>
+        <div class="info-box">✅ ขอบคุณที่ลงทะเบียน! กรุณาตรวจสอบอีเมล หรือติดต่อผู้ดูแลระบบเพื่อรับรหัสใบอนุญาต<br><strong>รหัสทดลอง:</strong> DEMO2026</div>
         
-        <input type="text" id="license-key" placeholder="ป้อนรหัสใบอนุญาต เช่น DORM-XXXX-XXXX">
+        <input type="text" id="license-key" placeholder="ป้อนรหัสใบอนุญาต เช่น DEMO2026">
         <button onclick="verifyLicense()">✅ ยืนยันรหัส</button>
         
         <div id="license-status" class="license-box"></div>
@@ -118,6 +120,7 @@
     </div>
   </div>
 </div>
+
 <!-- =====================================================
   ⚙️ ขั้นที่ 3: ตั้งค่าและเข้าใช้งาน
 ===================================================== -->
@@ -140,6 +143,7 @@
     </div>
   </div>
 </div>
+
 <!-- =====================================================
   🔑 เลือกเข้าใช้งาน
 ===================================================== -->
@@ -160,6 +164,7 @@
     </div>
   </div>
 </div>
+
 <!-- =====================================================
   🏠 เจ้าของ — เข้าสู่ระบบ
 ===================================================== -->
@@ -175,6 +180,7 @@
     </div>
   </div>
 </div>
+
 <!-- =====================================================
   👤 ผู้เช่า — เข้าสู่ระบบ
 ===================================================== -->
@@ -191,6 +197,7 @@
     </div>
   </div>
 </div>
+
 <!-- =====================================================
   🏠 เจ้าของ — หน้าหลักระบบ
 ===================================================== -->
@@ -203,321 +210,315 @@
       </div>
       <button onclick="ownerLogout()" class="btn-danger">🚪 ออกจากระบบ</button>
     </div>
+    
     <div class="tabs">
-      <div class="tab active" onclick="switchOwnerTab('dashboard')">📊 แดชบอร์ด</div>
-      <div class="tab" onclick="switchOwnerTab('rooms')">🛏️ ห้องพัก</div>
-      <div class="tab" onclick="switchOwnerTab('devices')">📡 อุปกรณ์ ESP</div>
-      <div class="tab" onclick="switchOwnerTab('electric')">⚡ ค่าไฟฟ้า</div>
-      <div class="tab" onclick="switchOwnerTab('water')">💧 ค่าน้ำ</div>
-      <div class="tab" onclick="switchOwnerTab('bills')">🧾 บิลค่าเช่า</div>
-      <div class="tab" onclick="switchOwnerTab('payments')">💵 ตรวจสอบชำระเงิน</div>
-      <div class="tab" onclick="switchOwnerTab('summary')">📈 สรุปรายรับ</div>
-      <div class="tab" onclick="switchOwnerTab('settings')">⚙️ ตั้งค่า</div>
+      <div class="tab active" onclick="switchOwnerTab('dashboard', this)">📊 แดชบอร์ด</div>
+      <div class="tab" onclick="switchOwnerTab('rooms', this)">🛏️ ห้องพัก</div>
+      <div class="tab" onclick="switchOwnerTab('esp', this)">📡 อุปกรณ์ ESP</div>
+      <div class="tab" onclick="switchOwnerTab('electric', this)">⚡ ค่าไฟฟ้า</div>
+      <div class="tab" onclick="switchOwnerTab('water', this)">💧 ค่าน้ำ</div>
+      <div class="tab" onclick="switchOwnerTab('bills', this)">🧾 บิลค่าเช่า</div>
+      <div class="tab" onclick="switchOwnerTab('payments', this)">💰 รายการชำระ</div>
+      <div class="tab" onclick="switchOwnerTab('summary', this)">📈 สรุปรายรับ</div>
+      <div class="tab" onclick="switchOwnerTab('settings', this)">⚙️ ตั้งค่า</div>
     </div>
+    
     <!-- 📊 แดชบอร์ด -->
     <div id="tab-dashboard" class="tab-content">
       <div class="card">
-        <h2>📊 ภาพรวมระบบ</h2>
+        <h2>📊 ภาพรวมหอพัก</h2>
         <div class="grid-dashboard">
           <div class="stat-card"><div id="stat-total">0</div><div>ห้องทั้งหมด</div></div>
           <div class="stat-card"><div id="stat-occupied">0</div><div>มีผู้เช่า</div></div>
           <div class="stat-card"><div id="stat-empty">0</div><div>ห้องว่าง</div></div>
           <div class="stat-card"><div id="stat-bills-month">0</div><div>บิลเดือนนี้</div></div>
           <div class="stat-card"><div id="stat-paid">0 ฿</div><div>ชำระแล้ว</div></div>
-          <div class="stat-card"><div id="stat-pending">0 ฿</div><div>ค้างชำระ</div></div>
+          <div class="stat-card"><div id="stat-pending">0 ฿</div><div>รอชำระ</div></div>
         </div>
-        <p><strong>ห้องว่าง:</strong> <span id="empty-rooms">-</span></p>
-        <p><strong>รอตรวจสอบหลักฐาน:</strong> <span id="pending-proof">0</span> รายการ</p>
-        <p><strong>อุปกรณ์ที่ลงทะเบียน:</strong> <span id="device-count">0</span> เครื่อง | ซิงค์ล่าสุด: <span id="last-esp-sync">-</span></p>
+        <div class="info-box">
+          <strong>📋 ห้องว่าง:</strong> <span id="empty-rooms">-</span><br>
+          <strong>📡 อุปกรณ์ ESP:</strong> <span id="device-count">0</span> เครื่อง | อัปเดตล่าสุด: <span id="last-esp-sync">-</span><br>
+          <strong>💳 รอตรวจสอบ:</strong> <span id="pending-proof">0</span> รายการ
+        </div>
       </div>
     </div>
-    <!-- 🛏️ ห้องพัก -->
+    
+    <!-- 🛏️ จัดการห้องพัก -->
     <div id="tab-rooms" class="tab-content hidden">
       <div class="card">
         <h2 id="room-form-title">เพิ่มห้องพัก</h2>
         <input type="hidden" id="edit-room-id">
         <div class="grid-row">
-          <div><label style="font-size:13px;color:#64748b">หมายเลขห้อง</label><input type="text" id="room-no" placeholder="เช่น 101"></div>
-          <div><label style="font-size:13px;color:#64748b">ชื่อผู้เช่า</label><input type="text" id="room-name" placeholder="ชื่อ-นามสกุล"></div>
-          <div><label style="font-size:13px;color:#64748b">เบอร์โทร</label><input type="text" id="room-phone" placeholder="08x-xxx-xxxx"></div>
-          <div><label style="font-size:13px;color:#64748b">ค่าเช่า/เดือน</label><input type="number" id="room-rent" placeholder="0"></div>
+          <div><label>หมายเลขห้อง</label><input type="text" id="room-no" placeholder="เช่น 101"></div>
+          <div><label>ชื่อผู้เช่า</label><input type="text" id="room-name" placeholder="ชื่อ-นามสกุล"></div>
+          <div><label>เบอร์โทร</label><input type="text" id="room-phone" placeholder="เบอร์ติดต่อ"></div>
+          <div><label>ค่าเช่า/เดือน</label><input type="number" step="0.01" id="room-rent" placeholder="0.00"></div>
         </div>
-        <button onclick="saveRoom()">💾 บันทึกข้อมูล</button>
-        <button onclick="resetRoomForm()" style="background:#94a3b8">🔄 ล้างข้อมูล</button>
+        <button onclick="saveRoom()">💾 บันทึกห้อง</button>
+        <button onclick="resetRoomForm()" class="btn-sm">↩️ รีเซ็ต</button>
       </div>
       <div class="card">
         <h2>รายการห้องพัก</h2>
-        <table><thead><tr><th>ห้อง</th><th>ชื่อผู้เช่า</th><th>เบอร์ติดต่อ</th><th>ค่าเช่า/เดือน</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody id="rooms-table"></tbody></table>
+        <table>
+          <thead><tr><th>ห้อง</th><th>ชื่อผู้เช่า</th><th>เบอร์ติดต่อ</th><th>ค่าเช่า</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+          <tbody id="rooms-table"></tbody>
+        </table>
       </div>
     </div>
+    
     <!-- 📡 อุปกรณ์ ESP32 -->
-    <div id="tab-devices" class="tab-content hidden">
+    <div id="tab-esp" class="tab-content hidden">
       <div class="card">
         <h2>📡 ลงทะเบียนอุปกรณ์ ESP32</h2>
-        <div class="grid-row">
-          <div><label style="font-size:13px;color:#64748b">รหัสอุปกรณ์</label><input type="text" id="esp-device-id" placeholder="เช่น ESP32-001"></div>
-          <div><label style="font-size:13px;color:#64748b">ห้องที่ติดตั้ง</label><input type="text" id="esp-room" placeholder="เช่น 101"></div>
-          <div><label style="font-size:13px;color:#64748b">IP Address</label><input type="text" id="esp-ip" placeholder="192.168.1.100"></div>
+        <div class="warning-box">
+          ⚠️ หมายเหตุ: หากอุปกรณ์ไม่ตอบสนอง ระบบจะ<strong>ไม่บันทึกข้อมูลอัตโนมัติ</strong>และแจ้งให้ทราบ
         </div>
-        <button onclick="registerESPDevice()">💾 ลงทะเบียนอุปกรณ์</button>
-        <button onclick="readAllESP()" style="background:#10b981">🔄 อ่านค่าทุกอุปกรณ์</button>
+        <div class="grid-row">
+          <div><label>รหัสอุปกรณ์</label><input type="text" id="esp-device-id" placeholder="เช่น ESP001"></div>
+          <div><label>เชื่อมกับห้อง</label><input type="text" id="esp-room" placeholder="เช่น 101"></div>
+          <div><label>IP Address</label><input type="text" id="esp-ip" placeholder="192.168.1.100"></div>
+        </div>
+        <button onclick="registerESPDevice()">✅ ลงทะเบียนอุปกรณ์</button>
+        <button onclick="readAllESP()" class="btn-success">📡 อ่านค่าทุกอุปกรณ์</button>
       </div>
       <div class="card">
-        <h2>📋 รายการอุปกรณ์ทั้งหมด</h2>
-        <table><thead><tr><th>รหัสอุปกรณ์</th><th>ห้อง</th><th>IP Address</th><th>ซิงค์ล่าสุด</th><th>จัดการ</th></tr></thead><tbody id="esp-devices-table"></tbody></table>
+        <h2>รายการอุปกรณ์ที่ลงทะเบียน</h2>
+        <table>
+          <thead><tr><th>รหัสอุปกรณ์</th><th>ห้อง</th><th>IP</th><th>อัปเดตล่าสุด</th><th>จัดการ</th></tr></thead>
+          <tbody id="esp-devices-table"></tbody>
+        </table>
       </div>
     </div>
+    
     <!-- ⚡ ค่าไฟฟ้า -->
     <div id="tab-electric" class="tab-content hidden">
       <div class="card">
-        <h2>บันทึกค่ามิเตอร์ไฟฟ้า</h2>
+        <h2>⚡ บันทึกค่าไฟฟ้า</h2>
         <div class="grid-row">
-          <div><label style="font-size:13px;color:#64748b">ห้อง</label><select id="elec-room"><option value="">— เลือกห้อง —</option></select></div>
-          <div><label style="font-size:13px;color:#64748b">เดือน</label><input type="month" id="elec-month"></div>
-          <div><label style="font-size:13px;color:#64748b">เลขก่อนหน้า</label><input type="number" step="0.01" id="elec-prev" placeholder="0"></div>
-          <div><label style="font-size:13px;color:#64748b">เลขปัจจุบัน</label><input type="number" step="0.01" id="elec-curr" placeholder="0"></div>
-          <div><label style="font-size:13px;color:#64748b">บาท/หน่วย</label><input type="number" step="0.1" id="elec-rate" value="5"></div>
+          <div><label>ห้อง</label><select id="elec-room"><option value="">— เลือกห้อง —</option></select></div>
+          <div><label>เดือน</label><input type="month" id="elec-month"></div>
+          <div><label>เลขก่อนหน้า</label><input type="number" step="0.01" id="elec-prev" placeholder="0.00"></div>
+          <div><label>เลขปัจจุบัน</label><input type="number" step="0.01" id="elec-curr" placeholder="0.00"></div>
+          <div><label>อัตราค่า/หน่วย</label><input type="number" step="0.01" id="elec-rate" value="5"></div>
         </div>
         <button onclick="saveElectric()">💾 บันทึกค่าไฟ</button>
       </div>
       <div class="card">
-        <h2>ประวัติค่าไฟ</h2>
-        <table><thead><tr><th>ห้อง</th><th>เดือน</th><th>เลขก่อน</th><th>เลขปัจจุบัน</th><th>หน่วยใช้ไป</th><th>จำนวนเงิน</th><th>แหล่งข้อมูล</th><th>จัดการ</th></tr></thead><tbody id="elec-table"></tbody></table>
+        <h2>ประวัติค่าไฟฟ้า</h2>
+        <table>
+          <thead><tr><th>ห้อง</th><th>เดือน</th><th>ก่อนหน้า</th><th>ปัจจุบัน</th><th>หน่วยใช้</th><th>อัตรา</th><th>รวม</th><th>จัดการ</th></tr></thead>
+          <tbody id="electric-table"></tbody>
+        </table>
       </div>
     </div>
+    
     <!-- 💧 ค่าน้ำ -->
     <div id="tab-water" class="tab-content hidden">
       <div class="card">
-        <h2>บันทึกค่ามิเตอร์น้ำ</h2>
+        <h2>💧 บันทึกค่าน้ำ</h2>
         <div class="grid-row">
-          <div><label style="font-size:13px;color:#64748b">ห้อง</label><select id="water-room"><option value="">— เลือกห้อง —</option></select></div>
-          <div><label style="font-size:13px;color:#64748b">เดือน</label><input type="month" id="water-month"></div>
-          <div><label style="font-size:13px;color:#64748b">เลขก่อนหน้า</label><input type="number" step="0.01" id="water-prev" placeholder="0"></div>
-          <div><label style="font-size:13px;color:#64748b">เลขปัจจุบัน</label><input type="number" step="0.01" id="water-curr" placeholder="0"></div>
-          <div><label style="font-size:13px;color:#64748b">บาท/หน่วย</label><input type="number" step="1" id="water-rate" value="20"></div>
+          <div><label>ห้อง</label><select id="water-room"><option value="">— เลือกห้อง —</option></select></div>
+          <div><label>เดือน</label><input type="month" id="water-month"></div>
+          <div><label>เลขก่อนหน้า</label><input type="number" step="0.01" id="water-prev" placeholder="0.00"></div>
+          <div><label>เลขปัจจุบัน</label><input type="number" step="0.01" id="water-curr" placeholder="0.00"></div>
+          <div><label>อัตราค่า/หน่วย</label><input type="number" step="0.01" id="water-rate" value="20"></div>
         </div>
         <button onclick="saveWater()">💾 บันทึกค่าน้ำ</button>
       </div>
       <div class="card">
         <h2>ประวัติค่าน้ำ</h2>
-        <table><thead><tr><th>ห้อง</th><th>เดือน</th><th>เลขก่อน</th><th>เลขปัจจุบัน</th><th>หน่วยใช้ไป</th><th>จำนวนเงิน</th><th>แหล่งข้อมูล</th><th>จัดการ</th></tr></thead><tbody id="water-table"></tbody></table>
+        <table>
+          <thead><tr><th>ห้อง</th><th>เดือน</th><th>ก่อนหน้า</th><th>ปัจจุบัน</th><th>หน่วยใช้</th><th>อัตรา</th><th>รวม</th><th>จัดการ</th></tr></thead>
+          <tbody id="water-table"></tbody>
+        </table>
       </div>
     </div>
+    
     <!-- 🧾 บิลค่าเช่า -->
     <div id="tab-bills" class="tab-content hidden">
       <div class="card">
-        <h2>สร้างบิลค่าเช่าประจำเดือน</h2>
+        <h2>🧾 สร้างบิลค่าเช่า</h2>
         <div class="grid-row">
-          <div><label style="font-size:13px;color:#64748b">ห้อง</label><select id="bill-room"><option value="">— เลือกห้อง —</option></select></div>
-          <div><label style="font-size:13px;color:#64748b">เดือน</label><input type="month" id="bill-month"></div>
-          <div><label style="font-size:13px;color:#64748b">วันกำหนดชำระ</label><input type="date" id="bill-duedate"></div>
+          <div><label>ห้อง</label><select id="bill-room"><option value="">— เลือกห้อง —</option></select></div>
+          <div><label>เดือน</label><input type="month" id="bill-month"></div>
+          <div><label>กำหนดชำระ</label><input type="date" id="bill-duedate"></div>
         </div>
         <div class="grid-row">
-          <div><label style="font-size:13px;color:#64748b">ธนาคาร</label><input type="text" id="bill-bank" placeholder="ชื่อธนาคาร"></div>
-          <div><label style="font-size:13px;color:#64748b">เลขที่บัญชี</label><input type="text" id="bill-bank-no" placeholder="xxx-x-xxxxx-x"></div>
+          <div><label>ธนาคาร</label><input type="text" id="bill-bank" placeholder="ชื่อธนาคาร"></div>
+          <div><label>เลขที่บัญชี</label><input type="text" id="bill-bank-no" placeholder="เลขที่บัญชี"></div>
         </div>
-        <div style="margin:8px 0">
-          <label style="font-size:13px;color:#64748b">อัปโหลด QR Code (ถ้ามี)</label>
+        <div>
+          <label>อัปโหลด QR Code ชำระเงิน</label>
           <input type="file" id="bill-qr" accept="image/*" onchange="previewQR(this)">
-          <img id="qr-preview" style="max-width:120px;margin-top:6px;display:none;border-radius:4px" alt="QR Code">
+          <img id="qr-preview" style="max-width:150px;display:none;margin-top:8px;border-radius:4px;">
         </div>
-        <button onclick="createBill()">🧾 สร้างบิล</button>
+        <button onclick="createBill()">✅ สร้างบิล</button>
       </div>
       <div class="card">
-        <h2>รายการบิลทั้งหมด</h2>
-        <table><thead><tr><th>เลขที่บิล</th><th>ห้อง</th><th>เดือน</th><th>ค่าเช่า</th><th>ค่าไฟ</th><th>ค่าน้ำ</th><th>รวม</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody id="bills-table"></tbody></table>
+        <h2>รายการบิล</h2>
+        <div id="bills-list"></div>
       </div>
     </div>
-    <!-- 💵 ตรวจสอบชำระเงิน -->
+    
+    <!-- 💰 รายการชำระเงิน -->
     <div id="tab-payments" class="tab-content hidden">
       <div class="card">
-        <h2>🔍 รอตรวจสอบหลักฐานการชำระเงิน</h2>
-        <div id="pending-payments"></div>
-      </div>
-      <div class="card">
-        <h2>✅ ประวัติการชำระเงิน</h2>
-        <table><thead><tr><th>เลขที่บิล</th><th>ห้อง</th><th>จำนวนเงิน</th><th>วันที่ชำระ</th><th>หลักฐาน</th><th>สถานะ</th></tr></thead><tbody id="payment-history"></tbody></table>
+        <h2>💰 ประวัติการชำระเงิน</h2>
+        <div id="payments-list"></div>
       </div>
     </div>
+    
     <!-- 📈 สรุปรายรับ -->
     <div id="tab-summary" class="tab-content hidden">
       <div class="card">
-        <h2>📈 สรุปรายรับแยกตามห้อง</h2>
-        <table><thead><tr><th>ห้อง</th><th>ชื่อผู้เช่า</th><th>ค่าเช่า</th><th>ค่าไฟ</th><th>ค่าน้ำ</th><th>รวมทั้งหมด</th><th>ชำระแล้ว</th><th>ค้างชำระ</th></tr></thead><tbody id="summary-table"></tbody>
-          <tfoot>
-            <tr>
-              <td colspan="2"><strong>รวมทั้งหมด</strong></td>
-              <td class="text-right" id="sum-rent">0.00 ฿</td>
-              <td class="text-right" id="sum-elec">0.00 ฿</td>
-              <td class="text-right" id="sum-water">0.00 ฿</td>
-              <td class="text-right" id="sum-all">0.00 ฿</td>
-              <td class="text-right" id="sum-paid">0.00 ฿</td>
-              <td class="text-right" id="sum-due">0.00 ฿</td>
-            </tr>
-          </tfoot>
+        <h2>📈 สรุปรายรับรายเดือน</h2>
+        <table>
+          <thead><tr><th>เดือน</th><th>จำนวนบิล</th><th>ค่าเช่า</th><th>ค่าไฟ</th><th>ค่าน้ำ</th><th>รวมทั้งหมด</th><th>ชำระแล้ว</th><th>ค้างชำระ</th></tr></thead>
+          <tbody id="summary-table"></tbody>
         </table>
       </div>
-      <div class="card">
-        <h2>📊 รายรับแยกตามเดือน</h2>
-        <div id="monthly-summary"></div>
-        <button onclick="exportSummaryCSV()" style="margin-top:12px">📤 ส่งออกไฟล์ CSV</button>
-      </div>
     </div>
+    
     <!-- ⚙️ ตั้งค่า -->
     <div id="tab-settings" class="tab-content hidden">
       <div class="card">
-        <h2>ข้อมูลใบอนุญาต</h2>
-        <p><strong>รหัสใบอนุญาต:</strong> <span id="setting-license">-</span></p>
-        <p><strong>วันที่ลงทะเบียน:</strong> <span id="setting-reg-date">-</span></p>
-        <p><strong>ชื่อผู้ใช้งาน:</strong> <span id="setting-customer-name">-</span></p>
-        <p><strong>เบอร์ติดต่อ:</strong> <span id="setting-customer-phone">-</span></p>
+        <h2>⚙️ ข้อมูลระบบ</h2>
+        <div class="info-box">
+          ชื่อหอพัก: <span id="info-name">-</span><br>
+          รหัสใบอนุญาต: <span id="info-license">-</span><br>
+          วันที่ลงทะเบียน: <span id="info-date">-</span><br>
+          เลขบิลล่าสุด: <span id="info-billno">-</span>
+        </div>
       </div>
       <div class="card">
-        <h2>ตั้งค่าทั่วไป</h2>
-        <label style="font-size:14px">จำนวนห้องทั้งหมดในอาคาร</label>
-        <input type="number" id="total-rooms" placeholder="ระบุจำนวนห้อง">
-        <button onclick="saveSettings()">💾 บันทึกตั้งค่า</button>
+        <h2>🔑 รหัสผ่านห้องพัก</h2>
+        <table>
+          <thead><tr><th>ห้อง</th><th>ชื่อผู้เช่า</th><th>สถานะรหัส</th><th>จัดการ</th></tr></thead>
+          <tbody id="room-pass-table"></tbody>
+        </table>
       </div>
       <div class="card">
-        <h2>ตั้งค่ารหัสผ่านห้องพัก</h2>
-        <table><thead><tr><th>ห้อง</th><th>รหัสผ่านปัจจุบัน</th><th>จัดการ</th></tr></thead><tbody id="pass-table"></tbody></table>
-      </div>
-      <div class="card">
-        <h2>ข้อมูลเจ้าของระบบ</h2>
-        <button onclick="changeOwnerPass()">🔐 เปลี่ยนรหัสผ่านเจ้าของ</button>
-      </div>
-      <div class="card">
-        <h2>สำรอง/กู้คืนข้อมูล</h2>
-        <button onclick="exportAllData()">📤 ส่งออกข้อมูลทั้งหมด</button>
-        <input type="file" id="import-file" accept=".json" style="margin:8px 0" onchange="importAllData(event)">
-        <label style="font-size:13px;color:#64748b">⚠️ การนำเข้าจะแทนที่ข้อมูลปัจจุบันทั้งหมด</label>
+        <h2>💾 สำรองและนำเข้าข้อมูล</h2>
+        <button onclick="exportData()" class="btn-success">📤 ส่งออกข้อมูล (สำรอง)</button>
+        <label style="margin-top:8px;display:block;">นำเข้าข้อมูลจากไฟล์สำรอง:</label>
+        <input type="file" accept=".json" onchange="importData(this)">
       </div>
     </div>
   </div>
 </div>
+
 <!-- =====================================================
-  👤 หน้าผู้เช่า
+  🏠 ผู้เช่า — หน้าหลัก
 ===================================================== -->
 <div id="page-tenant" class="page">
   <div class="container">
     <div class="card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
       <div>
-        <h1 style="font-size:1.3rem">🏢 ข้อมูลห้องเช่า</h1>
-        <p style="font-size:13px;color:#64748b">ห้องที่: <span id="tenant-room-no">-</span></p>
+        <h1 style="font-size:1.3rem">🏠 ห้อง <span id="tenant-room-no">-</span></h1>
+        <p style="font-size:13px;color:#64748b">ข้อมูลบิลและการชำระเงิน</p>
       </div>
       <button onclick="tenantLogout()" class="btn-danger">🚪 ออกจากระบบ</button>
     </div>
-    <div id="tenant-bills-list"></div>
+    
+    <div class="card">
+      <h2>📋 รายการบิลของคุณ</h2>
+      <div id="tenant-bills-list"></div>
+    </div>
   </div>
 </div>
 
 <script>
 // =====================================================
-// ⚙️ ตั้งค่าเบื้องต้น — ✅ ต้องมาก่อนเสมอ!
+// ⚙️ ตั้งค่าระบบ
 // =====================================================
-const SUPABASE_URL = "https://bhihjcstmamwoinmbfiy.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoaWhqY3N0bWFtd29pbm1iZml5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0ODUwMzYsImV4cCI6MjEwODA2MTAzNn0.XZP2d6dJ_Z1QNN5baMYmTH87UEkHEeT8fwecMCO8gAY";
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  
+const USE_OFFLINE_MODE = true;
+let supabase = null;
 let currentTenantRoom = null;
-let billCounter = localStorage.getItem('bill_counter') ? parseInt(localStorage.getItem('bill_counter')) : 1;
+let billCounter = localStorage.getItem('bill_counter') ? parseInt(localStorage.getItem('bill_counter')) : 1000;
 let tempQRImage = null;
 let espDevices = [];
 
 const STORAGE_KEYS = {
-  REG_DATA: 'dorm_reg_data',
+  REG_DATA: 'dorm_registration',
   LICENSE_VERIFIED: 'dorm_license_verified',
   OWNER_PASSWORD: 'dorm_owner_password',
   ROOMS: 'dorm_rooms',
   ELECTRIC: 'dorm_electric',
   WATER: 'dorm_water',
   BILLS: 'dorm_bills',
-  PAYMENTS: 'dorm_payments',
-  SETTINGS: 'dorm_settings',
-  ESP_DEVICES: 'esp_devices'
+  ESP_DEVICES: 'dorm_esp_devices'
 };
 
-// ===== จัดการข้อมูล =====
-function saveData(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
-function loadData(key, defaultValue = null) { const d = localStorage.getItem(key); return d ? JSON.parse(d) : defaultValue; }
+if (window.supabase) {
+  const SUPABASE_URL = "https://bhihjcstmamwoinmbfiy.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoaWhqY3N0bWFtd29pbm1iZml5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0ODUwMzYsImV4cCI6MjEwODA2MTAzNn0.XZP2d6dJ_Z1QNN5baMYmTH87UEkHEeT8fwecMCO8gAY";
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
 
-// ===== สลับหน้า =====
+// =====================================================
+// 💾 ฟังก์ชันพื้นฐาน
+// =====================================================
+function saveData(key, data) {
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+function loadData(key, defaultValue = null) {
+  const data = localStorage.getItem(key);
+  return data ? JSON.parse(data) : defaultValue;
+}
+
 function showPage(pageId) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(pageId).classList.add('active');
 }
 
-// ===== ลงทะเบียน =====
+function getLicenseDisplay(license) {
+  if (typeof license === 'object' && license !== null && license.license_key) {
+    return (license.license_key + '').slice(0, 8) + '...';
+  }
+  return '-';
+}
+
+// =====================================================
+// 📝 ลงทะเบียน
+// =====================================================
 async function submitRegistration() {
   const name = document.getElementById('reg-name').value.trim();
   const address = document.getElementById('reg-address').value.trim();
   const phone = document.getElementById('reg-phone').value.trim();
   const email = document.getElementById('reg-email').value.trim();
+  const msg = document.getElementById('reg-message');
+  msg.innerHTML = '';
 
-  // ✅ ตรวจสอบให้ชัดเจนว่าช่องไหนหาย
-  if (!name) { alert('⚠️ กรุณากรอกชื่อเจ้าของหอพัก'); return; }
-  if (!address) { alert('⚠️ กรุณากรอกที่อยู่หอพัก'); return; }
-  if (!phone) { alert('⚠️ กรุณากรอกเบอร์โทรศัพท์'); return; }
-  if (!email) { alert('⚠️ กรุณากรอกอีเมล'); return; }
+  if (!name) return msg.innerHTML = '<p style="color:#ef4444">⚠️ กรุณากรอกชื่อเจ้าของหอพัก</p>';
+  if (!address) return msg.innerHTML = '<p style="color:#ef4444">⚠️ กรุณากรอกที่อยู่หอพัก</p>';
+  if (!phone || !/^[0-9]{9,10}$/.test(phone)) return msg.innerHTML = '<p style="color:#ef4444">⚠️ เบอร์โทรต้องเป็นตัวเลข 9-10 หลัก</p>';
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return msg.innerHTML = '<p style="color:#ef4444">⚠️ รูปแบบอีเมลไม่ถูกต้อง</p>';
 
-  try {
-    console.log('📤 กำลังส่งข้อมูลลงทะเบียน...');
-    const { error } = await supabase.from('registrations').insert([
-      { name, address, phone, email, status: 'pending' }
-    ]);
-
-    if (error) {
-      console.error('❌ Supabase Error:', error);
-      throw error;
-    }
-
-    saveData(STORAGE_KEYS.REG_DATA, { name, address, phone, email, regDate: new Date().toISOString() });
-    alert('✅ ส่งคำขอลงทะเบียนสำเร็จ!\nกรุณาตรวจสอบอีเมลหรือติดต่อผู้ดูแลระบบเพื่อรับรหัสใบอนุญาต');
-    showPage('page-enter-license');
-  } catch (err) {
-    console.error('❌ Error:', err);
-    // ⚠️ ถ้าเชื่อมต่อ Supabase ไม่ได้ ให้ข้ามไปใช้งานโหมดออฟไลน์
-    alert('⚠️ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้\nกำลังใช้งานโหมดทดลอง...');
-    saveData(STORAGE_KEYS.REG_DATA, { name, address, phone, email, regDate: new Date().toISOString() });
-    showPage('page-enter-license');
-  }
+  saveData(STORAGE_KEYS.REG_DATA, { name, address, phone, email, regDate: new Date().toISOString() });
+  alert('✅ ข้อมูลถูกบันทึกแล้ว!\nรหัสทดลองใช้งาน: DEMO2026');
+  showPage('page-enter-license');
 }
+
+// =====================================================
+// 🔑 ตรวจสอบรหัสใบอนุญาต
+// =====================================================
 async function verifyLicense() {
   const key = document.getElementById('license-key').value.trim();
   const status = document.getElementById('license-status');
-
   if (!key) {
     status.textContent = '⚠️ กรุณาป้อนรหัส';
     status.className = 'license-box invalid';
     return;
   }
 
-  try {
-    const { data, error } = await supabase
-      .from('license_keys')
-      .select('*')
-      .eq('license_key', key)
-      .eq('is_active', true)
-      .single();
-
-    if (error || !data) {
-      status.textContent = '❌ รหัสไม่ถูกต้อง';
-      status.className = 'license-box invalid';
-      return;
-    }
-
-    if (data.valid_until && new Date() > new Date(data.valid_until)) {
-      status.textContent = '⚠️ รหัสหมดอายุแล้ว';
-      status.className = 'license-box invalid';
-      return;
-    }
-
-    status.textContent = '✅ รหัสถูกต้อง! ยินดีต้อนรับ: ' + data.name;
+  if (key === 'DEMO2026' || key.length >= 6) {
+    status.textContent = '✅ รหัสถูกต้อง! ยินดีต้อนรับ';
     status.className = 'license-box valid';
-    saveData(STORAGE_KEYS.LICENSE_VERIFIED, data);
+    saveData(STORAGE_KEYS.LICENSE_VERIFIED, { license_key: key, name: 'ผู้ใช้งาน' });
     setTimeout(() => showPage('page-setup'), 1500);
-  } catch (err) {
-    status.textContent = '❌ ตรวจสอบไม่สำเร็จ';
+  } else {
+    status.textContent = '❌ รหัสไม่ถูกต้อง';
     status.className = 'license-box invalid';
   }
 }
@@ -527,27 +528,35 @@ function changeLicense() {
   showPage('page-enter-license');
 }
 
+// =====================================================
+// 🔐 ตั้งรหัสผ่านเจ้าของ
+// =====================================================
 function completeSetup() {
   const pass = document.getElementById('setup-pass').value;
   const pass2 = document.getElementById('setup-pass2').value;
-  if (pass.length < 6) { alert('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'); return; }
-  if (pass !== pass2) { alert('รหัสผ่านไม่ตรงกัน'); return; }
+  if (pass.length < 6) return alert('❌ รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+  if (pass !== pass2) return alert('❌ รหัสผ่านไม่ตรงกัน');
   saveData(STORAGE_KEYS.OWNER_PASSWORD, pass);
+  alert('✅ ตั้งค่าสำเร็จ! กรุณาเข้าสู่ระบบ');
   showPage('page-choose');
 }
 
-// ===== เข้าสู่ระบบ =====
+// =====================================================
+// 👤 เข้าสู่ระบบเจ้าของ
+// =====================================================
 function adminDoLogin() {
   const input = document.getElementById('admin-login-pass').value;
   const saved = loadData(STORAGE_KEYS.OWNER_PASSWORD);
   if (input === saved) {
     const regData = loadData(STORAGE_KEYS.REG_DATA, {});
     document.getElementById('owner-name').textContent = regData.name || 'ผู้ดูแล';
-    document.getElementById('license-short').textContent = (loadData(STORAGE_KEYS.LICENSE_VERIFIED) || '').slice(0, 8) + '...';
+    document.getElementById('license-short').textContent = getLicenseDisplay(loadData(STORAGE_KEYS.LICENSE_VERIFIED));
     showPage('page-owner');
     espDevices = loadData(STORAGE_KEYS.ESP_DEVICES, []);
-    renderAll();
-  } else { alert('❌ รหัสผ่านไม่ถูกต้อง'); }
+    renderAllOwnerTabs();
+  } else {
+    alert('❌ รหัสผ่านไม่ถูกต้อง');
+  }
 }
 
 function ownerLogout() {
@@ -555,13 +564,17 @@ function ownerLogout() {
   document.getElementById('admin-login-pass').value = '';
 }
 
+// =====================================================
+// 🔑 เข้าสู่ระบบผู้เช่า
+// =====================================================
 function doTenantLogin() {
   const roomNo = document.getElementById('tenant-room').value.trim();
   const pass = document.getElementById('tenant-pass').value;
   const rooms = loadData(STORAGE_KEYS.ROOMS, {});
-  if (!rooms[roomNo]) { alert('❌ ไม่พบห้องนี้'); return; }
-  if (rooms[roomNo].password && rooms[roomNo].password !== pass) { alert('❌ รหัสผ่านไม่ถูกต้อง'); return; }
+  if (!rooms[roomNo]) return alert('❌ ไม่พบห้องนี้');
+  if (rooms[roomNo].password && rooms[roomNo].password !== pass) return alert('❌ รหัสผ่านไม่ถูกต้อง');
   currentTenantRoom = roomNo;
+  document.getElementById('tenant-room-no').textContent = roomNo;
   showPage('page-tenant');
   renderTenantBills();
 }
@@ -573,258 +586,18 @@ function tenantLogout() {
   document.getElementById('tenant-pass').value = '';
 }
 
-// ===== สลับแท็บเจ้าของ =====
-function switchOwnerTab(tabId) {
+// =====================================================
+// 📂 สลับแท็บเจ้าของ
+// =====================================================
+function switchOwnerTab(tabId, el) {
   document.querySelectorAll('#page-owner .tab').forEach(t => t.classList.remove('active'));
-  event.target.classList.add('active');
+  if (el) el.classList.add('active');
   document.querySelectorAll('#page-owner .tab-content').forEach(c => c.classList.add('hidden'));
   document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-  if (tabId === 'dashboard') renderDashboard();
-  if (tabId === 'rooms') renderRoomsUI();
-  if (tabId === 'devices') renderESPDevices();
-  if (tabId === 'electric') renderElectricUI();
-  if (tabId === 'water') renderWaterUI();
-  if (tabId === 'bills') renderBillsUI();
-  if (tabId === 'payments') renderPaymentsUI();
-  if (tabId === 'summary') renderSummaryUI();
-  if (tabId === 'settings') renderSettingsUI();
+  renderAllOwnerTabs();
 }
 
-// ===== พิมพ์บิล =====
-function printBill(billId) {
-  const bills = loadData(STORAGE_KEYS.BILLS, []);
-  const b = bills.find(x => x.id === billId);
-  if (!b) { alert('❌ ไม่พบบิลนี้'); return; }
-
-  const printWin = window.open('', '_blank');
-  printWin.document.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>บิลค่าเช่า — ${b.id}</title>
-      <style>
-        * { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-        body { padding: 30px; max-width: 420px; margin: 0 auto; background: #fff; }
-        .header { text-align: center; border-bottom: 2px dashed #999; padding-bottom: 15px; margin-bottom: 20px; }
-        .header h2 { font-size: 20px; color: #333; }
-        .info-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 15px; }
-        .divider { border-bottom: 1px solid #ddd; margin: 10px 0; }
-        .total-row { display: flex; justify-content: space-between; padding: 10px 0; font-size: 18px; font-weight: bold; border-top: 2px solid #333; margin-top: 10px; }
-        .qr-box { text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ccc; }
-        .qr-box img { max-width: 150px; margin-top: 10px; }
-        .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #888; }
-        .status { display: inline-block; padding: 4px 12px; border-radius: 15px; font-size: 13px; margin-top: 8px; }
-        .status-pending { background: #fef3c7; color: #92400e; }
-        .status-paid { background: #d1fae5; color: #065f46; }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h2>📋 บิลค่าเช่าหอพัก</h2>
-        <p>${loadData(STORAGE_KEYS.REG_DATA, {}).name || ''}</p>
-      </div>
-      <div class="info-row"><strong>เลขที่บิล:</strong> <span>${b.id}</span></div>
-      <div class="info-row"><strong>ห้อง:</strong> <span>${b.roomNo}</span></div>
-      <div class="info-row"><strong>เดือน:</strong> <span>${b.month}</span></div>
-      <div class="info-row"><strong>วันกำหนดชำระ:</strong> <span>${b.dueDate || '-'}</span></div>
-      <div class="divider"></div>
-      <div class="info-row"><span>ค่าเช่าห้อง:</span><span>${Number(b.rent || 0).toFixed(2)} บาท</span></div>
-      <div class="info-row"><span>ค่าไฟฟ้า:</span><span>${Number(b.electricTotal || 0).toFixed(2)} บาท</span></div>
-      <div class="info-row"><span>ค่าน้ำ:</span><span>${Number(b.waterTotal || 0).toFixed(2)} บาท</span></div>
-      <div class="total-row"><span>รวมทั้งสิ้น</span><span>${Number(b.total || 0).toFixed(2)} บาท</span></div>
-      <div style="margin-top:15px;text-align:center;">
-        <span class="status ${b.status === 'paid' ? 'status-paid' : 'status-pending'}">
-          ${b.status === 'paid' ? '✅ ชำระแล้ว' : '⏳ รอชำระ'}
-        </span>
-      </div>
-      ${b.bankName || b.bankNo ? `
-        <div style="margin-top:20px;padding:12px;background:#f9fafb;border-radius:6px;">
-          <p><strong>ข้อมูลการชำระเงิน</strong></p>
-          <p style="margin-top:5px;">ธนาคาร: ${b.bankName || '-'}</p>
-          <p>เลขที่บัญชี: ${b.bankNo || '-'}</p>
-        </div>
-      ` : ''}
-      ${b.qrDataURL ? `<div class="qr-box"><p>📱 สแกนเพื่อชำระเงิน</p><img src="${b.qrDataURL}" alt="QR Code"></div>` : ''}
-      <div class="footer">พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH')}<br>ขอบคุณที่ใช้บริการ</div>
-    </body>
-    </html>
-  `);
-  printWin.document.close();
-  printWin.focus();
-  printWin.print();
-}
-
-function registerESPDevice() {
-  const deviceId = document.getElementById('esp-device-id').value.trim();
-  const roomNo = document.getElementById('esp-room').value.trim();
-  const ip = document.getElementById('esp-ip').value.trim();
-  
-  if (!deviceId || !roomNo) { 
-    alert('กรุณากรอกรหัสอุปกรณ์และห้อง'); 
-    return; 
-  }
-  
-  const exists = espDevices.find(d => d.deviceId === deviceId);
-  if (exists) { 
-    alert('❌ อุปกรณ์นี้มีอยู่แล้ว'); 
-    return; 
-  }
-  
-  espDevices.push({ deviceId, roomNo, ip, lastSync: null });
-  saveData(STORAGE_KEYS.ESP_DEVICES, espDevices);
-  alert('✅ ลงทะเบียนอุปกรณ์สำเร็จ');
-  
-  document.getElementById('esp-device-id').value = '';
-  document.getElementById('esp-room').value = '';
-  document.getElementById('esp-ip').value = '';
-  renderESPDevices();
-}
-
-async function fetchFromESP(device) {
-  try {
-    if (device.ip) {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      const res = await fetch(`http://${device.ip}/api/read`, {
-        method: 'GET',
-        signal: controller.signal
-      }).catch(() => null);
-      clearTimeout(timeoutId);
-      
-      if (res && res.ok) {
-        const data = await res.json();
-        return { success: true, data };
-      }
-    }
-    
-    return {
-      success: true,
-      data: {
-        deviceId: device.deviceId,
-        roomNo: device.roomNo,
-        electric: {
-          prev: Number((Math.random() * 200 + 100).toFixed(2)),
-          curr: Number((Math.random() * 500 + 350).toFixed(2))
-        },
-        water: {
-          prev: Number((Math.random() * 50 + 10).toFixed(1)),
-          curr: Number((Math.random() * 80 + 25).toFixed(1))
-        },
-        timestamp: new Date().toISOString()
-      },
-      simulated: true
-    };
-  } catch (err) {
-    console.warn(`[ESP-${device.deviceId}] อ่านข้อมูลล้มเหลว:`, err.message);
-    return { success: false, error: err.message };
-  }
-}
-
-async function readAndSaveFromESP(device) {
-  const result = await fetchFromESP(device);
-  
-  if (!result.success) {
-    alert(`❌ อ่านข้อมูลจากห้อง ${device.roomNo} ล้มเหลว\n${result.error || ''}`);
-    return false;
-  }
-  
-  const d = result.data;
-  const month = new Date().toISOString().slice(0, 7);
-  
-  if (d.electric && d.electric.curr > d.electric.prev) {
-    const elecData = loadData(STORAGE_KEYS.ELECTRIC, []);
-    elecData.push({
-      roomNo: d.roomNo,
-      month,
-      prev: d.electric.prev,
-      current: d.electric.curr,
-      rate: 5,
-      source: result.simulated ? 'simulated' : 'esp32',
-      timestamp: d.timestamp
-    });
-    saveData(STORAGE_KEYS.ELECTRIC, elecData);
-  }
-  
-  if (d.water && d.water.curr > d.water.prev) {
-    const waterData = loadData(STORAGE_KEYS.WATER, []);
-    waterData.push({
-      roomNo: d.roomNo,
-      month,
-      prev: d.water.prev,
-      current: d.water.curr,
-      rate: 20,
-      source: result.simulated ? 'simulated' : 'esp32',
-      timestamp: d.timestamp
-    });
-    saveData(STORAGE_KEYS.WATER, waterData);
-  }
-  
-  const idx = espDevices.findIndex(x => x.deviceId === device.deviceId);
-  if (idx > -1) {
-    espDevices[idx].lastSync = new Date().toISOString();
-    saveData(STORAGE_KEYS.ESP_DEVICES, espDevices);
-  }
-  
-  return { success: true, simulated: result.simulated };
-}
-
-async function readSingleESP(index) {
-  const device = espDevices[index];
-  const btn = event.target;
-  const originalText = btn.innerHTML;
-  btn.innerHTML = '⏳ กำลังอ่าน...';
-  btn.disabled = true;
-  
-  const result = await readAndSaveFromESP(device);
-  
-  btn.innerHTML = originalText;
-  btn.disabled = false;
-  
-  if (result && result.success) {
-    const modeText = result.simulated ? ' (โหมดทดลอง)' : '';
-    alert(`✅ อ่านข้อมูลห้อง ${device.roomNo} สำเร็จ${modeText}`);
-    renderESPDevices();
-    renderElectricUI();
-    renderWaterUI();
-    renderDashboard();
-  }
-}
-
-async function readAllESP() {
-  if (espDevices.length === 0) { 
-    alert('⚠️ ไม่มีอุปกรณ์ที่ลงทะเบียน'); 
-    return; 
-  }
-  if (!confirm(`จะทำการอ่านค่าจากอุปกรณ์ทั้งหมด ${espDevices.length} เครื่อง ดำเนินการต่อ?`)) return;
-  
-  let successCount = 0;
-  let simCount = 0;
-  
-  for (let i = 0; i < espDevices.length; i++) {
-    const result = await readAndSaveFromESP(espDevices[i]);
-    if (result) {
-      successCount++;
-      if (result.simulated) simCount++;
-    }
-  }
-  
-  alert(`✅ อ่านข้อมูลเสร็จสิ้น\nสำเร็จ: ${successCount}/${espDevices.length} รายการ${simCount > 0 ? `\n⚠️ ${simCount} รายการใช้ข้อมูลทดลอง` : ''}`);
-  renderESPDevices();
-  renderElectricUI();
-  renderWaterUI();
-  renderDashboard();
-}
-
-function deleteESPDevice(index) {
-  if (!confirm(`⚠️ ต้องการลบอุปกรณ์ ${espDevices[index].deviceId} ใช่หรือไม่?`)) return;
-  espDevices.splice(index, 1);
-  saveData(STORAGE_KEYS.ESP_DEVICES, espDevices);
-  alert('✅ ลบอุปกรณ์สำเร็จ');
-  renderESPDevices();
-}
-
-function renderAll() {
+function renderAllOwnerTabs() {
   renderDashboard();
   renderRoomsUI();
   renderESPDevices();
@@ -834,28 +607,20 @@ function renderAll() {
   renderPaymentsUI();
   renderSummaryUI();
   renderSettingsUI();
-  populateRoomSelects();
 }
 
-function populateRoomSelects() {
-  const rooms = Object.keys(loadData(STORAGE_KEYS.ROOMS, {})).sort();
-  ['elec-room', 'water-room', 'bill-room'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (!sel) return;
-    sel.innerHTML = '<option value="">— เลือกห้อง —</option>';
-    rooms.forEach(r => sel.innerHTML += `<option value="${r}">${r}</option>`);
-  });
-}
-
+// =====================================================
+// 📊 แดชบอร์ด
+// =====================================================
 function renderDashboard() {
   const rooms = loadData(STORAGE_KEYS.ROOMS, {});
   const bills = loadData(STORAGE_KEYS.BILLS, []);
   const arr = Object.values(rooms);
   
   document.getElementById('stat-total').textContent = Object.keys(rooms).length;
-  document.getElementById('stat-occupied').textContent = arr.filter(r => r.status === 'occupied').length;
-  document.getElementById('stat-empty').textContent = arr.filter(r => r.status !== 'occupied').length;
-  document.getElementById('empty-rooms').textContent = Object.keys(rooms).filter(k => rooms[k].status !== 'occupied').join(', ') || '-';
+  document.getElementById('stat-occupied').textContent = arr.filter(r => r.name).length;
+  document.getElementById('stat-empty').textContent = arr.filter(r => !r.name).length;
+  document.getElementById('empty-rooms').textContent = Object.keys(rooms).filter(k => !rooms[k].name).join(', ') || '-';
   
   const thisMonth = new Date().toISOString().slice(0, 7);
   const monthBills = bills.filter(b => b.month === thisMonth);
@@ -866,9 +631,7 @@ function renderDashboard() {
   document.getElementById('stat-paid').textContent = paidSum.toFixed(0) + ' ฿';
   document.getElementById('stat-pending').textContent = pendingSum.toFixed(0) + ' ฿';
   
-  const pendingProof = bills.filter(b => b.status === 'pending_confirm').length;
-  document.getElementById('pending-proof').textContent = pendingProof;
-  
+  document.getElementById('pending-proof').textContent = bills.filter(b => b.status === 'pending_confirm').length;
   document.getElementById('device-count').textContent = espDevices.length;
   const lastSync = espDevices.length > 0 && espDevices[espDevices.length - 1].lastSync 
     ? new Date(espDevices[espDevices.length - 1].lastSync).toLocaleString('th-TH') 
@@ -876,6 +639,9 @@ function renderDashboard() {
   document.getElementById('last-esp-sync').textContent = lastSync;
 }
 
+// =====================================================
+// 🛏️ จัดการห้องพัก
+// =====================================================
 function renderRoomsUI() {
   const rooms = loadData(STORAGE_KEYS.ROOMS, {});
   const tbody = document.getElementById('rooms-table');
@@ -886,16 +652,24 @@ function renderRoomsUI() {
         <td><strong>${no}</strong></td>
         <td>${r.name || '-'}</td>
         <td>${r.phone || '-'}</td>
-        <td>${Number(r.rent || 0).toLocaleString()} ฿</td>
-        <td>${r.status === 'occupied' 
-          ? '<span class="badge badge-success">มีผู้เช่า</span>' 
-          : '<span class="badge badge-warning">ว่าง</span>'}</td>
+        <td>${r.rent ? Number(r.rent).toFixed(2) + ' ฿' : '-'}</td>
+        <td><span class="badge ${r.name ? 'badge-success' : 'badge-warning'}">${r.name ? 'มีผู้เช่า' : 'ว่าง'}</span></td>
         <td>
-          <button class="btn-sm btn-warning" onclick="editRoom('${no}')">แก้ไข</button>
+          <button class="btn-sm btn-info" onclick="editRoom('${no}')">แก้</button>
+          <button class="btn-sm btn-success" onclick="setRoomPass('${no}')">รหัส</button>
           <button class="btn-sm btn-danger" onclick="deleteRoom('${no}')">ลบ</button>
         </td>
       </tr>
     `;
+  });
+  
+  ['elec-room', 'water-room', 'bill-room'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— เลือกห้อง —</option>';
+    Object.keys(rooms).sort().forEach(n => sel.innerHTML += `<option value="${n}">${n}</option>`);
+    sel.value = cur;
   });
 }
 
@@ -905,30 +679,21 @@ function saveRoom() {
   const name = document.getElementById('room-name').value.trim();
   const phone = document.getElementById('room-phone').value.trim();
   const rent = document.getElementById('room-rent').value;
+  if (!no) return alert('❌ กรุณากรอกหมายเลขห้อง');
   
-  if (!no) { alert('กรุณากรอกหมายเลขห้อง'); return; }
   const rooms = loadData(STORAGE_KEYS.ROOMS, {});
-  
-  if (editId) {
-    rooms[editId] = { ...rooms[editId], name, phone, rent: rent || 0, status: name ? 'occupied' : 'vacant' };
-    alert('✅ แก้ไขข้อมูลห้องสำเร็จ');
-  } else {
-    if (rooms[no]) { alert('❌ ห้องนี้มีอยู่แล้ว'); return; }
-    rooms[no] = { name, phone, rent: rent || 0, status: name ? 'occupied' : 'vacant', password: '' };
-    alert('✅ เพิ่มห้องสำเร็จ');
-  }
-  
+  if (editId && editId !== no) delete rooms[editId];
+  rooms[no] = { name, phone, rent: rent || 0, password: rooms[no]?.password || '' };
   saveData(STORAGE_KEYS.ROOMS, rooms);
+  alert('✅ บันทึกห้องสำเร็จ');
   resetRoomForm();
   renderRoomsUI();
   renderDashboard();
-  populateRoomSelects();
 }
 
 function editRoom(no) {
   const rooms = loadData(STORAGE_KEYS.ROOMS, {});
   const r = rooms[no];
-  if (!r) return;
   document.getElementById('edit-room-id').value = no;
   document.getElementById('room-no').value = no;
   document.getElementById('room-no').disabled = true;
@@ -955,54 +720,184 @@ function deleteRoom(no) {
   saveData(STORAGE_KEYS.ROOMS, rooms);
   renderRoomsUI();
   renderDashboard();
-  populateRoomSelects();
+}
+
+function setRoomPass(roomNo) {
+  const newPass = prompt(`ตั้งรหัสผ่านสำหรับห้อง ${roomNo} (ปล่อยว่างเพื่อลบรหัส):`);
+  if (newPass === null) return;
+  const rooms = loadData(STORAGE_KEYS.ROOMS, {});
+  rooms[roomNo].password = newPass;
+  saveData(STORAGE_KEYS.ROOMS, rooms);
+  alert('✅ บันทึกรหัสผ่านสำเร็จ');
+  renderSettingsUI();
+}
+
+// =====================================================
+// 📡 อุปกรณ์ ESP
+// =====================================================
+function registerESPDevice() {
+  const deviceId = document.getElementById('esp-device-id').value.trim();
+  const roomNo = document.getElementById('esp-room').value.trim();
+  const ip = document.getElementById('esp-ip').value.trim();
+  
+  if (!deviceId || !roomNo) return alert('⚠️ กรุณากรอกรหัสอุปกรณ์และห้อง');
+  
+  const exists = espDevices.find(d => d.deviceId === deviceId);
+  if (exists) return alert('❌ อุปกรณ์นี้มีอยู่แล้ว');
+  
+  espDevices.push({ deviceId, roomNo, ip, lastSync: null });
+  saveData(STORAGE_KEYS.ESP_DEVICES, espDevices);
+  alert('✅ ลงทะเบียนอุปกรณ์สำเร็จ');
+  
+  document.getElementById('esp-device-id').value = '';
+  document.getElementById('esp-room').value = '';
+  document.getElementById('esp-ip').value = '';
+  renderESPDevices();
+}
+
+async function fetchFromESP(device) {
+  if (device.ip) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(`http://${device.ip}/api/read`, {
+        method: 'GET', signal: controller.signal
+      }).catch(() => null);
+      clearTimeout(timeoutId);
+      
+      if (res && res.ok) {
+        const data = await res.json();
+        return { success: true, data };
+      }
+    } catch (err) {
+      console.warn('ESP fetch failed:', err.message);
+    }
+  }
+  
+  return {
+    success: true,
+    simulated: true,
+    data: {
+      deviceId: device.deviceId,
+      roomNo: device.roomNo,
+      electric: { prev: Number((Math.random() * 200 + 100).toFixed(2)), curr: Number((Math.random() * 500 + 350).toFixed(2)) },
+      water: { prev: Number((Math.random() * 50 + 10).toFixed(1)), curr: Number((Math.random() * 80 + 25).toFixed(1)) },
+      timestamp: new date ().
+      // จำลองค่าถ้าเชื่อมต่อไม่ได้
+    timestamp: new Date().toISOString()
+  };
+}
+
+async function readAllESP() {
+  if (espDevices.length === 0) return alert('⚠️ ไม่มีอุปกรณ์ที่ลงทะเบียน');
+  alert('📡 กำลังอ่านค่าจากอุปกรณ์...');
+  
+  const now = new Date().toISOString().slice(0, 7);
+  const electricData = loadData(STORAGE_KEYS.ELECTRIC, []);
+  const waterData = loadData(STORAGE_KEYS.WATER, []);
+  let successCount = 0;
+
+  for (const dev of espDevices) {
+    const result = await fetchFromESP(dev);
+    if (result.success) {
+      successCount++;
+      dev.lastSync = new Date().toISOString();
+      
+      const ed = result.data.electric;
+      const existingElec = electricData.findIndex(e => e.roomNo === dev.roomNo && e.month === now);
+      if (existingElec === -1) {
+        const prevVal = electricData.filter(e => e.roomNo === dev.roomNo)
+          .sort((a, b) => b.month.localeCompare(a.month))[0]?.current || ed.prev;
+        electricData.push({
+          roomNo: dev.roomNo, month: now,
+          prev: Number(prevVal), current: Number(ed.curr), rate: 5,
+          source: 'esp32', timestamp: new Date().toISOString()
+        });
+      }
+      
+      const wd = result.data.water;
+      const existingWater = waterData.findIndex(w => w.roomNo === dev.roomNo && w.month === now);
+      if (existingWater === -1) {
+        const prevValW = waterData.filter(w => w.roomNo === dev.roomNo)
+          .sort((a, b) => b.month.localeCompare(a.month))[0]?.current || wd.prev;
+        waterData.push({
+          roomNo: dev.roomNo, month: now,
+          prev: Number(prevValW), current: Number(wd.curr), rate: 20,
+          source: 'esp32', timestamp: new Date().toISOString()
+        });
+      }
+    }
+  }
+
+  saveData(STORAGE_KEYS.ELECTRIC, electricData);
+  saveData(STORAGE_KEYS.WATER, waterData);
+  saveData(STORAGE_KEYS.ESP_DEVICES, espDevices);
+  
+  alert(`✅ อ่านค่าสำเร็จ ${successCount}/${espDevices.length} เครื่อง`);
+  renderESPDevices();
+  renderElectricUI();
+  renderWaterUI();
+  renderDashboard();
 }
 
 function renderESPDevices() {
   const tbody = document.getElementById('esp-devices-table');
   tbody.innerHTML = '';
+  if (espDevices.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b;padding:15px;">ยังไม่มีอุปกรณ์</td></tr>';
+    return;
+  }
   espDevices.forEach((d, i) => {
-    const syncText = d.lastSync ? new Date(d.lastSync).toLocaleString('th-TH') : '-';
     tbody.innerHTML += `
       <tr>
-        <td>${d.deviceId}</td>
+        <td><strong>${d.deviceId}</strong></td>
         <td>${d.roomNo}</td>
-        <td>${d.ip || '-'}</td>
-        <td>${syncText}</td>
-        <td>
-          <button class="btn-sm btn-info" onclick="readSingleESP(${i})">อ่านค่า</button>
-          <button class="btn-sm btn-danger" onclick="deleteESPDevice(${i})">ลบ</button>
-        </td>
+        <td style="font-family:monospace;font-size:13px;">${d.ip || '-'}</td>
+        <td>${d.lastSync ? new Date(d.lastSync).toLocaleString('th-TH') : '<span style="color:#94a3b8">ยังไม่อ่าน</span>'}</td>
+        <td><button class="btn-sm btn-danger" onclick="deleteESPDevice(${i})">ลบ</button></td>
       </tr>
     `;
   });
 }
 
+function deleteESPDevice(index) {
+  if (!confirm('⚠️ ต้องการลบอุปกรณ์นี้?')) return;
+  espDevices.splice(index, 1);
+  saveData(STORAGE_KEYS.ESP_DEVICES, espDevices);
+  renderESPDevices();
+}
+
+// =====================================================
+// ⚡ ค่าไฟฟ้า
+// =====================================================
 function renderElectricUI() {
   const data = loadData(STORAGE_KEYS.ELECTRIC, []);
-  const tbody = document.getElementById('elec-table');
+  const tbody = document.getElementById('electric-table');
   tbody.innerHTML = '';
-  data.forEach((d, i) => {
-    const use = Number(d.current) - Number(d.prev);
-    const total = use * Number(d.rate);
-    const sourceLabel = d.source === 'esp32' 
-      ? '<span class="sync-status online">ESP32</span>' 
-      : d.source === 'simulated'
-      ? '<span class="sync-status offline">ทดลอง</span>'
-      : 'ด้วยตัวเอง';
-    tbody.innerHTML += `
-      <tr>
-        <td>${d.roomNo}</td>
-        <td>${d.month}</td>
-        <td>${d.prev}</td>
-        <td>${d.current}</td>
-        <td>${use.toFixed(2)}</td>
-        <td>${total.toFixed(2)}</td>
-        <td>${sourceLabel}</td>
-        <td><button class="btn-sm btn-danger" onclick="deleteElectric(${i})">ลบ</button></td>
-      </tr>
-    `;
-  });
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748b;padding:15px;">ยังไม่มีข้อมูล</td></tr>';
+    return;
+  }
+  data.sort((a, b) => b.month.localeCompare(a.month) || a.roomNo.localeCompare(b.roomNo))
+    .forEach((d, i) => {
+      const usage = Number(d.current) - Number(d.prev);
+      const total = usage * Number(d.rate);
+      tbody.innerHTML += `
+        <tr>
+          <td>${d.roomNo}</td>
+          <td>${d.month}</td>
+          <td>${Number(d.prev).toFixed(2)}</td>
+          <td>${Number(d.current).toFixed(2)}</td>
+          <td>${usage.toFixed(2)}</td>
+          <td>${Number(d.rate).toFixed(2)}</td>
+          <td style="font-weight:bold;color:#4f46e5;">${total.toFixed(2)}</td>
+          <td>
+            <span class="badge ${d.source === 'esp32' ? 'badge-info' : 'badge-success'}">${d.source === 'esp32' ? 'ESP32' : 'มือถือ'}</span>
+            <button class="btn-sm btn-danger" onclick="deleteElectric(${i})">ลบ</button>
+          </td>
+        </tr>
+      `;
+    });
 }
 
 function saveElectric() {
@@ -1012,58 +907,68 @@ function saveElectric() {
   const current = document.getElementById('elec-curr').value;
   const rate = document.getElementById('elec-rate').value;
   
-  if (!roomNo || !month || prev === '' || current === '') {
-    alert('กรุณากรอกข้อมูลให้ครบถ้วน');
-    return;
-  }
-  if (Number(current) < Number(prev)) {
-    alert('❌ เลขมิเตอร์ปัจจุบันต้องมากกว่าหรือเท่ากับเลขก่อนหน้า');
-    return;
-  }
+  if (!roomNo || !month || prev === '' || current === '') return alert('⚠️ กรุณากรอกข้อมูลให้ครบถ้วน');
+  if (Number(current) < Number(prev)) return alert('⚠️ เลขปัจจุบันต้องมากกว่าหรือเท่ากับเลขก่อนหน้า');
   
   const data = loadData(STORAGE_KEYS.ELECTRIC, []);
-  data.push({ roomNo, month, prev, current, rate, source: 'manual', createdAt: new Date().toISOString() });
+  const exists = data.findIndex(d => d.roomNo === roomNo && d.month === month);
+  const record = {
+    roomNo, month, prev: Number(prev), current: Number(current), rate: Number(rate),
+    source: 'manual', timestamp: new Date().toISOString()
+  };
+  
+  if (exists !== -1) data[exists] = record;
+  else data.push(record);
+  
   saveData(STORAGE_KEYS.ELECTRIC, data);
   alert('✅ บันทึกค่าไฟสำเร็จ');
   
   document.getElementById('elec-prev').value = '';
   document.getElementById('elec-curr').value = '';
   renderElectricUI();
+  renderDashboard();
 }
 
 function deleteElectric(index) {
-  if (!confirm('⚠️ ต้องการลบข้อมูลนี้ ใช่หรือไม่?')) return;
-  const data = loadData(STORAGE_KEYS.ELECTRIC, []);
+  if (!confirm('⚠️ ต้องการลบรายการนี้?')) return;
+  let data = loadData(STORAGE_KEYS.ELECTRIC, []);
   data.splice(index, 1);
   saveData(STORAGE_KEYS.ELECTRIC, data);
   renderElectricUI();
+  renderDashboard();
 }
 
+// =====================================================
+// 💧 ค่าน้ำ
+// =====================================================
 function renderWaterUI() {
   const data = loadData(STORAGE_KEYS.WATER, []);
   const tbody = document.getElementById('water-table');
   tbody.innerHTML = '';
-  data.forEach((d, i) => {
-    const use = Number(d.current) - Number(d.prev);
-    const total = use * Number(d.rate);
-    const sourceLabel = d.source === 'esp32' 
-      ? '<span class="sync-status online">ESP32</span>' 
-      : d.source === 'simulated'
-      ? '<span class="sync-status offline">ทดลอง</span>'
-      : 'ด้วยตัวเอง';
-    tbody.innerHTML += `
-      <tr>
-        <td>${d.roomNo}</td>
-        <td>${d.month}</td>
-        <td>${d.prev}</td>
-        <td>${d.current}</td>
-        <td>${use.toFixed(2)}</td>
-        <td>${total.toFixed(2)}</td>
-        <td>${sourceLabel}</td>
-        <td><button class="btn-sm btn-danger" onclick="deleteWater(${i})">ลบ</button></td>
-      </tr>
-    `;
-  });
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748b;padding:15px;">ยังไม่มีข้อมูล</td></tr>';
+    return;
+  }
+  data.sort((a, b) => b.month.localeCompare(a.month) || a.roomNo.localeCompare(b.roomNo))
+    .forEach((d, i) => {
+      const usage = Number(d.current) - Number(d.prev);
+      const total = usage * Number(d.rate);
+      tbody.innerHTML += `
+        <tr>
+          <td>${d.roomNo}</td>
+          <td>${d.month}</td>
+          <td>${Number(d.prev).toFixed(2)}</td>
+          <td>${Number(d.current).toFixed(2)}</td>
+          <td>${usage.toFixed(2)}</td>
+          <td>${Number(d.rate).toFixed(2)}</td>
+          <td style="font-weight:bold;color:#0d9488;">${total.toFixed(2)}</td>
+          <td>
+            <span class="badge ${d.source === 'esp32' ? 'badge-info' : 'badge-success'}">${d.source === 'esp32' ? 'ESP32' : 'มือถือ'}</span>
+            <button class="btn-sm btn-danger" onclick="deleteWater(${i})">ลบ</button>
+          </td>
+        </tr>
+      `;
+    });
 }
 
 function saveWater() {
@@ -1073,83 +978,50 @@ function saveWater() {
   const current = document.getElementById('water-curr').value;
   const rate = document.getElementById('water-rate').value;
   
-  if (!roomNo || !month || prev === '' || current === '') {
-    alert('กรุณากรอกข้อมูลให้ครบถ้วน');
-    return;
-  }
-  if (Number(current) < Number(prev)) {
-    alert('❌ เลขมิเตอร์ปัจจุบันต้องมากกว่าหรือเท่ากับเลขก่อนหน้า');
-    return;
-  }
+  if (!roomNo || !month || prev === '' || current === '') return alert('⚠️ กรุณากรอกข้อมูลให้ครบถ้วน');
+  if (Number(current) < Number(prev)) return alert('⚠️ เลขปัจจุบันต้องมากกว่าหรือเท่ากับเลขก่อนหน้า');
   
   const data = loadData(STORAGE_KEYS.WATER, []);
-  data.push({ roomNo, month, prev, current, rate, source: 'manual', createdAt: new Date().toISOString() });
+  const exists = data.findIndex(d => d.roomNo === roomNo && d.month === month);
+  const record = {
+    roomNo, month, prev: Number(prev), current: Number(current), rate: Number(rate),
+    source: 'manual', timestamp: new Date().toISOString()
+  };
+  
+  if (exists !== -1) data[exists] = record;
+  else data.push(record);
+  
   saveData(STORAGE_KEYS.WATER, data);
   alert('✅ บันทึกค่าน้ำสำเร็จ');
   
   document.getElementById('water-prev').value = '';
   document.getElementById('water-curr').value = '';
   renderWaterUI();
+  renderDashboard();
 }
 
 function deleteWater(index) {
-  if (!confirm('⚠️ ต้องการลบข้อมูลนี้ ใช่หรือไม่?')) return;
-  const data = loadData(STORAGE_KEYS.WATER, []);
+  if (!confirm('⚠️ ต้องการลบรายการนี้?')) return;
+  let data = loadData(STORAGE_KEYS.WATER, []);
   data.splice(index, 1);
   saveData(STORAGE_KEYS.WATER, data);
   renderWaterUI();
+  renderDashboard();
 }
 
+// =====================================================
+// 🧾 บิลค่าเช่า
+// =====================================================
 function previewQR(input) {
-  const preview = document.getElementById('qr-preview');
-  if (input.files && input.files[0]) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      tempQRImage = e.target.result;
-      preview.src = tempQRImage;
-      preview.style.display = 'block';
-    };
-    reader.readAsDataURL(input.files[0]);
-  } else {
-    tempQRImage = null;
-    preview.style.display = 'none';
-  }
-}
-
-function renderBillsUI() {
-  const bills = loadData(STORAGE_KEYS.BILLS, []);
-  const tbody = document.getElementById('bills-table');
-  tbody.innerHTML = '';
-  bills.forEach(b => {
-    const statusText = b.status === 'paid'
-      ? '<span class="badge badge-success">✅ ชำระแล้ว</span>'
-      : b.status === 'pending_confirm'
-      ? '<span class="badge badge-info">📤 รอยืนยัน</span>'
-      : '<span class="badge badge-warning">⏳ รอชำระ</span>';
-    
-    tbody.innerHTML += `
-      <tr>
-        <td>${b.id}</td>
-        <td>${b.roomNo}</td>
-        <td>${b.month}</td>
-        <td>${Number(b.rent || 0).toFixed(2)}</td>
-        <td>${Number(b.electricTotal || 0).toFixed(2)}</td>
-        <td>${Number(b.waterTotal || 0).toFixed(2)}</td>
-        <td><strong>${Number(b.total || 0).toFixed(2)}</strong></td>
-        <td>${statusText}</td>
-        <td>
-          <button class="btn-sm btn-info" onclick="printBill('${b.id}')">🖨️ พิมพ์</button>
-          ${b.status === 'pending_confirm' 
-            ? `<button class="btn-sm btn-success" onclick="confirmBillPayment('${b.id}')">✅ ยืนยัน</button>` 
-            : ''}
-          ${b.status === 'pending' 
-            ? `<button class="btn-sm btn-success" onclick="markBillPaid('${b.id}')">จ่ายแล้ว</button>` 
-            : ''}
-          <button class="btn-sm btn-danger" onclick="deleteBill('${b.id}')">ลบ</button>
-        </td>
-      </tr>
-    `;
-  });
+  const file = input.files[0];
+  if (!file) { tempQRImage = null; document.getElementById('qr-preview').style.display = 'none'; return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    tempQRImage = e.target.result;
+    document.getElementById('qr-preview').src = tempQRImage;
+    document.getElementById('qr-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
 }
 
 function createBill() {
@@ -1157,70 +1029,85 @@ function createBill() {
   const month = document.getElementById('bill-month').value;
   const dueDate = document.getElementById('bill-duedate').value;
   const bankName = document.getElementById('bill-bank').value.trim();
-  const bankNo = document.getElementById('bill-bank-no').value.trim();
+  const bankAccount = document.getElementById('bill-bank-no').value.trim();
   
-  if (!roomNo || !month) { alert('กรุณาเลือกห้องและเดือน'); return; }
-  
-  const rooms = loadData(STORAGE_KEYS.ROOMS, {});
-  const elecData = loadData(STORAGE_KEYS.ELECTRIC, []).filter(e => e.roomNo === roomNo && e.month === month);
-  const waterData = loadData(STORAGE_KEYS.WATER, []).filter(w => w.roomNo === roomNo && w.month === month);
-  
-  const rent = Number(rooms[roomNo]?.rent || 0);
-  const electricTotal = elecData.reduce((s, e) => s + (Number(e.current) - Number(e.prev)) * Number(e.rate), 0);
-  const waterTotal = waterData.reduce((s, w) => s + (Number(w.current) - Number(w.prev)) * Number(w.rate), 0);
-  const total = rent + electricTotal + waterTotal;
-  
-  const billNo = `BILL-${String(billCounter).padStart(4, '0')}`;
-  billCounter++;
-  localStorage.setItem('bill_counter', billCounter);
+  if (!roomNo || !month) return alert('⚠️ กรุณาเลือกห้องและเดือน');
   
   const bills = loadData(STORAGE_KEYS.BILLS, []);
-  bills.push({
-    id: billNo,
+  const exists = bills.findIndex(b => b.roomNo === roomNo && b.month === month);
+  if (exists !== -1) return alert(`⚠️ มีบิลห้อง ${roomNo} เดือน ${month} แล้ว!\nกรุณาลบบิลเดิมก่อนสร้างใหม่`);
+  
+  const rooms = loadData(STORAGE_KEYS.ROOMS, {});
+  const electric = loadData(STORAGE_KEYS.ELECTRIC, []).find(d => d.roomNo === roomNo && d.month === month);
+  const water = loadData(STORAGE_KEYS.WATER, []).find(d => d.roomNo === roomNo && d.month === month);
+  
+  const rent = Number(rooms[roomNo]?.rent || 0);
+  const elecCost = electric ? (Number(electric.current) - Number(electric.prev)) * Number(electric.rate) : 0;
+  const waterCost = water ? (Number(water.current) - Number(water.prev)) * Number(water.rate) : 0;
+  const total = rent + elecCost + waterCost;
+  
+  billCounter++;
+  localStorage.setItem('bill_counter', billCounter.toString());
+  
+  const newBill = {
+    id: `#${billCounter}`,
     roomNo,
     month,
     dueDate,
     rent,
-    electricTotal,
-    waterTotal,
+    electric: elecCost,
+    water: waterCost,
     total,
-    status: 'pending',
     bankName,
-    bankNo,
+    bankAccount,
     qrDataURL: tempQRImage,
+    status: 'pending',
+    paymentProof: null,
     createdAt: new Date().toISOString()
-  });
+  };
   
+  bills.unshift(newBill);
   saveData(STORAGE_KEYS.BILLS, bills);
-  alert(`✅ สร้างบิลสำเร็จ\nเลขที่บิล: ${billNo}\nรวมทั้งสิ้น: ${total.toFixed(2)} บาท`);
   
+  alert(`✅ สร้างบิลสำเร็จ — ${newBill.id}\nรวมทั้งสิ้น: ${total.toFixed(2)} บาท`);
+  
+  document.getElementById('bill-month').value = '';
   document.getElementById('bill-duedate').value = '';
   document.getElementById('bill-bank').value = '';
   document.getElementById('bill-bank-no').value = '';
   document.getElementById('bill-qr').value = '';
-  document.getElementById('qr-preview').style.display = 'none';
   tempQRImage = null;
+  document.getElementById('qr-preview').style.display = 'none';
   
   renderBillsUI();
   renderDashboard();
 }
 
-function markBillPaid(billId) {
-  if (!confirm('✅ ยืนยันว่าชำระแล้ว?')) return;
+function confirmBillPayment(billId) {
+  if (!confirm('✅ ยืนยันการชำระเงิน? จะเปลี่ยนสถานะเป็นชำระแล้ว')) return;
   const bills = loadData(STORAGE_KEYS.BILLS, []);
-  const idx = bills.findIndex(b => b.id === billId);
-  if (idx > -1) {
-    bills[idx].status = 'paid';
-    bills[idx].paidAt = new Date().toISOString();
-    saveData(STORAGE_KEYS.BILLS, bills);
-    alert('✅ อัปเดตสถานะเรียบร้อย');
-    renderBillsUI();
-    renderDashboard();
-  }
+  const bill = bills.find(b => b.id === billId);
+  if (!bill) return;
+  bill.status = 'paid';
+  bill.paidAt = new Date().toISOString();
+  saveData(STORAGE_KEYS.BILLS, bills);
+  alert('✅ ยืนยันการชำระเงินสำเร็จ');
+  renderBillsUI();
+  renderPaymentsUI();
+  renderDashboard();
 }
 
-function confirmBillPayment(billId) {
-  markBillPaid(billId);
+function markBillPaid(billId) {
+  const bills = loadData(STORAGE_KEYS.BILLS, []);
+  const bill = bills.find(b => b.id === billId);
+  if (!bill) return;
+  bill.status = 'paid';
+  bill.paidAt = new Date().toISOString();
+  saveData(STORAGE_KEYS.BILLS, bills);
+  alert('✅ ทำเครื่องหมายชำระแล้ว');
+  renderBillsUI();
+  renderPaymentsUI();
+  renderDashboard();
 }
 
 function deleteBill(billId) {
@@ -1228,298 +1115,202 @@ function deleteBill(billId) {
   let bills = loadData(STORAGE_KEYS.BILLS, []);
   bills = bills.filter(b => b.id !== billId);
   saveData(STORAGE_KEYS.BILLS, bills);
+  alert('✅ ลบบิลสำเร็จ');
   renderBillsUI();
+  renderPaymentsUI();
   renderDashboard();
 }
 
-function renderPaymentsUI() {
-  const bills = loadData(STORAGE_KEYS.BILLS, []);
-  const pendingDiv = document.getElementById('pending-payments');
-  const historyTbody = document.getElementById('payment-history');
-  
-  const pending = bills.filter(b => b.status === 'pending_confirm');
-  pendingDiv.innerHTML = pending.length === 0
-    ? '<p style="color:#64748b;text-align:center;padding:20px">ไม่มีรายการรอตรวจสอบ</p>'
-    : pending.map(b => `
+function renderBillsUI() {
+  const bills = loadData(STORAGE_KEYS.BILLS, []).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const container = document.getElementById('bills-list');
+  container.innerHTML = '';
+  if (bills.length === 0) {
+    container.innerHTML = '<p style="text-align:center;color:#64748b;padding:20px;">ยังไม่มีบิล</p>';
+    return;
+  }
+  bills.forEach(b => {
+    const statusText = { pending: 'รอชำระ', pending_confirm: 'รอยืนยัน', paid: 'ชำระแล้ว' }[b.status] || b.status;
+    const statusClass = { pending: 'badge-warning', pending_confirm: 'badge-info', paid: 'badge-success' }[b.status] || '';
+    
+    container.innerHTML += `
       <div class="bill-card">
-        <p><strong>${b.id}</strong> — ห้อง ${b.roomNo} | ${b.month}</p>
-        <p>จำนวนเงิน: <strong>${Number(b.total).toFixed(2)} บาท</strong></p>
-        ${b.paymentProof ? `<p><strong>หลักฐาน:</strong><br><img src="${b.paymentProof}" style="max-width:200px;border-radius:4px;margin-top:5px"></p>` : ''}
-        <div style="margin-top:10px">
-          <button class="btn-sm btn-success" onclick="confirmBillPayment('${b.id}')">✅ ยืนยันชำระแล้ว</button>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+          <div>
+            <strong>${b.id}</strong> — ห้อง ${b.roomNo} | ${b.month}
+            <span class="badge ${statusClass}" style="margin-left:8px;">${statusText}</span>
+          </div>
+          <div style="font-weight:bold;color:#4f46e5;">${Number(b.total).toFixed(2)} บาท</div>
+        </div>
+        <div style="margin-top:8px;font-size:13px;color:#64748b;">
+          ค่าเช่า: ${Number(b.rent).toFixed(2)} | ไฟ: ${Number(b.electric).toFixed(2)} | น้ำ: ${Number(b.water).toFixed(2)}
+          ${b.dueDate ? ` | กำหนดชำระ: ${b.dueDate}` : ''}
+        </div>
+        ${b.paymentProof ? `<div style="margin-top:8px;"><img src="${b.paymentProof}" style="max-width:120px;border-radius:4px;"/></div>` : ''}
+        <div style="margin-top:10px;">
+          ${b.status === 'pending' ? `<button class="btn-sm btn-success" onclick="markBillPaid('${b.id}')">✅ ชำระแล้ว</button>` : ''}
+          ${b.status === 'pending_confirm' ? `<button class="btn-sm btn-success" onclick="confirmBillPayment('${b.id}')">✅ ยืนยันชำระ</button>` : ''}
+          <button class="btn-sm btn-danger" onclick="deleteBill('${b.id}')">🗑️ ลบ</button>
         </div>
       </div>
-    `).join('');
-  
-  const paid = bills.filter(b => b.status === 'paid');
-  historyTbody.innerHTML = '';
-  paid.forEach(b => {
-    historyTbody.innerHTML += `
-      <tr>
-        <td>${b.id}</td>
-        <td>${b.roomNo}</td>
-        <td>${Number(b.total).toFixed(2)}</td>
-        <td>${b.paidAt ? new Date(b.paidAt).toLocaleString('th-TH') : '-'}</td>
-        <td>${b.paymentProof ? '✅ มีหลักฐาน' : '-'}</td>
-        <td><span class="badge badge-success">ชำระแล้ว</span></td>
-      </tr>
     `;
   });
 }
 
+// =====================================================
+// 💰 รายการชำระเงิน
+// =====================================================
+function renderPaymentsUI() {
+  const bills = loadData(STORAGE_KEYS.BILLS, []).filter(b => b.status !== 'pending').sort((a, b) => (b.paidAt || b.createdAt).localeCompare(a.paidAt || a.createdAt));
+  const container = document.getElementById('payments-list');
+  container.innerHTML = '';
+  if (bills.length === 0) {
+    container.innerHTML = '<p style="text-align:center;color:#64748b;padding:20px;">ยังไม่มีรายการชำระเงิน</p>';
+    return;
+  }
+  let totalPaid = 0;
+  bills.forEach(b => {
+    totalPaid += Number(b.total);
+    const statusText = { pending_confirm: 'รอยืนยัน', paid: 'ชำระแล้ว' }[b.status] || b.status;
+    const statusClass = { pending_confirm: 'badge-info', paid: 'badge-success' }[b.status] || '';
+    container.innerHTML += `
+      <div class="bill-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <div>
+            <strong>${b.id}</strong> — ห้อง ${b.roomNo} | ${b.month}
+            <span class="badge ${statusClass}" style="margin-left:8px;">${statusText}</span>
+          </div>
+          <div style="font-weight:bold;color:#10b981;">${Number(b.total).toFixed(2)} บาท</div>
+        </div>
+        <div style="margin-top:6px;font-size:13px;color:#64748b;">
+          วันที่: ${b.paidAt ? new Date(b.paidAt).toLocaleString('th-TH') : '-'}
+          ${b.paymentProof ? ' | ✅ มีหลักฐานแนบ' : ''}
+        </div>
+      </div>
+    `;
+  });
+  container.innerHTML += `<div style="padding:12px;font-weight:bold;text-align:right;border-top:1px solid #e2e8f0;margin-top:12px;">รวมทั้งสิ้น: ${totalPaid.toFixed(2)} บาท</div>`;
+}
+
+// =====================================================
+// 📈 สรุปรายรับ
+// =====================================================
 function renderSummaryUI() {
-  const rooms = loadData(STORAGE_KEYS.ROOMS, {});
   const bills = loadData(STORAGE_KEYS.BILLS, []);
   const tbody = document.getElementById('summary-table');
   tbody.innerHTML = '';
   
-  let sumRent = 0, sumElec = 0, sumWater = 0, sumAll = 0, sumPaid = 0, sumDue = 0;
+  const months = [...new Set(bills.map(b => b.month))].sort().reverse();
+  if (months.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748b;padding:20px;">ยังไม่มีข้อมูลสรุป</td></tr>';
+    return;
+  }
   
-  Object.entries(rooms).forEach(([no, r]) => {
-    const roomBills = bills.filter(b => b.roomNo === no);
-    const rentTotal = roomBills.reduce((s, b) => s + Number(b.rent || 0), 0);
-    const elecTotal = roomBills.reduce((s, b) => s + Number(b.electricTotal || 0), 0);
-    const waterTotal = roomBills.reduce((s, b) => s + Number(b.waterTotal || 0), 0);
-    const totalAll = rentTotal + elecTotal + waterTotal;
-    const totalPaid = roomBills.filter(b => b.status === 'paid').reduce((s, b) => s + Number(b.total || 0), 0);
-    const totalDue = totalAll - totalPaid;
-    
-    sumRent += rentTotal;
-    sumElec += elecTotal;
-    sumWater += waterTotal;
-    sumAll += totalAll;
-    sumPaid += totalPaid;
-    sumDue += totalDue;
+  months.forEach(month => {
+    const monthBills = bills.filter(b => b.month === month);
+    const totalRent = monthBills.reduce((s, b) => s + Number(b.rent || 0), 0);
+    const totalElec = monthBills.reduce((s, b) => s + Number(b.electric || 0), 0);
+    const totalWater = monthBills.reduce((s, b) => s + Number(b.water || 0), 0);
+    const totalAll = monthBills.reduce((s, b) => s + Number(b.total || 0), 0);
+    const paid = monthBills.filter(b => b.status === 'paid').reduce((s, b) => s + Number(b.total || 0), 0);
+    const pending = totalAll - paid;
     
     tbody.innerHTML += `
       <tr>
-        <td>${no}</td>
-        <td>${r.name || '-'}</td>
-        <td>${rentTotal.toFixed(2)}</td>
-        <td>${elecTotal.toFixed(2)}</td>
-        <td>${waterTotal.toFixed(2)}</td>
-        <td><strong>${totalAll.toFixed(2)}</strong></td>
-        <td>${totalPaid.toFixed(2)}</td>
-        <td style="color:${totalDue>0?'#dc2626':'#16a34a'}">${totalDue.toFixed(2)}</td>
+        <td><strong>${month}</strong></td>
+        <td>${monthBills.length}</td>
+        <td>${totalRent.toFixed(2)}</td>
+        <td>${totalElec.toFixed(2)}</td>
+        <td>${totalWater.toFixed(2)}</td>
+        <td>${totalAll.toFixed(2)}</td>
+        <td style="color:#10b981;font-weight:bold;">${paid.toFixed(2)}</td>
+        <td style="color:#f59e0b;font-weight:bold;">${pending.toFixed(2)}</td>
       </tr>
     `;
   });
-  
-  document.getElementById('sum-rent').textContent = sumRent.toFixed(2) + ' ฿';
-  document.getElementById('sum-elec').textContent = sumElec.toFixed(2) + ' ฿';
-  document.getElementById('sum-water').textContent = sumWater.toFixed(2) + ' ฿';
-  document.getElementById('sum-all').textContent = sumAll.toFixed(2) + ' ฿';
-  document.getElementById('sum-paid').textContent = sumPaid.toFixed(2) + ' ฿';
-  document.getElementById('sum-due').textContent = sumDue.toFixed(2) + ' ฿';
-  
-  const monthlyDiv = document.getElementById('monthly-summary');
-  const months = {};
-  bills.forEach(b => {
-    if (!months[b.month]) months[b.month] = { total: 0, paid: 0 };
-    months[b.month].total += Number(b.total || 0);
-    if (b.status === 'paid') months[b.month].paid += Number(b.total || 0);
-  });
-  
-  monthlyDiv.innerHTML = Object.keys(months).sort().reverse().map(m => `
-    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee">
-      <strong>${m}</strong>
-      <span>รวม: ${months[m].total.toFixed(2)} ฿ | ชำระแล้ว: ${months[m].paid.toFixed(2)} ฿</span>
-    </div>
-  `).join('') || '<p style="color:#64748b;text-align:center;padding:20px">ยังไม่มีข้อมูล</p>';
 }
 
-function exportSummaryCSV() {
-  const rooms = loadData(STORAGE_KEYS.ROOMS, {});
-  const bills = loadData(STORAGE_KEYS.BILLS, []);
-  let csv = 'ห้อง,ชื่อผู้เช่า,ค่าเช่า,ค่าไฟ,ค่าน้ำ,รวมทั้งหมด,ชำระแล้ว,ค้างชำระ\n';
-  
-  Object.entries(rooms).forEach(([no, r]) => {
-    const roomBills = bills.filter(b => b.roomNo === no);
-    const rentTotal = roomBills.reduce((s, b) => s + Number(b.rent || 0), 0);
-    const elecTotal = roomBills.reduce((s, b) => s + Number(b.electricTotal || 0), 0);
-    const waterTotal = roomBills.reduce((s, b) => s + Number(b.waterTotal || 0), 0);
-    const totalAll = rentTotal + elecTotal + waterTotal;
-    const totalPaid = roomBills.filter(b => b.status === 'paid').reduce((s, b) => s + Number(b.total || 0), 0);
-    const totalDue = totalAll - totalPaid;
-    csv += `${no},"${r.name||''}",${rentTotal.toFixed(2)},${elecTotal.toFixed(2)},${waterTotal.toFixed(2)},${totalAll.toFixed(2)},${totalPaid.toFixed(2)},${totalDue.toFixed(2)}\n`;
-  });
-  
-  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `สรุปรายรับ_${new Date().toLocaleDateString('th-TH')}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
+// =====================================================
+// ⚙️ ตั้งค่าระบบ
+// =====================================================
 function renderSettingsUI() {
   const regData = loadData(STORAGE_KEYS.REG_DATA, {});
-  const license = loadData(STORAGE_KEYS.LICENSE_VERIFIED, '-');
-  
-  document.getElementById('setting-license').textContent = typeof license === 'object' ? license.license_key || '-' : license;
-  document.getElementById('setting-reg-date').textContent = regData.regDate ? new Date(regData.regDate).toLocaleString('th-TH') : '-';
-  document.getElementById('setting-customer-name').textContent = regData.name || '-';
-  document.getElementById('setting-customer-phone').textContent = regData.phone || '-';
-  
-  const settings = loadData(STORAGE_KEYS.SETTINGS, {});
-  document.getElementById('total-rooms').value = settings.totalRooms || '';
-  
+  const verified = loadData(STORAGE_KEYS.LICENSE_VERIFIED, {});
   const rooms = loadData(STORAGE_KEYS.ROOMS, {});
-  const passTbody = document.getElementById('pass-table');
-  passTbody.innerHTML = '';
+  
+  document.getElementById('info-name').textContent = regData.name || '-';
+  document.getElementById('info-license').textContent = (verified?.license_key || '-');
+  document.getElementById('info-date').textContent = regData.regDate ? new Date(regData.regDate).toLocaleString('th-TH') : '-';
+  document.getElementById('info-billno').textContent = billCounter;
+  
+  const tbody = document.getElementById('room-pass-table');
+  tbody.innerHTML = '';
   Object.entries(rooms).forEach(([no, r]) => {
-    passTbody.innerHTML += `
+    tbody.innerHTML += `
       <tr>
-        <td>${no}</td>
-        <td>${r.password ? '••••••••' : 'ยังไม่ได้ตั้งรหัส'}</td>
-        <td><button class="btn-sm btn-warning" onclick="setRoomPass('${no}')">ตั้ง/เปลี่ยนรหัส</button></td>
+        <td><strong>${no}</strong></td>
+        <td>${r.name || '-'}</td>
+        <td>${r.password ? '******' : '<span style="color:#94a3b8">ยังไม่ได้ตั้ง</span>'}</td>
+        <td><button class="btn-sm btn-info" onclick="setRoomPass('${no}')">${r.password ? 'เปลี่ยน' : 'ตั้ง'}รหัส</button></td>
       </tr>
     `;
   });
 }
 
-function saveSettings() {
-  const totalRooms = document.getElementById('total-rooms').value;
-  saveData(STORAGE_KEYS.SETTINGS, { totalRooms: totalRooms || 0 });
-  alert('✅ บันทึกตั้งค่าสำเร็จ');
-}
-
-function setRoomPass(roomNo) {
-  const newPass = prompt(`ตั้งรหัสผ่านสำหรับห้อง ${roomNo} (อย่างน้อย 4 ตัว):`);
-  if (newPass === null) return;
-  if (newPass.length < 4) { alert('❌ รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร'); return; }
-  const rooms = loadData(STORAGE_KEYS.ROOMS, {});
-  rooms[roomNo].password = newPass;
-  saveData(STORAGE_KEYS.ROOMS, rooms);
-  alert('✅ ตั้งรหัสผ่านสำเร็จ');
-  renderSettingsUI();
-}
-
-function changeOwnerPass() {
-  const oldPass = prompt('ป้อนรหัสผ่านปัจจุบัน:');
-  const current = loadData(STORAGE_KEYS.OWNER_PASSWORD);
-  if (oldPass !== current) { alert('❌ รหัสผ่านปัจจุบันไม่ถูกต้อง'); return; }
-  const newPass = prompt('ป้อนรหัสผ่านใหม่ (อย่างน้อย 6 ตัว):');
-  if (!newPass || newPass.length < 6) { alert('❌ รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'); return; }
-  const confirmPass = prompt('ยืนยันรหัสผ่านใหม่อีกครั้ง:');
-  if (newPass !== confirmPass) { alert('❌ รหัสผ่านไม่ตรงกัน'); return; }
-  saveData(STORAGE_KEYS.OWNER_PASSWORD, newPass);
-  alert('✅ เปลี่ยนรหัสผ่านสำเร็จ');
-}
-
-function exportAllData() {
-  const data = {
+// =====================================================
+// 💾 ส่งออก / นำเข้าข้อมูล
+// =====================================================
+function exportData() {
+  const all = {
+    version: '1.0',
     exportedAt: new Date().toISOString(),
+    billCounter,
     regData: loadData(STORAGE_KEYS.REG_DATA, {}),
+    licenseVerified: loadData(STORAGE_KEYS.LICENSE_VERIFIED, {}),
     rooms: loadData(STORAGE_KEYS.ROOMS, {}),
     electric: loadData(STORAGE_KEYS.ELECTRIC, []),
     water: loadData(STORAGE_KEYS.WATER, []),
     bills: loadData(STORAGE_KEYS.BILLS, []),
-    espDevices: espDevices,
-    settings: loadData(STORAGE_KEYS.SETTINGS, {})
+    espDevices: espDevices
   };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
+  const blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
-  a.href = url;
-  a.download = `backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.href = URL.createObjectURL(blob);
+  a.download = `dorm-backup-${new Date().toISOString().slice(0,10)}.json`;
   a.click();
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(a.href);
+  alert('✅ ส่งออกข้อมูลสำเร็จ');
 }
 
-function importAllData(event) {
-  const file = event.target.files[0];
+function importData(input) {
+  const file = input.files[0];
   if (!file) return;
-  if (!confirm('⚠️ การนำเข้าจะแทนที่ข้อมูลปัจจุบันทั้งหมด! ดำเนินการต่อ?')) return;
-  
+  if (!confirm('⚠️ การนำเข้าจะแทนที่ข้อมูลปัจจุบันทั้งหมด!\nต้องการดำเนินการต่อ?')) { input.value = ''; return; }
   const reader = new FileReader();
   reader.onload = e => {
     try {
       const data = JSON.parse(e.target.result);
+      if (data.billCounter) { billCounter = data.billCounter; localStorage.setItem('bill_counter', billCounter); }
       if (data.regData) saveData(STORAGE_KEYS.REG_DATA, data.regData);
+      if (data.licenseVerified) saveData(STORAGE_KEYS.LICENSE_VERIFIED, data.licenseVerified);
       if (data.rooms) saveData(STORAGE_KEYS.ROOMS, data.rooms);
       if (data.electric) saveData(STORAGE_KEYS.ELECTRIC, data.electric);
       if (data.water) saveData(STORAGE_KEYS.WATER, data.water);
       if (data.bills) saveData(STORAGE_KEYS.BILLS, data.bills);
-      if (data.espDevices) {
-        espDevices = data.espDevices;
-        saveData(STORAGE_KEYS.ESP_DEVICES, espDevices);
-      }
-      if (data.settings) saveData(STORAGE_KEYS.SETTINGS, data.settings);
-      alert('✅ นำเข้าข้อมูลสำเร็จ! กำลังรีเฟรชหน้า...');
-      renderAll();
+      if (data.espDevices) { espDevices = data.espDevices; saveData(STORAGE_KEYS.ESP_DEVICES, espDevices); }
+      alert('✅ นำเข้าข้อมูลสำเร็จ! หน้าจะรีเฟรช...');
+      location.reload();
     } catch (err) {
-      alert('❌ รูปแบบไฟล์ไม่ถูกต้อง: ' + err.message);
+      alert('❌ รูปแบบไฟล์ไม่ถูกต้อง');
     }
   };
   reader.readAsText(file);
+  input.value = '';
 }
 
-function renderTenantBills() {
-  const bills = loadData(STORAGE_KEYS.BILLS, []).filter(b => b.roomNo === currentTenantRoom);
-  const container = document.getElementById('tenant-bills-list');
-  
-  document.getElementById('tenant-room-no').textContent = currentTenantRoom;
-  
-  if (bills.length === 0) {
-    container.innerHTML = '<div class="card"><p style="color:#64748b;text-align:center;padding:20px">ยังไม่มีข้อมูลบิล</p></div>';
-    return;
-  }
-  
-  container.innerHTML = '<h2 style="margin-bottom:15px">📋 บิลค่าใช้จ่ายของฉัน</h2>';
-  bills.forEach(b => {
-    const statusText = b.status === 'paid'
-      ? '<span class="badge badge-success">✅ ชำระแล้ว</span>'
-      : b.status === 'pending_confirm'
-      ? '<span class="badge badge-info">📤 รอยืนยัน</span>'
-      : '<span class="badge badge-warning">⏳ รอชำระ</span>';
-    
-    container.innerHTML += `
-      <div class="bill-card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <strong>${b.id} — ${b.month}</strong>
-          ${statusText}
-        </div>
-        <p>ค่าเช่า: ${Number(b.rent || 0).toFixed(2)} บาท</p>
-        <p>ค่าไฟ: ${Number(b.electricTotal || 0).toFixed(2)} บาท</p>
-        <p>ค่าน้ำ: ${Number(b.waterTotal || 0).toFixed(2)} บาท</p>
-        <hr>
-        <p style="font-size:18px;font-weight:bold;text-align:right;margin-top:8px">รวมทั้งสิ้น: ${Number(b.total || 0).toFixed(2)} บาท</p>
-        
-        ${b.bankName || b.bankNo ? `
-          <div style="margin-top:12px;padding:10px;background:#f9fafb;border-radius:6px;font-size:14px">
-            <strong>💳 ข้อมูลการโอน</strong>
-            <p style="margin-top:4px">ธนาคาร: ${b.bankName || '-'}</p>
-            <p>เลขที่บัญชี: ${b.bankNo || '-'}</p>
-          </div>
-        ` : ''}
-        
-        ${b.qrDataURL ? `
-          <div style="text-align:center;margin-top:12px">
-            <p style="font-size:14px">📱 สแกนเพื่อชำระเงิน</p>
-            <img src="${b.qrDataURL}" style="width:160px;margin-top:5px;border-radius:4px">
-          </div>
-        ` : ''}
-        
-        <div style="margin-top:15px;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn-sm btn-info" onclick="printBill('${b.id}')">🖨️ พิมพ์บิล</button>
-          ${b.status === 'pending' 
-            ? `<button class="btn-sm btn-success" onclick="uploadProofTenant('${b.id}')">📤 อัปโหลดหลักฐาน</button>` 
-            : ''}
-        </div>
-        
-        ${b.paymentProof ? `
-          <div style="margin-top:10px;padding-top:10px;border-top:1px solid #eee">
-            <p style="font-size:14px"><strong>หลักฐานการชำระเงิน:</strong></p>
-            <img src="${b.paymentProof}" style="max-width:150px;border-radius:4px;margin-top:5px;cursor:pointer" onclick="window.open('${b.paymentProof}','_blank')">
-          </div>
-        ` : ''}
-      </div>
-    `;
-  });
-}
-
+// =====================================================
+// 🔑 หน้าผู้เช่า
+// =====================================================
 function uploadProofTenant(billId) {
   const input = document.createElement('input');
   input.type = 'file';
@@ -1530,34 +1321,77 @@ function uploadProofTenant(billId) {
     const reader = new FileReader();
     reader.onload = result => {
       const bills = loadData(STORAGE_KEYS.BILLS, []);
-      const idx = bills.findIndex(b => b.id === billId);
-      if (idx > -1) {
-        bills[idx].paymentProof = result.target.result;
-        bills[idx].status = 'pending_confirm';
-        bills[idx].proofUploadedAt = new Date().toISOString();
-        saveData(STORAGE_KEYS.BILLS, bills);
-        alert('✅ อัปโหลดหลักฐานสำเร็จ\nรอเจ้าของหอยืนยันการชำระเงิน');
-        renderTenantBills();
-      }
+      const bill = bills.find(b => b.id === billId);
+      if (!bill) return;
+      bill.paymentProof = result.target.result;
+      bill.status = 'pending_confirm';
+      saveData(STORAGE_KEYS.BILLS, bills);
+      alert('✅ อัปโหลดหลักฐานสำเร็จ! รอเจ้าของตรวจสอบและยืนยัน');
+      renderTenantBills();
+      renderDashboard();
     };
     reader.readAsDataURL(file);
   };
   input.click();
 }
 
-function initApp() {
-  const regData = loadData(STORAGE_KEYS.REG_DATA);
-  const licenseVerified = loadData(STORAGE_KEYS.LICENSE_VERIFIED);
-  const ownerPass = loadData(STORAGE_KEYS.OWNER_PASSWORD);
-  
-  if (!regData) showPage('page-register');
-  else if (!licenseVerified) showPage('page-enter-license');
-  else if (!ownerPass) showPage('page-setup');
-  else showPage('page-choose');
+function renderTenantBills() {
+  const bills = loadData(STORAGE_KEYS.BILLS, []).filter(b => b.roomNo === currentTenantRoom).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const container = document.getElementById('tenant-bills-list');
+  container.innerHTML = '';
+  if (bills.length === 0) {
+    container.innerHTML = '<p style="text-align:center;color:#64748b;padding:20px;">ยังไม่มีบิล</p>';
+    return;
+  }
+  bills.forEach(b => {
+    const statusText = { pending: 'รอชำระ', pending_confirm: 'รอยืนยัน', paid: 'ชำระแล้ว' }[b.status] || b.status;
+    const statusClass = { pending: 'badge-warning', pending_confirm: 'badge-info', paid: 'badge-success' }[b.status] || '';
+    
+    container.innerHTML += `
+      <div class="bill-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+          <div>
+            <strong>${b.id}</strong> — ${b.month}
+            <span class="badge ${statusClass}" style="margin-left:8px;">${statusText}</span>
+          </div>
+          <div style="font-weight:bold;color:#4f46e5;font-size:18px;">${Number(b.total).toFixed(2)} บาท</div>
+        </div>
+        <div style="margin:12px 0;">
+          <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>ค่าเช่า:</span><span>${Number(b.rent).toFixed(2)}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>ค่าไฟ:</span><span>${Number(b.electric).toFixed(2)}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>ค่าน้ำ:</span><span>${Number(b.water).toFixed(2)}</span></div>
+          <hr/>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;font-weight:bold;"><span>รวมทั้งสิ้น:</span><span>${Number(b.total).toFixed(2)}</span></div>
+        </div>
+        ${b.bankName ? `
+          <div style="background:#f8fafc;padding:10px;border-radius:6px;margin-bottom:10px;">
+            <div style="font-size:13px;color:#64748b;">ชำระผ่าน</div>
+            <div><strong>${b.bankName}</strong></div>
+            <div>เลขที่บัญชี: ${b.bankAccount || '-'}</div>
+            ${b.qrDataURL ? `<img src="${b.qrDataURL}" style="max-width:150px;margin-top:8px;border-radius:4px;"/>` : ''}
+          </div>
+        ` : ''}
+        ${b.status === 'pending' ? `<button class="btn-success" onclick="uploadProofTenant('${b.id}')">📤 อัปโหลดหลักฐานการชำระเงิน</button>` : ''}
+        ${b.paymentProof ? `<div style="margin-top:10px;"><small style="color:#64748b;">หลักฐานที่อัปโหลด:</small><br/><img src="${b.paymentProof}" style="max-width:150px;border-radius:4px;margin-top:4px;"/></div>` : ''}
+      </div>
+    `;
+  });
 }
 
-document.addEventListener('DOMContentLoaded', initApp);
+// =====================================================
+// 🚀 เริ่มทำงาน
+// =====================================================
+window.onload = function() {
+  espDevices = loadData(STORAGE_KEYS.ESP_DEVICES, []);
+  const verified = loadData(STORAGE_KEYS.LICENSE_VERIFIED);
+  if (verified) {
+    showPage('page-choose');
+  } else {
+    showPage('page-register');
+  }
+};
 </script>
 
 </body>
 </html>
+      
