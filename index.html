@@ -750,40 +750,73 @@ async function submitRegistration() {
 // =====================================================
 async function verifyLicense() {
   console.log('▶️ เรียกใช้ verifyLicense()');
-  
+
   const keyInput = document.getElementById('license-key');
   const status = document.getElementById('license-status');
-  
+
   if (!keyInput || !status) {
-    alert('❌ ไม่พบช่องกรอกหรือช่องแสดงผล');
+    alert('❌ ไม่พบช่องกรอกรหัสหรือช่องแสดงผล');
     return;
   }
-  
+
   const key = keyInput.value.trim();
-  const LICENSE_KEY = 'SUPERBASS2026';
 
   if (!key) {
-    status.textContent = '⚠️ กรุณาป้อนรหัสใบอนุญาตที่ได้รับจากผู้ให้บริการ';
+    status.textContent = '⚠️ กรุณาป้อนรหัสใบอนุญาต';
     status.className = 'license-box invalid';
     return;
   }
 
-  if (key === LICENSE_KEY) {
-    status.textContent = '✅ รหัสถูกต้อง! กำลังบันทึกสิทธิ์...';
+  if (typeof supabase === 'undefined' ||
+      !supabase ||
+      typeof supabase.from !== 'function') {
+    status.textContent = '❌ ระบบเชื่อมต่อ Supabase ไม่พร้อม';
+    status.className = 'license-box invalid';
+    return;
+  }
+
+  status.textContent = '⏳ กำลังตรวจสอบใบอนุญาต...';
+  status.className = 'license-box';
+
+  try {
+    const { data, error } = await supabase
+      .from('license_keys')
+      .select('id, license_key, is_active, created_at')
+      .eq('license_key', key)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Supabase license error:', error);
+      status.textContent =
+        '❌ ตรวจสอบใบอนุญาตไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อและสิทธิ์ฐานข้อมูล';
+      status.className = 'license-box invalid';
+      return;
+    }
+
+    if (!data || data.is_active !== true) {
+      status.textContent =
+        '❌ ไม่พบรหัสใบอนุญาต หรือรหัสถูกปิดใช้งาน';
+      status.className = 'license-box invalid';
+      return;
+    }
+
+    status.textContent = '✅ รหัสถูกต้อง กำลังบันทึกสิทธิ์...';
     status.className = 'license-box valid';
-    
+
     saveData(STORAGE_KEYS.LICENSE_VERIFIED, {
-      licenseKey: key,
+      licenseKey: data.license_key,
       verifiedAt: new Date().toISOString(),
       issuedBy: 'ผู้ให้บริการ'
     });
-    
-    setTimeout(function() {
-      alert('✅ ยืนยันสิทธิ์สำเร็จ!\n\n📌 ข้อมูลถูกบันทึกแล้ว เข้าสู่ระบบได้เลย');
+
+    setTimeout(function () {
+      alert('✅ ยืนยันสิทธิ์สำเร็จ!\n\n📌 บันทึกสิทธิ์แล้ว เข้าสู่ระบบได้เลย');
       showPage('page-setup');
     }, 1000);
-  } else {
-    status.textContent = '❌ รหัสไม่ถูกต้อง ตรวจสอบกับผู้ให้บริการอีกครั้ง';
+
+  } catch (err) {
+    console.error('verifyLicense error:', err);
+    status.textContent = '❌ เกิดข้อผิดพลาดในการตรวจสอบใบอนุญาต';
     status.className = 'license-box invalid';
   }
 }
