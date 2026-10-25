@@ -749,25 +749,15 @@ if (window.supabase) {
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoaWhqY3N0bWFtd29pbm1iZml5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0ODUwMzYsImV4cCI6MjEwODA2MTAzNn0.XZP2d6dJ_Z1QNN5baMYmTH87UEkHEeT8fwecMCO8gAY';
   supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
-
-async function verifyLicense() {
-  const key = document.getElementById('license-key').value.trim();
-  const status = document.getElementById('license-status');
-  if (!key) {
-    status.textContent = '⚠️ กรุณาป้อนรหัส';
-    status.className = 'license-box invalid';
-    return;
+// =====================================================
+// 🛠️ ช่วยแสดงผลใบอนุญาต
+// =====================================================
+function getLicenseDisplay(license) {
+  if (typeof license === 'object' && license !== null) {
+    if (license.licenseKey) return license.licenseKey.slice(0, 8) + '...';
+    if (license.license_key) return license.license_key.slice(0, 8) + '...';
   }
-
-  if (key === 'DEMO2026' || key.length >= 6) {
-    status.textContent = '✅ รหัสถูกต้อง! ยินดีต้อนรับ';
-    status.className = 'license-box valid';
-    saveData(STORAGE_KEYS.LICENSE_VERIFIED, { license_key: key, name: 'ผู้ใช้งาน' });
-    setTimeout(() => showPage('page-setup'), 1500);
-  } else {
-    status.textContent = '❌ รหัสไม่ถูกต้อง';
-    status.className = 'license-box invalid';
-  }
+  return '-';
 }
 
 function changeLicense() {
