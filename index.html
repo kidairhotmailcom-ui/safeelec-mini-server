@@ -1372,7 +1372,23 @@ function previewQR(input) {
         reader.readAsDataURL(input.files[0]);
     }
 }
-
+// ✅ เจ้าของห้องยืนยันการชำระเงิน
+function confirmPayment(billId) {
+    if (!confirm('ยืนยันว่าชำระเงินถูกต้อง?')) return;
+    
+    const bills = loadData(STORAGE.BILLS, []);
+    const idx = bills.findIndex(b => (b.id === billId) || (b.billNo === billId));
+    
+    if (idx !== -1) {
+        bills[idx].paid = true;
+        bills[idx].pending = false;
+        bills[idx].confirmedAt = new Date().toLocaleString('th-TH');
+        saveData(STORAGE.BILLS, bills);
+        
+        alert('✅ ยืนยันสำเร็จ! บิลนี้แจ้งว่าชำระแล้ว');
+        location.reload();
+    }
+}
 // เรียกใช้เมื่อโหลดหน้า
 document.addEventListener('DOMContentLoaded', () => {
     updateRoomDropdowns();
