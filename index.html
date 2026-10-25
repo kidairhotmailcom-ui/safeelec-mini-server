@@ -454,26 +454,34 @@ async function submitRegistration() {
   const phone = document.getElementById('reg-phone').value.trim();
   const email = document.getElementById('reg-email').value.trim();
 
-  if (!name || !address || !phone || !email) {
-    alert('กรุณากรอกข้อมูลให้ครบถ้วน');
-    return;
-  }
+  // ✅ ตรวจสอบให้ชัดเจนว่าช่องไหนหาย
+  if (!name) { alert('⚠️ กรุณากรอกชื่อเจ้าของหอพัก'); return; }
+  if (!address) { alert('⚠️ กรุณากรอกที่อยู่หอพัก'); return; }
+  if (!phone) { alert('⚠️ กรุณากรอกเบอร์โทรศัพท์'); return; }
+  if (!email) { alert('⚠️ กรุณากรอกอีเมล'); return; }
 
   try {
+    console.log('📤 กำลังส่งข้อมูลลงทะเบียน...');
     const { error } = await supabase.from('registrations').insert([
       { name, address, phone, email, status: 'pending' }
     ]);
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Supabase Error:', error);
+      throw error;
+    }
 
     saveData(STORAGE_KEYS.REG_DATA, { name, address, phone, email, regDate: new Date().toISOString() });
     alert('✅ ส่งคำขอลงทะเบียนสำเร็จ!\nกรุณาตรวจสอบอีเมลหรือติดต่อผู้ดูแลระบบเพื่อรับรหัสใบอนุญาต');
     showPage('page-enter-license');
   } catch (err) {
-    alert('❌ ผิดพลาด: ' + err.message);
+    console.error('❌ Error:', err);
+    // ⚠️ ถ้าเชื่อมต่อ Supabase ไม่ได้ ให้ข้ามไปใช้งานโหมดออฟไลน์
+    alert('⚠️ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้\nกำลังใช้งานโหมดทดลอง...');
+    saveData(STORAGE_KEYS.REG_DATA, { name, address, phone, email, regDate: new Date().toISOString() });
+    showPage('page-enter-license');
   }
 }
-
 async function verifyLicense() {
   const key = document.getElementById('license-key').value.trim();
   const status = document.getElementById('license-status');
