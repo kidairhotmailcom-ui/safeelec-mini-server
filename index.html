@@ -3,80 +3,67 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ระบบจัดการหอพัก - อ่านค่ามิเตอร์อัตโนมัติจาก ESP</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <title>ระบบจัดการหอพัก</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+    body { background: #f1f5f9; min-height: 100vh; }
     .page { display: none; }
     .page.active { display: block; }
-    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-    .card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-    .card h2 { font-size: 1.3rem; margin-bottom: 16px; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
-    input, button, select { padding: 10px 14px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 14px; margin: 4px 0; width: 100%; }
-    button { background: #4f46e5; color: white; border: none; cursor: pointer; font-weight: 500; transition: 0.2s; }
-    button:hover { background: #4338ca; }
-    button.btn-success { background: #10b981; }
-    button.btn-success:hover { background: #059669; }
-    button.btn-danger { background: #ef4444; }
-    button.btn-danger:hover { background: #dc2626; }
-    button.btn-info { background: #3b82f6; }
-    button.btn-info:hover { background: #2563eb; }
-    button.btn-sm { padding: 6px 10px; font-size: 13px; width: auto; margin: 2px; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-    th { background: #f8fafc; font-weight: 600; color: #334155; }
-    .text-right { text-align: right; }
-    .badge { padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; display: inline-block; }
-    .badge-success { background: #d1fae5; color: #065f46; }
-    .badge-warning { background: #fef3c7; color: #92400e; }
-    .badge-info { background: #dbeafe; color: #1e40af; }
     .center-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
-    .license-box { padding: 16px; border-radius: 8px; margin: 12px 0; font-size: 14px; display: none; }
-    .license-box.valid { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; display: block; }
-    .license-box.invalid { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; display: block; }
-    .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
-    .tab { padding: 10px 16px; background: #e2e8f0; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: 0.2s; }
-    .tab.active { background: #4f46e5; color: white; }
-    .bill-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
-    .grid-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-    .grid-row > * { flex: 1; min-width: 140px; }
-    .footer-note { text-align: center; margin-top: 30px; font-size: 12px; color: white; opacity: 0.8; }
-    .hidden { display: none !important; }
-    .step-indicator { text-align: center; margin-bottom: 20px; }
-    .step-indicator span { display: inline-block; width: 32px; height: 32px; line-height: 32px; border-radius: 50%; background: #e2e8f0; color: #64748b; margin: 0 4px; font-weight: bold; font-size: 14px; }
+    .container { width: 100%; }
+    .card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 16px; }
+    input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 15px; }
+    button { width: 100%; padding: 12px; background: #4f46e5; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: 500; cursor: pointer; margin-top: 8px; }
+    button:hover { opacity: 0.95; }
+    button:disabled { background: #94a3b8; cursor: not-allowed; }
+    .btn-success { background: #10b981; }
+    .btn-danger { background: #ef4444; }
+    .btn-sm { width: auto; padding: 6px 12px; font-size: 13px; }
+    .step-indicator { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; }
+    .step-indicator span { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #e2e8f0; color: #64748b; font-weight: bold; font-size: 14px; }
     .step-indicator span.active { background: #4f46e5; color: white; }
     .step-indicator span.done { background: #10b981; color: white; }
-    a { color: #4f46e5; text-decoration: none; }
-    .info-box { background: #e0f2fe; border-left: 4px solid #0284c7; padding: 12px; border-radius: 4px; margin: 12px 0; font-size: 14px; color: #0c4a6e; }
-    .warning-box { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; margin: 12px 0; font-size: 14px; color: #78350f; }
-    .grid-dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
-    .stat-card { background: #f8fafc; padding: 16px; border-radius: 8px; text-align: center; }
+    .info-box { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px; border-radius: 4px; margin: 12px 0; font-size: 14px; line-height: 1.6; }
+    .warning-box { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; margin: 12px 0; font-size: 14px; }
+    .license-box { padding: 12px; border-radius: 6px; margin-top: 12px; font-weight: 500; }
+    .license-box.valid { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+    .license-box.invalid { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .hidden { display: none !important; }
+    .tabs { display: flex; flex-wrap: wrap; border-bottom: 1px solid #e2e8f0; margin-bottom: 16px; }
+    .tab { padding: 10px 14px; font-size: 14px; cursor: pointer; border-bottom: 2px solid transparent; }
+    .tab.active { border-bottom-color: #4f46e5; color: #4f46e5; font-weight: 500; }
+    .tab-content { padding-top: 16px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+    th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    th { background: #f8fafc; font-weight: 600; }
+    .grid-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+    .grid-dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+    .stat-card { background: #f8fafc; border-radius: 8px; padding: 16px; text-align: center; }
     .stat-card div:first-child { font-size: 24px; font-weight: bold; color: #4f46e5; }
-    .stat-card div:last-child { font-size: 13px; color: #64748b; }
-    tfoot { font-weight: bold; background: #f8fafc; }
-    hr { border: none; border-top: 1px solid #e2e8f0; margin: 8px 0; }
-    .sync-status { font-size: 12px; padding: 2px 6px; border-radius: 10px; }
-    .sync-status.online { background: #d1fae5; color: #065f46; }
-    .sync-status.offline { background: #fee2e2; color: #991b1b; }
+    .stat-card div:last-child { font-size: 13px; color: #64748b; margin-top: 4px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+    .badge-success { background: #dcfce7; color: #166534; }
+    .badge-warning { background: #fef3c7; color: #92400e; }
+    .badge-info { background: #dbeafe; color: #1e40a5; }
+    .bill-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+    a { color: #4f46e5; text-decoration: none; }
+    .footer-note { text-align: center; font-size: 13px; color: #94a3b8; margin-top: 16px; }
   </style>
 </head>
 <body>
 
-<!-- =====================================================
-  📝 ขั้นที่ 1: ลงทะเบียนขอใช้งานระบบ
-===================================================== -->
 <div id="page-register" class="page active">
   <div class="center-page">
-    <div class="container" style="max-width:420px">
-      <div class="card">
+    <div class="container">
+      <div class="card" style="max-width:420px;margin:0 auto;">
         <div class="step-indicator">
           <span class="active">1</span>
           <span>2</span>
           <span>3</span>
         </div>
-        <h1 style="font-size:1.5rem;text-align:center;margin-bottom:8px">📝 ลงทะเบียนขอใช้งานระบบ</h1>
-        <p style="text-align:center;color:#64748b;margin-bottom:16px">กรอกข้อมูลเพื่อสมัครใช้งาน</p>
+        <h1 style="font-size:1.5rem;text-align:center;margin-bottom:8px;">📝 ลงทะเบียนขอใช้งานระบบ</h1>
+        <p style="text-align:center;color:#64748b;margin-bottom:16px;">กรอกข้อมูลเพื่อสมัครใช้งาน</p>
         
         <input type="text" id="reg-name" placeholder="ชื่อเจ้าของหอพัก / ชื่อสถานประกอบการ">
         <input type="text" id="reg-address" placeholder="ที่อยู่หอพัก">
@@ -94,20 +81,17 @@
   </div>
 </div>
 
-<!-- =====================================================
-  🔐 ขั้นที่ 2: ป้อนรหัสใบอนุญาต
-===================================================== -->
 <div id="page-enter-license" class="page">
   <div class="center-page">
-    <div class="container" style="max-width:420px">
-      <div class="card">
+    <div class="container">
+      <div class="card" style="max-width:420px;margin:0 auto;">
         <div class="step-indicator">
           <span class="done">✓</span>
           <span class="active">2</span>
           <span>3</span>
         </div>
-        <h1 style="font-size:1.5rem;text-align:center;margin-bottom:8px">🔑 ป้อนรหัสใบอนุญาต</h1>
-        <p style="text-align:center;color:#64748b;margin-bottom:16px">ได้รับรหัสแล้ว ให้ป้อนรหัสที่นี่</p>
+        <h1 style="font-size:1.5rem;text-align:center;margin-bottom:8px;">🔑 ป้อนรหัสใบอนุญาต</h1>
+        <p style="text-align:center;color:#64748b;margin-bottom:16px;">ได้รับรหัสแล้ว ให้ป้อนรหัสที่นี่</p>
         
         <div class="info-box">✅ ขอบคุณที่ลงทะเบียน! กรุณาตรวจสอบอีเมล หรือติดต่อผู้ดูแลระบบเพื่อรับรหัสใบอนุญาต<br><strong>รหัสทดลอง:</strong> DEMO2026</div>
         
@@ -116,7 +100,7 @@
         
         <div id="license-status" class="license-box"></div>
         
-        <p style="margin-top:16px;text-align:center;font-size:13px">
+        <p style="margin-top:16px;text-align:center;font-size:13px;">
           <a href="#" onclick="showPage('page-register'); return false;">ยังไม่ได้รับรหัส? ลงทะเบียนใหม่</a>
         </p>
       </div>
@@ -124,20 +108,17 @@
   </div>
 </div>
 
-<!-- =====================================================
-  ⚙️ ขั้นที่ 3: ตั้งค่าและเข้าใช้งาน
-===================================================== -->
 <div id="page-setup" class="page">
   <div class="center-page">
-    <div class="container" style="max-width:420px">
-      <div class="card">
+    <div class="container">
+      <div class="card" style="max-width:420px;margin:0 auto;">
         <div class="step-indicator">
           <span class="done">✓</span>
           <span class="done">✓</span>
           <span class="active">3</span>
         </div>
-        <h1 style="font-size:1.5rem;text-align:center;margin-bottom:8px">⚙️ ตั้งค่าบัญชีผู้ใช้</h1>
-        <p style="text-align:center;color:#64748b;margin-bottom:16px">ตั้งรหัสผ่านเพื่อเข้าใช้ระบบ</p>
+        <h1 style="font-size:1.5rem;text-align:center;margin-bottom:8px;">⚙️ ตั้งค่าบัญชีผู้ใช้</h1>
+        <p style="text-align:center;color:#64748b;margin-bottom:16px;">ตั้งรหัสผ่านเพื่อเข้าใช้งานระบบ</p>
         
         <input type="password" id="setup-pass" placeholder="ตั้งรหัสผ่าน (อย่างน้อย 6 ตัว)">
         <input type="password" id="setup-pass2" placeholder="ยืนยันรหัสผ่าน">
@@ -147,20 +128,17 @@
   </div>
 </div>
 
-<!-- =====================================================
-  🔑 เลือกเข้าใช้งาน
-===================================================== -->
 <div id="page-choose" class="page">
   <div class="center-page">
-    <div class="container" style="max-width:420px">
-      <div class="card" style="text-align:center">
-        <h1 style="font-size:1.5rem;margin-bottom:12px">👋 ยินดีต้อนรับ</h1>
-        <p style="margin-bottom:24px;color:#64748b">เลือกบทบาทเพื่อเข้าใช้งานระบบ</p>
+    <div class="container">
+      <div class="card" style="text-align:center;max-width:420px;margin:0 auto;">
+        <h1 style="font-size:1.5rem;margin-bottom:12px;">👋 ยินดีต้อนรับ</h1>
+        <p style="margin-bottom:24px;color:#64748b;">เลือกบทบาทเพื่อเข้าใช้งานระบบ</p>
         
-        <button onclick="showPage('page-owner-login')" style="margin-bottom:12px">🏠 เจ้าของหอพัก</button>
+        <button onclick="showPage('page-owner-login')" style="margin-bottom:12px;">🏠 เจ้าของหอพัก</button>
         <button onclick="showPage('page-tenant-login')">🔑 ผู้เช่า</button>
         
-        <p style="margin-top:24px;font-size:13px">
+        <p style="margin-top:24px;font-size:13px;">
           <a href="#" onclick="changeLicense(); return false;">เปลี่ยนรหัสใบอนุญาต</a>
         </p>
       </div>
@@ -168,50 +146,41 @@
   </div>
 </div>
 
-<!-- =====================================================
-  🏠 เจ้าของ — เข้าสู่ระบบ
-===================================================== -->
 <div id="page-owner-login" class="page">
   <div class="center-page">
-    <div class="container" style="max-width:420px">
-      <div class="card">
-        <h2 style="text-align:center;margin-bottom:20px">🔑 เข้าสู่ระบบเจ้าของ</h2>
+    <div class="container">
+      <div class="card" style="max-width:420px;margin:0 auto;">
+        <h2 style="text-align:center;margin-bottom:20px;">🔑 เข้าสู่ระบบเจ้าของ</h2>
         <input type="password" id="admin-login-pass" placeholder="ป้อนรหัสผ่าน">
         <button onclick="adminDoLogin()">✅ เข้าสู่ระบบ</button>
-        <p style="margin-top:16px;text-align:center"><a href="#" onclick="showPage('page-choose'); return false;">← กลับ</a></p>
+        <p style="margin-top:16px;text-align:center;"><a href="#" onclick="showPage('page-choose'); return false;">← กลับ</a></p>
       </div>
     </div>
   </div>
 </div>
 
-<!-- =====================================================
-  👤 ผู้เช่า — เข้าสู่ระบบ
-===================================================== -->
 <div id="page-tenant-login" class="page">
   <div class="center-page">
-    <div class="container" style="max-width:420px">
-      <div class="card">
-        <h2 style="text-align:center;margin-bottom:20px">🔑 เข้าใช้งานผู้เช่า</h2>
+    <div class="container">
+      <div class="card" style="max-width:420px;margin:0 auto;">
+        <h2 style="text-align:center;margin-bottom:20px;">🔑 เข้าใช้งานผู้เช่า</h2>
         <input type="text" id="tenant-room" placeholder="หมายเลขห้อง เช่น 101">
         <input type="password" id="tenant-pass" placeholder="รหัสผ่านห้อง">
         <button onclick="doTenantLogin()">✅ เข้าใช้งาน</button>
-        <p style="margin-top:16px;text-align:center"><a href="#" onclick="showPage('page-choose'); return false;">← กลับ</a></p>
+        <p style="margin-top:16px;text-align:center;"><a href="#" onclick="showPage('page-choose'); return false;">← กลับ</a></p>
       </div>
     </div>
   </div>
 </div>
 
-<!-- =====================================================
-  🏠 เจ้าของ — หน้าหลักระบบ
-===================================================== -->
 <div id="page-owner" class="page">
-  <div class="container">
+  <div class="container" style="max-width:1000px;margin:0 auto;padding:20px;">
     <div class="card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
       <div>
         <h1 style="font-size:1.3rem">🏢 ระบบจัดการหอพัก</h1>
         <p style="font-size:13px;color:#64748b">ผู้ใช้: <span id="owner-name">-</span> | ใบอนุญาต: <span id="license-short">-</span></p>
       </div>
-      <button onclick="ownerLogout()" class="btn-danger">🚪 ออกจากระบบ</button>
+      <button onclick="ownerLogout()" class="btn-danger" style="width:auto;">🚪 ออกจากระบบ</button>
     </div>
     
     <div class="tabs">
@@ -226,7 +195,6 @@
       <div class="tab" onclick="switchOwnerTab('settings', this)">⚙️ ตั้งค่า</div>
     </div>
     
-    <!-- 📊 แดชบอร์ด -->
     <div id="tab-dashboard" class="tab-content">
       <div class="card">
         <h2>📊 ภาพรวมหอพัก</h2>
@@ -246,7 +214,6 @@
       </div>
     </div>
     
-    <!-- 🛏️ จัดการห้องพัก -->
     <div id="tab-rooms" class="tab-content hidden">
       <div class="card">
         <h2 id="room-form-title">เพิ่มห้องพัก</h2>
@@ -269,7 +236,6 @@
       </div>
     </div>
     
-    <!-- 📡 อุปกรณ์ ESP32 -->
     <div id="tab-esp" class="tab-content hidden">
       <div class="card">
         <h2>📡 ลงทะเบียนอุปกรณ์ ESP32</h2>
@@ -293,7 +259,6 @@
       </div>
     </div>
     
-    <!-- ⚡ ค่าไฟฟ้า -->
     <div id="tab-electric" class="tab-content hidden">
       <div class="card">
         <h2>⚡ บันทึกค่าไฟฟ้า</h2>
@@ -315,7 +280,6 @@
       </div>
     </div>
     
-    <!-- 💧 ค่าน้ำ -->
     <div id="tab-water" class="tab-content hidden">
       <div class="card">
         <h2>💧 บันทึกค่าน้ำ</h2>
@@ -337,7 +301,6 @@
       </div>
     </div>
     
-    <!-- 🧾 บิลค่าเช่า -->
     <div id="tab-bills" class="tab-content hidden">
       <div class="card">
         <h2>🧾 สร้างบิลค่าเช่า</h2>
@@ -363,7 +326,6 @@
       </div>
     </div>
     
-    <!-- 💰 รายการชำระเงิน -->
     <div id="tab-payments" class="tab-content hidden">
       <div class="card">
         <h2>💰 ประวัติการชำระเงิน</h2>
@@ -371,7 +333,6 @@
       </div>
     </div>
     
-    <!-- 📈 สรุปรายรับ -->
     <div id="tab-summary" class="tab-content hidden">
       <div class="card">
         <h2>📈 สรุปรายรับรายเดือน</h2>
@@ -382,7 +343,6 @@
       </div>
     </div>
     
-    <!-- ⚙️ ตั้งค่า -->
     <div id="tab-settings" class="tab-content hidden">
       <div class="card">
         <h2>⚙️ ข้อมูลระบบ</h2>
@@ -402,7 +362,7 @@
       </div>
       <div class="card">
         <h2>💾 สำรองและนำเข้าข้อมูล</h2>
-        <button onclick="exportData()" class="btn-success">📤 ส่งออกข้อมูล (สำรอง)</button>
+        <button onclick="exportData()" class="btn-success" style="width:auto;">📤 ส่งออกข้อมูล (สำรอง)</button>
         <label style="margin-top:8px;display:block;">นำเข้าข้อมูลจากไฟล์สำรอง:</label>
         <input type="file" accept=".json" onchange="importData(this)">
       </div>
@@ -410,17 +370,14 @@
   </div>
 </div>
 
-<!-- =====================================================
-  🏠 ผู้เช่า — หน้าหลัก
-===================================================== -->
 <div id="page-tenant" class="page">
-  <div class="container">
+  <div class="container" style="max-width:700px;margin:0 auto;padding:20px;">
     <div class="card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
       <div>
         <h1 style="font-size:1.3rem">🏠 ห้อง <span id="tenant-room-no">-</span></h1>
         <p style="font-size:13px;color:#64748b">ข้อมูลบิลและการชำระเงิน</p>
       </div>
-      <button onclick="tenantLogout()" class="btn-danger">🚪 ออกจากระบบ</button>
+      <button onclick="tenantLogout()" class="btn-danger" style="width:auto;">🚪 ออกจากระบบ</button>
     </div>
     
     <div class="card">
@@ -432,52 +389,66 @@
 
 <script>
 // =====================================================
-// 🔍 ระบบตรวจสอบเชิงลึก — ตรวจสอบจุดสำคัญทั้งหมด
+// 🔑 ค่าคงที่ — ต้องอยู่บรรทัดแรกสุด!
 // =====================================================
+const STORAGE_KEYS = {
+  REG_DATA: 'dorm_registration',
+  LICENSE_VERIFIED: 'dorm_license_verified',
+  OWNER_PASSWORD: 'dorm_owner_password',
+  ROOMS: 'dorm_rooms',
+  ELECTRIC: 'dorm_electric',
+  WATER: 'dorm_water',
+  BILLS: 'dorm_bills',
+  ESP_DEVICES: 'dorm_esp_devices'
+};
+
+const USE_OFFLINE_MODE = true;
+let supabase = null;
+let currentTenantRoom = null;
+let billCounter = localStorage.getItem('bill_counter') ? parseInt(localStorage.getItem('bill_counter')) : 1000;
+let tempQRImage = null;
+let espDevices = [];
+
+const SUPABASE_URL = 'https://bhihjcstmamwoinmbfiy.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoaWhqY3N0bWFtd29pbm1iZml5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0ODUwMzYsImV4cCI6MjEwODA2MTAzNn0.XZP2d6dJ_Z1QNN5baMYmTH87UEkHEeT8fwecMCO8gAY';
+
 // =====================================================
-// 🔍 ระบบตรวจสอบเชิงลึก
+// 🔧 เริ่มต้นเชื่อมต่อ Supabase
+// =====================================================
+function initSupabase() {
+  if (typeof window.supabase !== 'undefined') {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log('✅ Supabase เชื่อมต่อสำเร็จ');
+  } else {
+    console.warn('⚠️ รอโหลด Supabase SDK...');
+    setTimeout(initSupabase, 300);
+  }
+}
+
+// =====================================================
+// 🔍 ตรวจสอบระบบ
 // =====================================================
 function deepCheckSystem() {
   console.log('\n' + '='.repeat(60));
   console.log('🔍 ระบบตรวจสอบเชิงลึก — เริ่มการวิเคราะห์');
   console.log('='.repeat(60));
   
-  const result = {
-    passed: [],
-    warning: [],
-    error: [],
-    suggestions: []
-  };
+  const result = { passed: [], warning: [], error: [], suggestions: [] };
 
-  // ส่วนที่ 1: ตรวจสอบตัวแปรหลัก
-  console.log('\n📌 ส่วนที่ 1: ตรวจสอบตัวแปรหลัก');
-  
   if (typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS) {
     result.passed.push('✅ พบตัวแปร STORAGE_KEYS');
-    
     const requiredKeys = ['REG_DATA', 'LICENSE_VERIFIED', 'OWNER_PASSWORD', 'ROOMS'];
     requiredKeys.forEach(key => {
       if (STORAGE_KEYS[key]) {
-        result.passed.push('   ✅ พบคีย์: ' + key + ' = "' + STORAGE_KEYS[key] + '"');
+        result.passed.push('   ✅ พบคีย์: ' + key);
       } else {
         result.error.push('❌ ไม่พบคีย์สำคัญ: ' + key);
-        result.suggestions.push('→ ตรวจสอบว่ามี "' + key + '": ค่า ภายใน STORAGE_KEYS');
       }
     });
   } else {
     result.error.push('❌ ไม่พบตัวแปร STORAGE_KEYS เลย!');
-    result.suggestions.push('→ ตรวจสอบว่ามี const STORAGE_KEYS = { ... }');
   }
 
-  if (typeof USE_OFFLINE_MODE !== 'undefined') {
-    result.passed.push('✅ USE_OFFLINE_MODE = ' + USE_OFFLINE_MODE);
-  } else {
-    result.warning.push('⚠️ ไม่พบ USE_OFFLINE_MODE — ไม่กระทบถ้าไม่ใช้ระบบนี้');
-  }
-
-  // ส่วนที่ 2: ตรวจสอบฟังก์ชันหลัก
-  console.log('\n🔧 ส่วนที่ 2: ตรวจสอบฟังก์ชันหลัก');
-  
   const coreFunctions = [
     { name: 'saveData', desc: 'บันทึกข้อมูลลงเครื่อง' },
     { name: 'loadData', desc: 'อ่านข้อมูลจากเครื่อง' },
@@ -485,93 +456,20 @@ function deepCheckSystem() {
     { name: 'submitRegistration', desc: 'ส่งข้อมูลลงทะเบียน' },
     { name: 'verifyLicense', desc: 'ตรวจสอบรหัสใบอนุญาต' }
   ];
-
   coreFunctions.forEach(fn => {
     if (typeof window[fn.name] === 'function') {
-      result.passed.push('✅ ' + fn.name + '() — พร้อมใช้งาน (' + fn.desc + ')');
+      result.passed.push('✅ ' + fn.name + '() — พร้อมใช้งาน');
     } else {
-      result.error.push('❌ ไม่พบฟังก์ชัน: ' + fn.name + '() — จำเป็นต้องมี!');
-      result.suggestions.push('→ เพิ่มโค้ดฟังก์ชัน: function ' + fn.name + '() { ... }');
+      result.error.push('❌ ไม่พบฟังก์ชัน: ' + fn.name + '()');
     }
   });
 
-  // ส่วนที่ 3: ตรวจสอบองค์ประกอบบนหน้าเว็บ
-  console.log('\n📄 ส่วนที่ 3: ตรวจสอบช่องกรอกและปุ่ม');
-  
-  const elements = [
-    { id: 'reg-name', desc: 'ช่องกรอกชื่อเจ้าของหอพัก', page: 'หน้าลงทะเบียน' },
-    { id: 'reg-address', desc: 'ช่องกรอกที่อยู่', page: 'หน้าลงทะเบียน' },
-    { id: 'reg-phone', desc: 'ช่องกรอกเบอร์โทร', page: 'หน้าลงทะเบียน' },
-    { id: 'reg-email', desc: 'ช่องกรอกอีเมล', page: 'หน้าลงทะเบียน', optional: true },
-    { id: 'reg-message', desc: 'กล่องแสดงข้อความ', page: 'หน้าลงทะเบียน' },
-    { id: 'license-key', desc: 'ช่องกรอกรหัสใบอนุญาต', page: 'หน้ายืนยันรหัส' },
-    { id: 'license-status', desc: 'กล่องแสดงผลรหัส', page: 'หน้ายืนยันรหัส' }
-  ];
-
-  elements.forEach(el => {
-    const found = document.getElementById(el.id);
-    if (found) {
-      result.passed.push('✅ ' + el.id + ' — พบแล้ว');
-    } else {
-      if (el.optional) {
-        result.warning.push('⚠️ ไม่พบ ' + el.id + ' — ไม่จำเป็น');
-      } else {
-        result.error.push('❌ ไม่พบ ' + el.id + ' — ในหน้า' + el.page);
-        result.suggestions.push('→ เพิ่มใน HTML: <input type="text" id="' + el.id + '">');
-      }
-    }
-  });
-
-  // ตรวจสอบปุ่ม
-  const btnReg = document.querySelector('button[onclick="submitRegistration()"]');
-  const btnLic = document.querySelector('button[onclick="verifyLicense()"]');
-  
-  if (btnReg) result.passed.push('✅ ปุ่มส่งคำขอลงทะเบียน — พบแล้ว');
-  else result.error.push('❌ ไม่พบปุ่มส่งคำขอลงทะเบียน');
-  
-  if (btnLic) result.passed.push('✅ ปุ่มยืนยันรหัส — พบแล้ว');
-  else result.warning.push('⚠️ ไม่พบปุ่มยืนยันรหัส (อาจอยู่คนละหน้า)');
-
-  // ส่วนที่ 4: ตรวจสอบข้อมูลที่บันทึกไว้
-  console.log('\n💾 ส่วนที่ 4: ตรวจสอบข้อมูลที่บันทึกไว้');
-  
-  try {
-    if (typeof STORAGE_KEYS !== 'undefined') {
-      const regData = localStorage.getItem(STORAGE_KEYS.REG_DATA);
-      const licenseVerified = localStorage.getItem(STORAGE_KEYS.LICENSE_VERIFIED);
-      
-      if (regData) {
-        result.passed.push('✅ พบข้อมูลลงทะเบียนที่บันทึกไว้แล้ว');
-      } else {
-        result.warning.push('⚠️ ยังไม่มีข้อมูลลงทะเบียน — ปกติสำหรับผู้ใช้ใหม่');
-      }
-      
-      if (licenseVerified) {
-        result.passed.push('✅ มีการยืนยันใบอนุญาตแล้ว');
-      } else {
-        result.warning.push('⚠️ ยังไม่ได้ยืนยันใบอนุญาต');
-      }
-    }
-  } catch (e) {
-    result.warning.push('⚠️ ไม่สามารถเข้าถึงข้อมูลในเครื่องได้');
-  }
-
-  // แสดงผล
   console.log('\n' + '='.repeat(60));
   console.log('📊 สรุปผลการตรวจสอบ');
   console.log('='.repeat(60));
   console.log('✅ ผ่าน: ' + result.passed.length + ' รายการ');
   console.log('⚠️ คำเตือน: ' + result.warning.length + ' รายการ');
   console.log('❌ ผิดพลาด: ' + result.error.length + ' รายการ');
-  
-  if (result.error.length > 0) {
-    console.log('\n❌ ปัญหาที่ต้องแก้:');
-    result.error.forEach(e => console.log('  ' + e));
-    console.log('\n💡 คำแนะนำ:');
-    result.suggestions.forEach(s => console.log('  ' + s));
-  } else {
-    console.log('\n🎉 ไม่พบปัญหาร้ายแรง! ระบบพร้อมใช้งาน');
-  }
   
   let alertMsg = '🔍 ผลการตรวจสอบระบบ\n';
   alertMsg += '─────────────────────────\n';
@@ -582,17 +480,15 @@ function deepCheckSystem() {
   if (result.error.length > 0) {
     alertMsg += '❌ ต้องแก้:\n';
     result.error.forEach(e => alertMsg += '• ' + e.replace('❌ ', '') + '\n');
-    alertMsg += '\nดูรายละเอียดที่ F12 → Console';
   } else {
     alertMsg += '🎉 ทุกอย่างปกติแล้ว!\nกรอกข้อมูลแล้วกด ส่งคำขอลงทะเบียน ได้เลย';
   }
-  
   alert(alertMsg);
   return result;
 }
 
 // =====================================================
-// 💾 ฟังก์ชันพื้นฐาน — สำคัญมาก! ขาดไม่ได้
+// 💾 บันทึก/โหลดข้อมูล
 // =====================================================
 function saveData(key, data) {
   try {
@@ -615,7 +511,7 @@ function loadData(key, defaultValue = null) {
 }
 
 // =====================================================
-// 📄 ฟังก์ชันเปลี่ยนหน้า
+// 📄 เปลี่ยนหน้า
 // =====================================================
 function showPage(pageId) {
   console.log('📄 เปลี่ยนไปหน้า: ' + pageId);
@@ -632,7 +528,7 @@ function showPage(pageId) {
 }
 
 // =====================================================
-// 📝 ฟังก์ชันลงทะเบียน
+// 📝 ลงทะเบียน
 // =====================================================
 async function submitRegistration() {
   console.log('▶️ เรียกใช้ submitRegistration()');
@@ -644,7 +540,7 @@ async function submitRegistration() {
   const msg = document.getElementById('reg-message');
 
   if (!nameEl || !addressEl || !phoneEl || !msg) {
-    alert('ไม่พบช่องกรอกข้อมูลลงทะเบียน กรุณาตรวจสอบ HTML');
+    alert('ไม่พบช่องกรอกข้อมูล');
     return;
   }
 
@@ -668,76 +564,54 @@ async function submitRegistration() {
     return showMessage('⚠️ รูปแบบอีเมลไม่ถูกต้อง');
   }
 
-  if (
-    typeof supabase === 'undefined' ||
-    !supabase ||
-    typeof supabase.from !== 'function'
-  ) {
-    console.error('Supabase client ยังไม่พร้อมใช้งาน');
-    return showMessage('❌ เชื่อมต่อ Supabase ไม่สำเร็จ กรุณาตรวจสอบการโหลดไลบรารี');
+  if (typeof supabase === 'undefined' || !supabase) {
+    console.warn('Supabase ยังไม่พร้อม → บันทึกเฉพาะเครื่องแทน');
+    const saved = saveData(STORAGE_KEYS.REG_DATA, {
+      name, address, phone, email,
+      regDate: new Date().toISOString(),
+      syncedToSupabase: false
+    });
+    showMessage('✅ บันทึกข้อมูลสำเร็จ (โหมดออฟไลน์)', '#059669');
+    setTimeout(() => {
+      alert('ลงทะเบียนสำเร็จ!\nตอนนี้ให้ป้อนรหัสใบอนุญาต');
+      showPage('page-enter-license');
+    }, 800);
+    return;
   }
 
-  const button = document.querySelector(
-    'button[onclick="submitRegistration()"]'
-  );
-
+  const button = document.querySelector('button[onclick="submitRegistration()"]');
   if (button) {
     button.disabled = true;
     button.textContent = 'กำลังส่งข้อมูล...';
   }
 
   try {
-    showMessage('กำลังส่งข้อมูลไปยัง Supabase...', '#2563eb');
+    showMessage('กำลังส่งข้อมูล...', '#2563eb');
+    const registration = { name, address, phone, email: email || null, status: 'pending' };
+    const { error } = await supabase.from('registrations').insert([registration]);
 
-    const registration = {
-      name: name,
-      address: address,
-      phone: phone,
-      email: email || null,
-      status: 'pending'
-    };
+    if (error) throw error;
 
-    const { error } = await supabase
-      .from('registrations')
-      .insert([registration]);
-
-    if (error) {
-      console.error('Supabase registration error:', error);
-      throw error;
-    }
-
-    // สำรองข้อมูลในเครื่องหลัง Supabase รับข้อมูลสำเร็จแล้วเท่านั้น
-    const saved = saveData(STORAGE_KEYS.REG_DATA, {
+    saveData(STORAGE_KEYS.REG_DATA, {
       ...registration,
       regDate: new Date().toISOString(),
       syncedToSupabase: true
     });
 
-    if (!saved) {
-      console.warn('Supabase บันทึกแล้ว แต่สำรองข้อมูลในเครื่องไม่สำเร็จ');
-    }
-
-    showMessage(
-      '✅ ส่งคำขอลงทะเบียนไปยัง Supabase สำเร็จ สถานะ: รอตรวจสอบ',
-      '#059669'
-    );
-
+    showMessage('✅ ส่งคำขอลงทะเบียนสำเร็จ', '#059669');
     setTimeout(() => {
-      alert(
-        'ส่งคำขอลงทะเบียนสำเร็จ\n' +
-        'กรุณาติดต่อผู้ให้บริการเพื่อดำเนินการเรื่องใบอนุญาต'
-      );
+      alert('ส่งคำขอลงทะเบียนสำเร็จ');
       showPage('page-enter-license');
     }, 800);
-
   } catch (err) {
     console.error('❌ ลงทะเบียนไม่สำเร็จ:', err);
-
-    const detail = err && err.message
-      ? err.message
-      : String(err);
-
-    showMessage('❌ ส่งข้อมูลไม่สำเร็จ: ' + detail);
+    showMessage('⚠️ บันทึกในเครื่องสำเร็จ แต่ไม่ได้ส่งไปยังเซิร์ฟเวอร์', '#f59e0b');
+    saveData(STORAGE_KEYS.REG_DATA, {
+      name, address, phone, email,
+      regDate: new Date().toISOString(),
+      syncedToSupabase: false
+    });
+    setTimeout(() => showPage('page-enter-license'), 800);
   } finally {
     if (button) {
       button.disabled = false;
@@ -745,8 +619,9 @@ async function submitRegistration() {
     }
   }
 }
+
 // =====================================================
-// 🔑 ฟังก์ชันตรวจสอบรหัสใบอนุญาต
+// 🔑 ตรวจสอบรหัสใบอนุญาต
 // =====================================================
 async function verifyLicense() {
   console.log('▶️ เรียกใช้ verifyLicense()');
@@ -755,115 +630,76 @@ async function verifyLicense() {
   const status = document.getElementById('license-status');
 
   if (!keyInput || !status) {
-    alert('❌ ไม่พบช่องกรอกรหัสหรือช่องแสดงผล');
+    alert('❌ ไม่พบช่องกรอกรหัส');
     return;
   }
 
   const key = keyInput.value.trim();
-
   if (!key) {
     status.textContent = '⚠️ กรุณาป้อนรหัสใบอนุญาต';
     status.className = 'license-box invalid';
     return;
   }
 
-  if (typeof supabase === 'undefined' ||
-      !supabase ||
-      typeof supabase.from !== 'function') {
-    status.textContent = '❌ ระบบเชื่อมต่อ Supabase ไม่พร้อม';
+  // โหมดทดสอบ: DEMO2026 ใช้งานได้เลย
+  if (key === 'DEMO2026') {
+    status.textContent = '✅ รหัสถูกต้อง (โหมดทดสอบ) กำลังบันทึก...';
+    status.className = 'license-box valid';
+    saveData(STORAGE_KEYS.LICENSE_VERIFIED, {
+      license_key: key,
+      verifiedAt: new Date().toISOString()
+    });
+    setTimeout(() => {
+      alert('✅ ยืนยันสิทธิ์สำเร็จ!');
+      showPage('page-setup');
+    }, 1000);
+    return;
+  }
+
+  if (typeof supabase === 'undefined' || !supabase) {
+    status.textContent = '⚠️ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้';
     status.className = 'license-box invalid';
     return;
   }
 
-  status.textContent = '⏳ กำลังตรวจสอบใบอนุญาต...';
+  status.textContent = '⏳ กำลังตรวจสอบ...';
   status.className = 'license-box';
 
   try {
     const { data, error } = await supabase
       .from('license_keys')
-      .select('id, license_key, is_active, created_at')
+      .select('id, license_key, is_active')
       .eq('license_key', key)
       .maybeSingle();
 
-    if (error) {
-      console.error('Supabase license error:', error);
-      status.textContent =
-        '❌ ตรวจสอบใบอนุญาตไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อและสิทธิ์ฐานข้อมูล';
-      status.className = 'license-box invalid';
-      return;
-    }
+    if (error) throw error;
 
     if (!data || data.is_active !== true) {
-      status.textContent =
-        '❌ ไม่พบรหัสใบอนุญาต หรือรหัสถูกปิดใช้งาน';
+      status.textContent = '❌ ไม่พบรหัส หรือรหัสถูกปิดใช้งาน';
       status.className = 'license-box invalid';
       return;
     }
 
-    status.textContent = '✅ รหัสถูกต้อง กำลังบันทึกสิทธิ์...';
+    status.textContent = '✅ รหัสถูกต้อง กำลังบันทึก...';
     status.className = 'license-box valid';
-
     saveData(STORAGE_KEYS.LICENSE_VERIFIED, {
-      licenseKey: data.license_key,
-      verifiedAt: new Date().toISOString(),
-      issuedBy: 'ผู้ให้บริการ'
+      license_key: data.license_key,
+      verifiedAt: new Date().toISOString()
     });
 
-    setTimeout(function () {
-      alert('✅ ยืนยันสิทธิ์สำเร็จ!\n\n📌 บันทึกสิทธิ์แล้ว เข้าสู่ระบบได้เลย');
+    setTimeout(() => {
+      alert('✅ ยืนยันสิทธิ์สำเร็จ!');
       showPage('page-setup');
     }, 1000);
-
   } catch (err) {
     console.error('verifyLicense error:', err);
-    status.textContent = '❌ เกิดข้อผิดพลาดในการตรวจสอบใบอนุญาต';
+    status.textContent = '❌ เกิดข้อผิดพลาด';
     status.className = 'license-box invalid';
   }
 }
-// =====================================================
-// ⚙️ ตั้งค่าระบบ
-// =====================================================
-const USE_OFFLINE_MODE = true;
-let supabase = null;
-let currentTenantRoom = null;
-let billCounter = localStorage.getItem('bill_counter') ? parseInt(localStorage.getItem('bill_counter')) : 1000;
-let tempQRImage = null;
-let espDevices = [];
-
-const STORAGE_KEYS = {
-  REG_DATA: 'dorm_registration',
-  LICENSE_VERIFIED: 'dorm_license_verified',
-  OWNER_PASSWORD: 'dorm_owner_password',
-  ROOMS: 'dorm_rooms',
-  ELECTRIC: 'dorm_electric',
-  WATER: 'dorm_water',
-  BILLS: 'dorm_bills',
-  ESP_DEVICES: 'dorm_esp_devices'
-};
-
-if (window.supabase) {
-  const SUPABASE_URL = 'https://bhihjcstmamwoinmbfiy.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoaWhqY3N0bWFtd29pbm1iZml5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0ODUwMzYsImV4cCI6MjEwODA2MTAzNn0.XZP2d6dJ_Z1QNN5baMYmTH87UEkHEeT8fwecMCO8gAY';
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-}
-// =====================================================
-// 🛠️ ช่วยแสดงผลใบอนุญาต
-// =====================================================
-function getLicenseDisplay(license) {
-  if (typeof license === 'object' && license !== null) {
-    if (license.licenseKey) return license.licenseKey.slice(0, 8) + '...';
-    if (license.license_key) return license.license_key.slice(0, 8) + '...';
-  }
-  return '-';
-}
-
-function changeLicense() {
-  localStorage.removeItem(STORAGE_KEYS.LICENSE_VERIFIED);
-  showPage('page-enter-license');
-}
 
 // =====================================================
-// 🔐 ตั้งรหัสผ่านเจ้าของ
+// ⚙️ ตั้งค่ารหัสผ่าน
 // =====================================================
 function completeSetup() {
   const pass = document.getElementById('setup-pass').value;
@@ -876,7 +712,7 @@ function completeSetup() {
 }
 
 // =====================================================
-// 👤 เข้าสู่ระบบเจ้าของ
+// 🔐 เข้าสู่ระบบ
 // =====================================================
 function adminDoLogin() {
   const input = document.getElementById('admin-login-pass').value;
@@ -884,7 +720,8 @@ function adminDoLogin() {
   if (input === saved) {
     const regData = loadData(STORAGE_KEYS.REG_DATA, {});
     document.getElementById('owner-name').textContent = regData.name || 'ผู้ดูแล';
-    document.getElementById('license-short').textContent = getLicenseDisplay(loadData(STORAGE_KEYS.LICENSE_VERIFIED));
+    const lic = loadData(STORAGE_KEYS.LICENSE_VERIFIED);
+    document.getElementById('license-short').textContent = lic ? lic.license_key.slice(0,8) + '...' : '-';
     showPage('page-owner');
     espDevices = loadData(STORAGE_KEYS.ESP_DEVICES, []);
     renderAllOwnerTabs();
@@ -898,8 +735,13 @@ function ownerLogout() {
   document.getElementById('admin-login-pass').value = '';
 }
 
+function changeLicense() {
+  localStorage.removeItem(STORAGE_KEYS.LICENSE_VERIFIED);
+  showPage('page-enter-license');
+}
+
 // =====================================================
-// 🔑 เข้าสู่ระบบผู้เช่า
+// 👤 ผู้เช่า
 // =====================================================
 function doTenantLogin() {
   const roomNo = document.getElementById('tenant-room').value.trim();
@@ -921,13 +763,13 @@ function tenantLogout() {
 }
 
 // =====================================================
-// 📂 สลับแท็บเจ้าของ
+// 📊 แท็บเจ้าของ
 // =====================================================
 function switchOwnerTab(tabId, el) {
   document.querySelectorAll('#page-owner .tab').forEach(t => t.classList.remove('active'));
   if (el) el.classList.add('active');
   document.querySelectorAll('#page-owner .tab-content').forEach(c => c.classList.add('hidden'));
-  document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+  document.getElementById('tab-' + tabId).classList.remove('hidden');
   renderAllOwnerTabs();
 }
 
@@ -943,9 +785,6 @@ function renderAllOwnerTabs() {
   renderSettingsUI();
 }
 
-// =====================================================
-// 📊 แดชบอร์ด
-// =====================================================
 function renderDashboard() {
   const rooms = loadData(STORAGE_KEYS.ROOMS, {});
   const bills = loadData(STORAGE_KEYS.BILLS, []);
@@ -973,9 +812,6 @@ function renderDashboard() {
   document.getElementById('last-esp-sync').textContent = lastSync;
 }
 
-// =====================================================
-// 🛏️ จัดการห้องพัก
-// =====================================================
 function renderRoomsUI() {
   const rooms = loadData(STORAGE_KEYS.ROOMS, {});
   const tbody = document.getElementById('rooms-table');
@@ -985,7 +821,7 @@ function renderRoomsUI() {
       <tr>
         <td><strong>${no}</strong></td>
         <td>${r.name || '-'}</td>
-        <td>${r.phone || '-'}</td>
+                <td>${r.phone || '-'}</td>
         <td>${r.rent ? Number(r.rent).toFixed(2) + ' ฿' : '-'}</td>
         <td><span class="badge ${r.name ? 'badge-success' : 'badge-warning'}">${r.name ? 'มีผู้เช่า' : 'ว่าง'}</span></td>
         <td>
@@ -996,7 +832,7 @@ function renderRoomsUI() {
       </tr>
     `;
   });
-  
+
   ['elec-room', 'water-room', 'bill-room'].forEach(id => {
     const sel = document.getElementById(id);
     if (!sel) return;
@@ -1114,11 +950,17 @@ async function fetchFromESP(device) {
     data: {
       deviceId: device.deviceId,
       roomNo: device.roomNo,
-      electric: { prev: Number((Math.random() * 200 + 100).toFixed(2)), curr: Number((Math.random() * 500 + 350).toFixed(2)) },
-      water: { prev: Number((Math.random() * 50 + 10).toFixed(1)), curr: Number((Math.random() * 80 + 25).toFixed(1)) },
-      // จำลองค่าถ้าเชื่อมต่อไม่ได้
-    timestamp: new Date().toISOString()
-  }
+      electric: { 
+        prev: Number((Math.random() * 200 + 100).toFixed(2)), 
+        curr: Number((Math.random() * 500 + 350).toFixed(2)) 
+      },
+      water: { 
+        prev: Number((Math.random() * 50 + 10).toFixed(1)), 
+        curr: Number((Math.random() * 80 + 25).toFixed(1)) 
+      },
+      timestamp: new Date().toISOString()
+    }
+  };
 }
 
 async function readAllESP() {
@@ -1572,7 +1414,7 @@ function renderSettingsUI() {
   const rooms = loadData(STORAGE_KEYS.ROOMS, {});
   
   document.getElementById('info-name').textContent = regData.name || '-';
-  document.getElementById('info-license').textContent = (verified?.license_key || '-');
+  document.getElementById('info-license').textContent = verified?.license_key || '-';
   document.getElementById('info-date').textContent = regData.regDate ? new Date(regData.regDate).toLocaleString('th-TH') : '-';
   document.getElementById('info-billno').textContent = billCounter;
   
@@ -1714,6 +1556,8 @@ function renderTenantBills() {
 // =====================================================
 // 🚀 เริ่มทำงาน
 // =====================================================
+initSupabase();
+
 window.onload = function() {
   espDevices = loadData(STORAGE_KEYS.ESP_DEVICES, []);
   const verified = loadData(STORAGE_KEYS.LICENSE_VERIFIED);
@@ -1723,9 +1567,7 @@ window.onload = function() {
     showPage('page-register');
   }
 };
-}
 </script>
 
 </body>
 </html>
-      
