@@ -1254,7 +1254,7 @@ function updateRoomDropdowns() {
     });
 }
 
-// ✅ ฝั่งผู้เช่า: แสดงบิล + ข้อมูลโอน + อัปโหลดสลิป
+// ✅ ฝั่งผู้เช่า: แสดงบิล + ข้อมูลโอน + อัปโหลดสลิป + รอยืนยัน
 function renderTenantBills(roomNo) {
     const bills = loadData(STORAGE.BILLS, []).filter(b => b.room === roomNo);
     const paymentInfo = loadData('dorm_payment_info', {});
@@ -1280,7 +1280,7 @@ function renderTenantBills(roomNo) {
             <hr>
             <p style="font-size:18px;font-weight:bold;color:#4f46e5;text-align:right;">รวมทั้งสิ้น: ${b.total.toLocaleString()} บาท</p>
             
-            ${!b.paid ? `
+            ${!b.paid && !b.pending ? `
             <div style="margin-top:16px; padding:12px; background:#f0fdf4; border-radius:8px; border:1px solid #a7f0c5;">
                 <h4 style="margin:0 0 8px 0; color:#065f46;">💳 ข้อมูลการโอนเงิน</h4>
                 ${paymentInfo.bankName ? `<p><strong>ธนาคาร:</strong> ${paymentInfo.bankName}</p>` : ''}
@@ -1293,21 +1293,29 @@ function renderTenantBills(roomNo) {
                 <h4 style="margin:0 0 10px 0; color:#92400e;">📤 แจ้งชำระเงิน</h4>
                 <p style="margin:6px 0; font-size:14px;">อัปโหลดรูปสลิป/หลักฐานการโอน:</p>
                 <input type="file" id="slip-${b.id || b.billNo}" accept="image/*">
-                <button type="button" onclick="uploadSlip('${b.id || b.billNo}')" style="margin-top:8px; padding:8px 16px; background:#16a34a; color:white; border:none; border-radius:6px; cursor:pointer;">📤 ส่งหลักฐาน & แจ้งชำระแล้ว</button>
+                <button type="button" onclick="uploadSlip('${b.id || b.billNo}')" style="margin-top:8px; padding:8px 16px; background:#16a34a; color:white; border:none; border-radius:6px; cursor:pointer;">📤 ส่งหลักฐาน</button>
             </div>
-            ` : `
-            <p style="color:#16a34a; font-weight:bold; text-align:center; margin-top:16px;">✅ ชำระเงินแล้ว</p>
+            ` : ''}
+            
+            ${b.pending && !b.paid ? `
+            <p style="color:#d97706; font-weight:bold; text-align:center; margin-top:16px;">⏳ สลิปถูกส่งแล้ว รอการยืนยันจากเจ้าของห้อง</p>
+            ${b.slipImage ? `<div style="margin-top:8px; text-align:center;"><p style="font-size:13px; color:#666;">📷 สลิปที่ส่ง:</p><img src="${b.slipImage}" style="max-width:200px; border-radius:6px; margin-top:4px;"></div>` : ''}
+            ` : ''}
+            
+            ${b.paid ? `
+            <p style="color:#16a34a; font-weight:bold; text-align:center; margin-top:16px;">✅ ชำระเงินเรียบร้อยแล้ว</p>
             ${b.slipImage ? `<div style="margin-top:8px; text-align:center;"><p style="font-size:13px; color:#666;">📷 หลักฐานการโอน:</p><img src="${b.slipImage}" style="max-width:200px; border-radius:6px; margin-top:4px;"></div>` : ''}
-            `}
+            ` : ''}
             
             <p style="text-align:right;margin-top:12px;">
-                <span class="badge ${b.paid ? 'badge-success' : 'badge-warning'}">${b.paid ? '✅ ชำระแล้ว' : '⏳ รอชำระ'}</span>
+                <span class="badge ${b.paid ? 'badge-success' : b.pending ? 'badge-warning' : 'badge-secondary'}">
+                    ${b.paid ? '✅ ชำระแล้ว' : b.pending ? '⏳ รอเจ้าของยืนยัน' : '⏳ รอชำระ'}
+                </span>
             </p>
         </div>`;
     });
     container.innerHTML = html;
 }
-
 // 📤 ผู้เช่าส่งสลิป → สถานะเป็นรอตรวจสอบ
 function uploadSlip(billId) {
     const fileInput = document.getElementById(`slip-${billId}`);
