@@ -717,12 +717,6 @@ async function verifyLicense() {
     status.className = 'license-box invalid';
   }
 }
-
-function changeLicense() {
-  localStorage.removeItem(STORAGE_KEYS.LICENSE_VERIFIED);
-  showPage('page-enter-license');
-}
-
 // =====================================================
 // ⚙️ ตั้งค่าระบบ
 // =====================================================
