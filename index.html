@@ -434,6 +434,9 @@
 // =====================================================
 // 🔍 ระบบตรวจสอบเชิงลึก — ตรวจสอบจุดสำคัญทั้งหมด
 // =====================================================
+// =====================================================
+// 🔍 ระบบตรวจสอบเชิงลึก
+// =====================================================
 function deepCheckSystem() {
   console.log('\n' + '='.repeat(60));
   console.log('🔍 ระบบตรวจสอบเชิงลึก — เริ่มการวิเคราะห์');
@@ -446,37 +449,33 @@ function deepCheckSystem() {
     suggestions: []
   };
 
-  // ════════════════════════════════════════════════════
-  // ส่วนที่ 1: ตรวจสอบตัวแปรหลักของระบบ
-  // ════════════════════════════════════════════════════
+  // ส่วนที่ 1: ตรวจสอบตัวแปรหลัก
   console.log('\n📌 ส่วนที่ 1: ตรวจสอบตัวแปรหลัก');
   
   if (typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS) {
-    result.passed.push('✅ พบตัวแปร STORAGE_KEYS (คีย์สำหรับบันทึกข้อมูล)');
+    result.passed.push('✅ พบตัวแปร STORAGE_KEYS');
     
     const requiredKeys = ['REG_DATA', 'LICENSE_VERIFIED', 'OWNER_PASSWORD', 'ROOMS'];
     requiredKeys.forEach(key => {
       if (STORAGE_KEYS[key]) {
-        result.passed.push(`   ✅ พบคีย์: ${key} = "${STORAGE_KEYS[key]}"`);
+        result.passed.push('   ✅ พบคีย์: ' + key + ' = "' + STORAGE_KEYS[key] + '"');
       } else {
-        result.error.push(`❌ ไม่พบคีย์สำคัญ: ${key} ภายใน STORAGE_KEYS`);
-        result.suggestions.push(`→ ตรวจสอบว่ามี '${key}: ชื่อตัวแปร' ภายใน const STORAGE_KEYS = { ... }`);
+        result.error.push('❌ ไม่พบคีย์สำคัญ: ' + key);
+        result.suggestions.push('→ ตรวจสอบว่ามี "' + key + '": ค่า ภายใน STORAGE_KEYS');
       }
     });
   } else {
     result.error.push('❌ ไม่พบตัวแปร STORAGE_KEYS เลย!');
-    result.suggestions.push('→ ตรวจสอบว่ามีโค้ด: const STORAGE_KEYS = { ... } อยู่ก่อนฟังก์ชันตรวจสอบ');
+    result.suggestions.push('→ ตรวจสอบว่ามี const STORAGE_KEYS = { ... }');
   }
 
   if (typeof USE_OFFLINE_MODE !== 'undefined') {
-    result.passed.push(`✅ USE_OFFLINE_MODE = ${USE_OFFLINE_MODE}`);
+    result.passed.push('✅ USE_OFFLINE_MODE = ' + USE_OFFLINE_MODE);
   } else {
-    result.warning.push('⚠️ ไม่พบ USE_OFFLINE_MODE — อาจไม่มีผลกระทบถ้าไม่ใช้ระบบนี้');
+    result.warning.push('⚠️ ไม่พบ USE_OFFLINE_MODE — ไม่กระทบถ้าไม่ใช้ระบบนี้');
   }
 
-  // ════════════════════════════════════════════════════
-  // ส่วนที่ 2: ตรวจสอบฟังก์ชันหลักและตำแหน่ง
-  // ════════════════════════════════════════════════════
+  // ส่วนที่ 2: ตรวจสอบฟังก์ชันหลัก
   console.log('\n🔧 ส่วนที่ 2: ตรวจสอบฟังก์ชันหลัก');
   
   const coreFunctions = [
@@ -489,61 +488,51 @@ function deepCheckSystem() {
 
   coreFunctions.forEach(fn => {
     if (typeof window[fn.name] === 'function') {
-      result.passed.push(`✅ ${fn.name}() — พร้อมใช้งาน (${fn.desc})`);
+      result.passed.push('✅ ' + fn.name + '() — พร้อมใช้งาน (' + fn.desc + ')');
     } else {
-      result.error.push(`❌ ไม่พบฟังก์ชัน: ${fn.name}() — จำเป็นต้องมี!`);
-      result.suggestions.push(`→ เพิ่มโค้ดฟังก์ชัน: function ${fn.name}(...) { ... } ก่อนเรียกใช้`);
+      result.error.push('❌ ไม่พบฟังก์ชัน: ' + fn.name + '() — จำเป็นต้องมี!');
+      result.suggestions.push('→ เพิ่มโค้ดฟังก์ชัน: function ' + fn.name + '() { ... }');
     }
   });
 
-  // ════════════════════════════════════════════════════
-  // ส่วนที่ 3: ตรวจสอบองค์ประกอบบนหน้าเว็บ (DOM Elements)
-  // ════════════════════════════════════════════════════
-  console.log('\n📄 ส่วนที่ 3: ตรวจสอบช่องกรอกและปุ่มบนหน้าเว็บ');
+  // ส่วนที่ 3: ตรวจสอบองค์ประกอบบนหน้าเว็บ
+  console.log('\n📄 ส่วนที่ 3: ตรวจสอบช่องกรอกและปุ่ม');
   
   const elements = [
     { id: 'reg-name', desc: 'ช่องกรอกชื่อเจ้าของหอพัก', page: 'หน้าลงทะเบียน' },
     { id: 'reg-address', desc: 'ช่องกรอกที่อยู่', page: 'หน้าลงทะเบียน' },
     { id: 'reg-phone', desc: 'ช่องกรอกเบอร์โทร', page: 'หน้าลงทะเบียน' },
     { id: 'reg-email', desc: 'ช่องกรอกอีเมล', page: 'หน้าลงทะเบียน', optional: true },
-    { id: 'reg-message', desc: 'กล่องแสดงข้อความแจ้งเตือน', page: 'หน้าลงทะเบียน' },
+    { id: 'reg-message', desc: 'กล่องแสดงข้อความ', page: 'หน้าลงทะเบียน' },
     { id: 'license-key', desc: 'ช่องกรอกรหัสใบอนุญาต', page: 'หน้ายืนยันรหัส' },
-    { id: 'license-status', desc: 'กล่องแสดงผลตรวจสอบรหัส', page: 'หน้ายืนยันรหัส' }
+    { id: 'license-status', desc: 'กล่องแสดงผลรหัส', page: 'หน้ายืนยันรหัส' }
   ];
 
   elements.forEach(el => {
     const found = document.getElementById(el.id);
     if (found) {
-      result.passed.push(`✅ ${el.id} — พบแล้ว (${el.desc})`);
+      result.passed.push('✅ ' + el.id + ' — พบแล้ว');
     } else {
       if (el.optional) {
-        result.warning.push(`⚠️ ไม่พบ ${el.id} (${el.desc}) — ไม่จำเป็น ระบบยังทำงานได้`);
+        result.warning.push('⚠️ ไม่พบ ' + el.id + ' — ไม่จำเป็น');
       } else {
-        result.error.push(`❌ ไม่พบ ${el.id} — ในหน้า ${el.page}`);
-        result.suggestions.push(`→ เพิ่มในส่วน HTML ของหน้า ${el.page}:\n   <input type="text" id="${el.id}" placeholder="${el.desc}">`);
+        result.error.push('❌ ไม่พบ ' + el.id + ' — ในหน้า' + el.page);
+        result.suggestions.push('→ เพิ่มใน HTML: <input type="text" id="' + el.id + '">');
       }
     }
   });
 
   // ตรวจสอบปุ่ม
-  const buttons = [
-    { selector: 'button[onclick="submitRegistration()"]', desc: 'ปุ่มส่งคำขอลงทะเบียน', page: 'หน้าลงทะเบียน' },
-    { selector: 'button[onclick="verifyLicense()"]', desc: 'ปุ่มยืนยันรหัส', page: 'หน้ายืนยันรหัส' }
-  ];
+  const btnReg = document.querySelector('button[onclick="submitRegistration()"]');
+  const btnLic = document.querySelector('button[onclick="verifyLicense()"]');
+  
+  if (btnReg) result.passed.push('✅ ปุ่มส่งคำขอลงทะเบียน — พบแล้ว');
+  else result.error.push('❌ ไม่พบปุ่มส่งคำขอลงทะเบียน');
+  
+  if (btnLic) result.passed.push('✅ ปุ่มยืนยันรหัส — พบแล้ว');
+  else result.warning.push('⚠️ ไม่พบปุ่มยืนยันรหัส (อาจอยู่คนละหน้า)');
 
-  buttons.forEach(btn => {
-    const found = document.querySelector(btn.selector);
-    if (found) {
-      result.passed.push(`✅ ${btn.desc} — พบแล้ว เรียกใช้ถูกต้อง`);
-    } else {
-      result.error.push(`❌ ไม่พบ ${btn.desc} ในหน้า ${btn.page}`);
-      result.suggestions.push(`→ เพิ่มใน HTML:\n   <button onclick="${btn.selector.match(/onclick="([^"]+)"/)[1]}">ข้อความบนปุ่ม</button>`);
-    }
-  });
-
-  // ════════════════════════════════════════════════════
-  // ส่วนที่ 4: ตรวจสอบข้อมูลที่บันทึกไว้ในเครื่อง
-  // ════════════════════════════════════════════════════
+  // ส่วนที่ 4: ตรวจสอบข้อมูลที่บันทึกไว้
   console.log('\n💾 ส่วนที่ 4: ตรวจสอบข้อมูลที่บันทึกไว้');
   
   try {
@@ -553,102 +542,187 @@ function deepCheckSystem() {
       
       if (regData) {
         result.passed.push('✅ พบข้อมูลลงทะเบียนที่บันทึกไว้แล้ว');
-        try {
-          const parsed = JSON.parse(regData);
-          result.passed.push(`   📋 ชื่อ: ${parsed.name || 'ไม่ระบุ'}, วันที่: ${parsed.regDate || 'ไม่ระบุ'}`);
-        } catch(e) {}
       } else {
         result.warning.push('⚠️ ยังไม่มีข้อมูลลงทะเบียน — ปกติสำหรับผู้ใช้ใหม่');
       }
       
       if (licenseVerified) {
-        result.passed.push('✅ มีการยืนยันใบอนุญาตแล้ว — ผ่านขั้นตอนนี้แล้ว');
+        result.passed.push('✅ มีการยืนยันใบอนุญาตแล้ว');
       } else {
-        result.warning.push('⚠️ ยังไม่ได้ยืนยันใบอนุญาต — ปกติในขั้นตอนนี้');
+        result.warning.push('⚠️ ยังไม่ได้ยืนยันใบอนุญาต');
       }
     }
   } catch (e) {
-    result.warning.push('⚠️ ไม่สามารถเข้าถึงข้อมูลในเครื่องได้ — อาจถูกบล็อกโดยเบราว์เซอร์');
+    result.warning.push('⚠️ ไม่สามารถเข้าถึงข้อมูลในเครื่องได้');
   }
 
-  // ════════════════════════════════════════════════════
-  // สรุปผล
-  // ════════════════════════════════════════════════════
+  // แสดงผล
   console.log('\n' + '='.repeat(60));
   console.log('📊 สรุปผลการตรวจสอบ');
   console.log('='.repeat(60));
-  console.log(`✅ ผ่าน: ${result.passed.length} รายการ`);
-  console.log(`⚠️ คำเตือน: ${result.warning.length} รายการ`);
-  console.log(`❌ ผิดพลาด: ${result.error.length} รายการ`);
-  
-  if (result.passed.length > 0) {
-    console.log('\n✅ รายการที่ปกติ:');
-    result.passed.forEach(p => console.log('  ' + p));
-  }
-  
-  if (result.warning.length > 0) {
-    console.log('\n⚠️ คำเตือน:');
-    result.warning.forEach(w => console.log('  ' + w));
-  }
+  console.log('✅ ผ่าน: ' + result.passed.length + ' รายการ');
+  console.log('⚠️ คำเตือน: ' + result.warning.length + ' รายการ');
+  console.log('❌ ผิดพลาด: ' + result.error.length + ' รายการ');
   
   if (result.error.length > 0) {
     console.log('\n❌ ปัญหาที่ต้องแก้:');
     result.error.forEach(e => console.log('  ' + e));
-    console.log('\n💡 คำแนะนำในการแก้ไข:');
+    console.log('\n💡 คำแนะนำ:');
     result.suggestions.forEach(s => console.log('  ' + s));
   } else {
     console.log('\n🎉 ไม่พบปัญหาร้ายแรง! ระบบพร้อมใช้งาน');
   }
   
-  // แสดงผลในหน้าเว็บ
-  let alertMsg = `🔍 ผลการตรวจสอบระบบ\n`;
-  alertMsg += `${'─'.repeat(25)}\n`;
-  alertMsg += `✅ ปกติ: ${result.passed.length} รายการ\n`;
-  alertMsg += `⚠️ คำเตือน: ${result.warning.length} รายการ\n`;
-  alertMsg += `❌ ผิดพลาด: ${result.error.length} รายการ\n\n`;
+  let alertMsg = '🔍 ผลการตรวจสอบระบบ\n';
+  alertMsg += '─────────────────────────\n';
+  alertMsg += '✅ ปกติ: ' + result.passed.length + ' รายการ\n';
+  alertMsg += '⚠️ คำเตือน: ' + result.warning.length + ' รายการ\n';
+  alertMsg += '❌ ผิดพลาด: ' + result.error.length + ' รายการ\n\n';
   
   if (result.error.length > 0) {
-    alertMsg += `❌ ต้องแก้:\n`;
-    result.error.forEach(e => alertMsg += `• ${e.replace(/^❌ /, '')}\n`);
-    alertMsg += `\n💡 เปิด F12 → แท็บ Console ดูคำแนะนำละเอียด`;
+    alertMsg += '❌ ต้องแก้:\n';
+    result.error.forEach(e => alertMsg += '• ' + e.replace('❌ ', '') + '\n');
+    alertMsg += '\nดูรายละเอียดที่ F12 → Console';
   } else {
-    alertMsg += `🎉 ทุกอย่างปกติแล้ว!\nลองกดปุ่มอีกครั้งได้เลย`;
+    alertMsg += '🎉 ทุกอย่างปกติแล้ว!\nกรอกข้อมูลแล้วกด ส่งคำขอลงทะเบียน ได้เลย';
   }
   
   alert(alertMsg);
-  
   return result;
 }
 
-// เพิ่มปุ่มตรวจสอบ
-function addDeepCheckButton() {
-  if (document.getElementById('deep-check-btn')) return;
-  
-  const btn = document.createElement('button');
-  btn.id = 'deep-check-btn';
-  btn.innerHTML = '🔍 ตรวจสอบระบบเชิงลึก';
-  btn.style.cssText = `
-    position: fixed;
-    top: 60px;
-    right: 10px;
-    z-index: 99999;
-    padding: 10px 16px;
-    background: #059669;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: bold;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-  `;
-  btn.onmouseover = () => btn.style.background = '#047857';
-  btn.onmouseout = () => btn.style.background = '#059669';
-  btn.onclick = deepCheckSystem;
-  document.body.appendChild(btn);
+// =====================================================
+// 💾 ฟังก์ชันพื้นฐาน — สำคัญมาก! ขาดไม่ได้
+// =====================================================
+function saveData(key, data) {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+    return true;
+  } catch (e) {
+    console.error('❌ saveData ผิดพลาด:', e);
+    return false;
+  }
 }
 
-window.addEventListener('load', addDeepCheckButton);
+function loadData(key, defaultValue = null) {
+  try {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : defaultValue;
+  } catch (e) {
+    console.error('❌ loadData ผิดพลาด:', e);
+    return defaultValue;
+  }
+}
+
+// =====================================================
+// 📄 ฟังก์ชันเปลี่ยนหน้า
+// =====================================================
+function showPage(pageId) {
+  console.log('📄 เปลี่ยนไปหน้า: ' + pageId);
+  const pages = document.querySelectorAll('[id^="page-"]');
+  pages.forEach(page => page.style.display = 'none');
+  const target = document.getElementById(pageId);
+  if (target) {
+    target.style.display = 'block';
+    return true;
+  } else {
+    console.error('❌ ไม่พบหน้า: ' + pageId);
+    return false;
+  }
+}
+
+// =====================================================
+// 📝 ฟังก์ชันลงทะเบียน
+// =====================================================
+async function submitRegistration() {
+  console.log('▶️ เรียกใช้ submitRegistration()');
+  
+  const name = document.getElementById('reg-name').value.trim();
+  const address = document.getElementById('reg-address').value.trim();
+  const phone = document.getElementById('reg-phone').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const msg = document.getElementById('reg-message');
+  
+  if (!msg) {
+    alert('❌ ไม่พบช่องแสดงข้อความ');
+    return;
+  }
+  msg.innerHTML = '';
+
+  if (!name) return msg.innerHTML = '<p style="color:#ef4444;padding:8px;margin:0;">⚠️ กรุณากรอกชื่อเจ้าของหอพัก</p>';
+  if (!address) return msg.innerHTML = '<p style="color:#ef4444;padding:8px;margin:0;">⚠️ กรุณากรอกที่อยู่หอพัก</p>';
+  if (!phone || !/^[0-9]{9,10}$/.test(phone)) return msg.innerHTML = '<p style="color:#ef4444;padding:8px;margin:0;">⚠️ เบอร์โทรต้องเป็นตัวเลข 9-10 หลัก</p>';
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return msg.innerHTML = '<p style="color:#ef4444;padding:8px;margin:0;">⚠️ รูปแบบอีเมลไม่ถูกต้อง</p>';
+
+  try {
+    saveData(STORAGE_KEYS.REG_DATA, {
+      name: name,
+      address: address,
+      phone: phone,
+      email: email,
+      regDate: new Date().toISOString()
+    });
+    
+    msg.innerHTML = '<p style="color:#10b981;padding:8px;margin:0;">✅ บันทึกข้อมูลสำเร็จ!</p>';
+    
+    setTimeout(function() {
+      alert('✅ บันทึกข้อมูลสำเร็จ!\n\n📞 กรุณาติดต่อผู้ให้บริการ เพื่อขอรับรหัสใบอนุญาตใช้งาน');
+      showPage('page-enter-license');
+    }, 600);
+    
+  } catch (err) {
+    msg.innerHTML = '<p style="color:#ef4444;padding:8px;margin:0;">❌ ผิดพลาด: ' + err.message + '</p>';
+  }
+}
+
+// =====================================================
+// 🔑 ฟังก์ชันตรวจสอบรหัสใบอนุญาต
+// =====================================================
+async function verifyLicense() {
+  console.log('▶️ เรียกใช้ verifyLicense()');
+  
+  const keyInput = document.getElementById('license-key');
+  const status = document.getElementById('license-status');
+  
+  if (!keyInput || !status) {
+    alert('❌ ไม่พบช่องกรอกหรือช่องแสดงผล');
+    return;
+  }
+  
+  const key = keyInput.value.trim();
+  const LICENSE_KEY = 'SUPERBASS2026';
+
+  if (!key) {
+    status.textContent = '⚠️ กรุณาป้อนรหัสใบอนุญาตที่ได้รับจากผู้ให้บริการ';
+    status.className = 'license-box invalid';
+    return;
+  }
+
+  if (key === LICENSE_KEY) {
+    status.textContent = '✅ รหัสถูกต้อง! กำลังบันทึกสิทธิ์...';
+    status.className = 'license-box valid';
+    
+    saveData(STORAGE_KEYS.LICENSE_VERIFIED, {
+      licenseKey: key,
+      verifiedAt: new Date().toISOString(),
+      issuedBy: 'ผู้ให้บริการ'
+    });
+    
+    setTimeout(function() {
+      alert('✅ ยืนยันสิทธิ์สำเร็จ!\n\n📌 ข้อมูลถูกบันทึกแล้ว เข้าสู่ระบบได้เลย');
+      showPage('page-setup');
+    }, 1000);
+  } else {
+    status.textContent = '❌ รหัสไม่ถูกต้อง ตรวจสอบกับผู้ให้บริการอีกครั้ง';
+    status.className = 'license-box invalid';
+  }
+}
+
+function changeLicense() {
+  localStorage.removeItem(STORAGE_KEYS.LICENSE_VERIFIED);
+  showPage('page-enter-license');
+}
+
 // =====================================================
 // ⚙️ ตั้งค่าระบบ
 // =====================================================
@@ -671,11 +745,10 @@ const STORAGE_KEYS = {
 };
 
 if (window.supabase) {
-  const SUPABASE_URL = "https://bhihjcstmamwoinmbfiy.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoaWhqY3N0bWFtd29pbm1iZml5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0ODUwMzYsImV4cCI6MjEwODA2MTAzNn0.XZP2d6dJ_Z1QNN5baMYmTH87UEkHEeT8fwecMCO8gAY";
+  const SUPABASE_URL = 'https://bhihjcstmamwoinmbfiy.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoaWhqY3N0bWFtd29pbm1iZml5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0ODUwMzYsImV4cCI6MjEwODA2MTAzNn0.XZP2d6dJ_Z1QNN5baMYmTH87UEkHEeT8fwecMCO8gAY';
   supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
-
 // =====================================================
 // 💾 ฟังก์ชันพื้นฐาน
 // =====================================================
