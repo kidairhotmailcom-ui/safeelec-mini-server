@@ -1517,7 +1517,7 @@ function updateRoomDropdowns() {
 
 // ✅ ฝั่งผู้เช่า: แสดงบิล + ข้อมูลโอน + อัปโหลดสลิป
 function renderTenantBills(roomNo) {
-    const bills = loadData(STORAGE.BILLS, []).filter(b => b.room === roomNo);
+    const bills = loadData(STORAGE.BILLS, []).filter(b => String(b.room) === String(roomNo));
     const paymentInfo = loadData('dorm_payment_info', {});
     const qrData = localStorage.getItem('dorm_qr_base64') || '';
     const container = document.getElementById('tenant-bills');
