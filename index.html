@@ -1155,8 +1155,6 @@ function createBill() {
     saveData(STORAGE.BILLS, bills);
 
     alert(`✅ สร้างบิลสำเร็จ\nเลขที่: ${billNo}\nห้อง: ${room}\nรวมทั้งสิ้น: ฿${total.toLocaleString()}`);
-    
-    document.getElementById
         document.getElementById('bill-room').value = '';
     renderBillList();
     updateDashboard();
