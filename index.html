@@ -658,16 +658,29 @@ const STORAGE = {
 function saveData(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 function loadData(key) { let s = localStorage.getItem(key); return s ? JSON.parse(s) : null; }
 
+
 function showPage(id) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.page').forEach(function (p) {
+    p.classList.remove('active');
+  });
+
+  const target = document.getElementById(id);
+
+  if (!target) {
+    console.error('ไม่พบหน้า HTML ที่มี id:', id);
+    return;
+  }
+
+  target.classList.add('active');
 }
+
 
 window.onload = function() {
   const reg = loadData(STORAGE.REGISTRAT);
   const lic = loadData(STORAGE.LICENSE);
   const admin = loadData(STORAGE.ADMIN);
 
+  
   if (!reg) { showPage("page-register"); }
   else if (!lic) { showPage("page-enter-license"); }
   else if (!admin) { showPage("page-setup"); }
