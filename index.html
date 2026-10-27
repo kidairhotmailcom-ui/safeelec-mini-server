@@ -826,12 +826,11 @@ function saveElectric() {
   const prev = Number(document.getElementById('elec-prev').value);
   const curr = Number(document.getElementById('elec-curr').value);
   const rate = Number(document.getElementById('elec-rate').value);
-
-
+ 
   if (!room || !month || isNaN(prev) || isNaN(curr)) {
-    alert(’กรอกข้อมูลค่าไฟให้ครบ‘);
+    alert('กรอกข้อมูลค่าไฟให้ครบ');
     return;
-  }
+}
 
   let elec = loadData(STORAGE.METER_ELEC) || [];
 
