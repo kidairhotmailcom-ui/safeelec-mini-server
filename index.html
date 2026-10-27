@@ -467,22 +467,53 @@ function showPage(pageId) {
 // =====================================================
 // 📝 ลงทะเบียน
 // =====================================================
-function submitRegistration() {
+async function submitRegistration() {
     const name = document.getElementById('reg-name').value.trim();
     const address = document.getElementById('reg-address').value.trim();
     const phone = document.getElementById('reg-phone').value.trim();
     const email = document.getElementById('reg-email').value.trim();
     const msg = document.getElementById('reg-message');
+
+    // ตรวจสอบข้อมูลก่อนส่ง
     if (!name || !address || !phone) {
-        msg.innerHTML = '<div class="license-box invalid" style="display:block">⚠️ กรอกข้อมูลให้ครบถ้วน</div>';
+        msg.innerHTML = '<div class="license-box invalid" style="display:block">⚠️ กรอกชื่อ ที่อยู่ และเบอร์โทรให้ครบ</div>';
         return;
     }
-    saveData(STORAGE.REG, { name, address, phone, email, date: new Date().toISOString() });
-    msg.innerHTML = '<div class="license-box valid" style="display:block">✅ บันทึกข้อมูลสำเร็จ</div>';
-    
-    setTimeout(() => showPage('page-enter-license'), 1000);
-}
 
+    // เช็คว่าเชื่อมต่อ Supabase สำเร็จไหม
+    if (!supabase) {
+        msg.innerHTML = '<div class="license-box invalid" style="display:block">❌ ไม่พบ Supabase<br>ตรวจสอบ script ใน &lt;head&gt;</div>';
+        return;
+    }
+
+    msg.innerHTML = '<div class="license-box" style="display:block;background:#e0f2fe;color:#0c4a6e;">⏳ กำลังบันทึก...</div>';
+
+    try {
+        // ส่งข้อมูลไปยัง Supabase
+        const { error } = await supabase
+            .from('registrations')
+            .insert([
+                { 
+                    name: name,
+                    address: address,
+                    phone: phone,
+                    email: email || ''
+                }
+            ]);
+
+        if (error) throw error;
+
+        // สำเร็จ → บันทึกในเครื่องด้วย + แจ้งเตือน
+        saveData(STORAGE.REG, { name, address, phone, email, date: new Date().toISOString() });
+        msg.innerHTML = '<div class="license-box valid" style="display:block">✅ บันทึกข้อมูลสำเร็จ!</div>';
+        setTimeout(() => showPage('page-enter-license'), 1200);
+
+    } catch (err) {
+        // ❌ ถ้าผิดพลาด แจ้งเหตุผล
+        console.error('Error:', err);
+        msg.innerHTML = `<div class="license-box invalid" style="display:block">❌ ผิดพลาด: ${err.message}<br>💡 อย่าลืมรัน SQL ใน Supabase → SQL Editor นะครับ</div>`;
+    }
+}
 // =====================================================
 // 🔑 ตรวจสอบรหัสใบอนุญาต
 // =====================================================
