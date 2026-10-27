@@ -719,7 +719,7 @@ function saveElectric() {
   data.unshift({ room, month, prev, curr, units, rate, total, recordedAt: new Date().toISOString() });
   saveData(STORAGE.ELECTRIC, data);
 
-  alert(`✅ บันทึกสำเร็จ! ใช้ไป ${units} หน่วย = ฿${total.toLocaleString()}`);
+  alert(`✅ บันทึกสำเร็จ! ใช้ไป ${units} หน่วย = ฿${total}`);
   document.getElementById('elec-room').value = '';
   document.getElementById('elec-prev').value = '';
   document.getElementById('elec-curr').value = '';
