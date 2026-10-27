@@ -447,48 +447,22 @@ function loadData(key, defaultValue = null) {
 // 📝 ขั้นที่ 1: ลงทะเบียน
 // =====================================================
 
-async function submitRegistration() {
+function submitRegistration() {
   const name = document.getElementById('reg-name').value.trim();
   const address = document.getElementById('reg-address').value.trim();
   const phone = document.getElementById('reg-phone').value.trim();
-  const email = document.getElementById('reg-email').value.trim();
-  const msg = document.getElementById('reg-message');
-
+  const msgDiv = document.getElementById('reg-message');
+  
   if (!name || !address || !phone) {
-    msg.innerHTML = '<div style="color:red;padding:10px;background:#fee2e2;border-radius:6px;">⚠️ กรอกชื่อ ที่อยู่ และเบอร์โทรให้ครบ</div>';
+    msgDiv.innerHTML = '<span style="color:red">❌ กรอกข้อมูลให้ครบถ้วน</span>';
     return;
   }
-
-  // บันทึกลงเครื่องก่อน
-  saveData(STORAGE.REGISTRATION, { name, address, phone, email, submittedAt: new Date().toISOString() });
-
-  // ถ้ามี Supabase ให้ส่งขึ้น
-  if (supabase) {
-    try {
-      const { error } = await supabase
-        .from('registrations')
-        .insert([
-          {
-            name: name,
-            address: address,
-            phone: phone,
-            email: email || ''
-          }
-        ]);
-
-      if (error) throw error;
-    } catch (e) {
-      console.warn('Supabase not available:', e.message);
-    }
-  }
-
-  msg.innerHTML = '<div style="color:green;padding:10px;background:#d1fae5;border-radius:6px;">✅ ส่งคำขอสำเร็จ! กำลังพาไปหน้าป้อนรหัส...</div>';
   
+  msgDiv.innerHTML = '<span style="color:green">✅ บันทึกสำเร็จ! กำลังไปหน้าถัดไป...</span>';
   setTimeout(() => {
     showPage('page-enter-license');
   }, 1500);
 }
-
 // =====================================================
 // 🔐 ขั้นที่ 2: ตรวจสอบรหัสใบอนุญาต
 // =====================================================
