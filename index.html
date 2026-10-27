@@ -658,22 +658,28 @@ const STORAGE = {
 function saveData(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 function loadData(key) { let s = localStorage.getItem(key); return s ? JSON.parse(s) : null; }
 
-
 function showPage(id) {
-  document.querySelectorAll('.page').forEach(function (p) {
-    p.classList.remove('active');
-  });
-
   const target = document.getElementById(id);
 
   if (!target) {
     console.error('ไม่พบหน้า HTML ที่มี id:', id);
-    return;
+    console.log(
+      'ID ของหน้า .page ที่มีอยู่จริง:',
+      Array.from(document.querySelectorAll('.page'))
+        .map(function (page) {
+          return page.id;
+        })
+    );
+    return false;
   }
 
-  target.classList.add('active');
-}
+  document.querySelectorAll('.page').forEach(function (page) {
+    page.classList.remove('active');
+  });
 
+  target.classList.add('active');
+  return true;
+}
 
 window.onload = function() {
   const reg = loadData(STORAGE.REGISTRAT);
