@@ -1166,9 +1166,11 @@ function renderSummary() {
   
   tbody.innerHTML = rooms.map(room => {
     const roomBills = bills.filter(b => b.room === room.id);
-    const rent = roomBills.reduce((s, b) => s + (b.rent || 0), 0);
-    const elec = roomBills.reduce((s, b) => s + (b.elecTotal || 0), 0);
-    const water = roomBills.reduce((s, b) => s + (b.waterTotal || 0), 0);
+    const paid = roomBills
+    .filter(b => b.paid)
+    .reduce((s, b) => s + (b.total || 0), 0);
+
+    const due = total - paid;
     const total = rent + elec + water;
     const paid = roomBills.filter(b => b.paid).reduce((s, b) => s + (b.total || 0), 0);
     b => b.paid).reduce((s, b) => s + (b.total || 0), 0);
