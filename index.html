@@ -716,12 +716,16 @@ function saveRoom() {
   const idx = rooms.findIndex(r => r.id === id);
   const roomData = { id, price, tenant, status };
   
-  if (idx >= 0) rooms[idx] = roomData;
-  else rooms.push(  
-roomData;
-  
-  saveData(STORAGE.ROOMS, rooms);
-  alert('✅ บันทึกข้อมูลห้องสำเร็จ');
+  // อัปเดตหรือเพิ่มข้อมูลห้อง
+if (idx >= 0) {
+    rooms[idx] = roomData;
+} else {
+    rooms.push(roomData);
+}
+
+// บันทึกลงเครื่อง
+saveData(STORAGE.ROOMS, rooms);
+alert('✅ บันทึกห้องสำเร็จ!');
   document.getElementById('room-id').value = '';
   document.getElementById('room-price').value = '';
   document.getElementById('room-tenant').value = '';
