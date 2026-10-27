@@ -643,6 +643,8 @@ if (SUPABASE_URL && SUPABASE_KEY && window.supabase) {
     console.log('✅ เชื่อมต่อ Supabase สำเร็จ!');
 } else {
     console.warn('⚠️ ไม่สามารถเชื่อมต่อ Supabase ได้ (อาจเป็นลิงก์เสีย หรือโหลดไลบรารีไม่ทัน)');
+    console.log('ตรวจสอบไลบรารี Supabase:', typeof window.supabase);
+    console.log('ตรวจสอบ Supabase client:', typeof supabase);
 }
 
 const STORAGE = {
