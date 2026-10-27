@@ -1030,6 +1030,36 @@ function doTenantLogin(){
 function logout(){
   showPage('page‑choose');
 }
+document.addEventListener("click", function (event) {
+  const button = event.target.closest("[data-action]");
+
+  if (!button) return;
+
+  const action = button.dataset.action;
+
+  const allowedActions = {
+    submitRegistration: () => window.submitRegistration(),
+    doLogin: () => window.doLogin(),
+    saveRoomData: () => window.saveRoomData()
+  };
+
+  if (typeof allowedActions[action] !== "function") {
+    console.error("ไม่พบ action:", action);
+    return;
+  }
+
+  try {
+    const result = allowedActions[action]();
+
+    if (result && typeof result.catch === "function") {
+      result.catch(error => {
+        console.error("การทำงานล้มเหลว:", error);
+      });
+    }
+  } catch (error) {
+    console.error("เกิดข้อผิดพลาด:", error);
+  }
+});
 </script>
 </body>
 </html>
