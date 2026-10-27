@@ -671,10 +671,10 @@ window.onload = function() {
   const lic = loadData(STORAGE.LICENSE);
   const admin = loadData(STORAGE.ADMIN);
 
-  if (!reg) { showPage("page‑register"); }
-  else if (!lic) { showPage("page‑enter‑license"); }
-  else if (!admin) { showPage("page‑setup"); }
-  else { showPage("page‑choose"); }
+  if (!reg) { showPage("page-register"); }
+  else if (!lic) { showPage("page-enter-license"); }
+  else if (!admin) { showPage("page-setup"); }
+  else { showPage("page-choose"); }
 
   const today = new Date();
   const currentMonth = today.toISOString().slice(0,7);
