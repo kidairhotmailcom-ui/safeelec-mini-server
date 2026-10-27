@@ -836,7 +836,7 @@ function doTenantLogin() {
     
     if (room && pass === savedPass) {
         localStorage.setItem('current_tenant_room', room);
-        showPage('page-tenant');
+        showPage('page-tenant-dashboard');
         initTenantPage(room);
     } else {
         alert('❌ ห้องหรือรหัสผ่านไม่ถูกต้อง\n💡 ทดลองใช้เลขห้องเป็นรหัสผ่าน เช่น ห้อง 101 → รหัส 101');
