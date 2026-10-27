@@ -659,25 +659,30 @@ function saveData(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 function loadData(key) { let s = localStorage.getItem(key); return s ? JSON.parse(s) : null; }
 
 function showPage(id) {
-  const target = document.getElementById(id);
+  function normalizeId(value) {
+    return value.replace(/[\u2010-\u2015\u2212]/g, '-');
+  }
 
-  if (!target) {
-    console.error('ไม่พบหน้า HTML ที่มี id:', id);
-    console.log(
-      'ID ของหน้า .page ที่มีอยู่จริง:',
-      Array.from(document.querySelectorAll('.page'))
-        .map(function (page) {
-          return page.id;
-        })
-    );
+  const pages = Array.from(document.querySelectorAll('.page'));
+  const matches = pages.filter(function (page) {
+    return normalizeId(page.id) === normalizeId(id);
+  });
+
+  if (matches.length === 0) {
+    console.error('ไม่พบหน้า HTML:', id);
+    console.log('ID หน้าที่มีอยู่:', pages.map(page => page.id));
     return false;
   }
 
-  document.querySelectorAll('.page').forEach(function (page) {
+  if (matches.length > 1) {
+    console.warn('พบหน้า ID ซ้ำ:', id, 'จำนวน:', matches.length);
+  }
+
+  pages.forEach(function (page) {
     page.classList.remove('active');
   });
 
-  target.classList.add('active');
+  matches[0].classList.add('active');
   return true;
 }
 
