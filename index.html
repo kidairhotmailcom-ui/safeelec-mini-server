@@ -857,18 +857,36 @@ function renderElectricList(){
   html += '</table>';
   document.getElementById('electric‑list').innerHTML = html;
 }
-function saveWater(){
-  const room = document.getElementById('water‑room').value.trim();
-  const month = document.getElementById('water‑month').value;
-  const prev = Number(document.getElementById('water‑prev').value);
-  const curr = Number(document.getElementById('water‑curr').value);
-  const rate = Number(document.getElementById('water‑rate').value);
-  if(!room || !month || isNaN(prev) || isNaN(curr)){ alert('กรอกข้อมูลค่าน้ำให้ครบ'); return; }
+
+function saveWater() {
+  const room = document.getElementById('water-room').value.trim();
+  const month = document.getElementById('water-month').value;
+  const prev = Number(document.getElementById('water-prev').value);
+  const curr = Number(document.getElementById('water-curr').value);
+  const rate = Number(document.getElementById('water-rate').value);
+
+  if (!room || !month || isNaN(prev) || isNaN(curr)) {
+    alert('กรอกข้อมูลค่าน้ำให้ครบ');
+    return;
+  }
+
   let water = loadData(STORAGE.METER_WATER) || [];
-  water.push({room,month,prev,curr,rate,used:curr‑prev,total:(curr‑prev)*rate,savedAt:new Date().toISOString()});
+
+  water.push({
+    room: room,
+    month: month,
+    prev: prev,
+    curr: curr,
+    rate: rate,
+    used: curr - prev,
+    total: (curr - prev) * rate,
+    savedAt: new Date().toISOString()
+  });
+
   saveData(STORAGE.METER_WATER, water);
   renderWaterList();
 }
+
 function renderWaterList(){
   const water = loadData(STORAGE.METER_WATER) || [];
   let html = '<table><tr><th>ห้อง</th><th>เดือน</th><th>ก่อน</th><th>ปัจจุบัน</th><th>หน่วยใช้</th><th>รวมบาท</th></tr>';
