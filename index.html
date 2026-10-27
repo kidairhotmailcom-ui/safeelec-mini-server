@@ -1172,32 +1172,32 @@ function submitPayment() {
 // 🚀 เริ่มต้นระบบ
 // =====================================================
 window.onload = function() {
-  const reg = loadData(STORAGE.REGISTRATION, null);
-  const lic = loadData(STORAGE.LICENSE, null);
-  const admin = loadData(STORAGE.ADMIN, null);
-  
+  const reg = loadData(STORAGE.REGISTRAT);
+  const lic = loadData(STORAGE.LICENSE);
+  const admin = loadData(STORAGE.ADMIN);
+
   if (!reg) {
-    showPage("page-register");
+    showPage("page‑register");
   } else if (!lic) {
-    showPage("page-enter-license");
+    showPage("page‑enter‑license");
   } else if (!admin) {
-    showPage("page-setup");
+    showPage("page‑setup");
   } else {
-    showPage("page-choose");
+    showPage("page‑choose");
   }
-  
+
   const today = new Date();
-  const currentMonth = today.toISOString().slice(0, 7);
-  const currentDate = today.toISOString().slice(0, 10);
-  
+  const currentMonth = today.toISOString().slice(0,7);
+  const currentDate = today.toISOString().slice(0,10);
+
   document.querySelectorAll('input[type="month"]').forEach(el => {
     if (!el.value) el.value = currentMonth;
   });
-  
+
   document.querySelectorAll('input[type="date"]').forEach(el => {
     if (!el.value) el.value = currentDate;
   });
-  };
+};
 </script>
 </body>
 </html>
