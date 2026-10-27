@@ -1171,7 +1171,7 @@ function renderSummary() {
     const water = roomBills.reduce((s, b) => s + (b.waterTotal || 0), 0);
     const total = rent + elec + water;
     const paid = roomBills.filter(b
-  (b.paid).reduce((s, b) => s + (b.total || 0), 0);
+    b => b.paid).reduce((s, b) => s + (b.total || 0), 0);
     const due = total - paid;
     
     sumRent += rent;
