@@ -822,10 +822,11 @@ function renderESPDeviceList(){
 
 function saveElectric() {  
   const room = document.getElementById('elec-room').value.trim();
-  const month = document.getElementById(’elec-month‘).value;
-  const prev = Number(document.getElementById(’elec-prev‘).value);
-  const curr = Number(document.getElementById(’elec-curr‘).value);
-  const rate = Number(document.getElementById(’elec-rate‘).value);
+  const month = document.getElementById('elec-month').value;
+  const prev = Number(document.getElementById('elec-prev').value);
+  const curr = Number(document.getElementById('elec-curr').value);
+  const rate = Number(document.getElementById('elec-rate').value);
+
 
   if (!room || !month || isNaN(prev) || isNaN(curr)) {
     alert(’กรอกข้อมูลค่าไฟให้ครบ‘);
