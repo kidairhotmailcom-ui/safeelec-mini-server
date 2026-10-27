@@ -818,15 +818,31 @@ function renderESPDeviceList(){
   document.getElementById('esp‑device‑list').innerHTML = html;
 }
 
-function saveElectric(){
-  const room = document.getElementById('elec‑room').value.trim();
-  const month = document.getElementById('elec‑month').value;
-  const prev = Number(document.getElementById('elec‑prev').value);
-  const curr = Number(document.getElementById('elec‑curr').value);
-  const rate = Number(document.getElementById('elec‑rate').value);
-  if(!room || !month || isNaN(prev) || isNaN(curr)){ alert('กรอกข้อมูลค่าไฟให้ครบ'); return; }
+function saveElectric() {
+  const room = document.getElementById(’elec-room‘).value.trim();
+  const month = document.getElementById(’elec-month‘).value;
+  const prev = Number(document.getElementById(’elec-prev‘).value);
+  const curr = Number(document.getElementById(’elec-curr‘).value);
+  const rate = Number(document.getElementById(’elec-rate‘).value);
+
+  if (!room || !month || isNaN(prev) || isNaN(curr)) {
+    alert(’กรอกข้อมูลค่าไฟให้ครบ‘);
+    return;
+  }
+
   let elec = loadData(STORAGE.METER_ELEC) || [];
-  elec.push({room,month,prev,curr,rate,used:curr‑prev,total:(curr‑prev)*rate,savedAt:new Date().toISOString()});
+
+  elec.push({
+    room,
+    month,
+    prev,
+    curr,
+    rate,
+    used: curr - prev,
+    total: (curr - prev) * rate,
+    savedAt: new Date().toISOString()
+  });
+
   saveData(STORAGE.METER_ELEC, elec);
   renderElectricList();
 }
