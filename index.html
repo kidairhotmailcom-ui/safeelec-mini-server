@@ -775,27 +775,43 @@ function renderTenantBills(room) {
 // =====================================================
 // 📤 อัปโหลดสลิป
 // =====================================================
-function uploadSlip(billId) {
-  const fileInput = document.getElementById(`slip-${billId}`);
-  if (!fileInput || !fileInput.files[0]) {
-    alert('❌ กรุณาเลือกรูปสลิปก่อน');
+
+async function uploadSlip(billId) {
+  const fileInput = document.getElementById('slip-file');
+  const file = fileInput?.files?.[0];
+
+  if (!file) {
+    alert('กรุณาเลือกรูปสลิปก่อน');
     return;
   }
-  
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const bills = loadData(STORAGE.BILLS, []);
-    const idx = bills.findIndex(b => b.billNo === billId);
-    if (idx !== -1) {
-      bills[idx].pending = true;
-      bills[idx].slipImage = e.target.result;
-      bills[idx].submittedAt = new Date().toLocaleString('th-TH');
-      saveData(STORAGE.BILLS, bills);
-      alert('✅ ส่งสลิปเรียบร้อย! รอตรวจสอบ');
-      renderTenantBills(localStorage.getItem('current_tenant_room'));
-    }
-  };
-  reader.readAsDataURL(fileInput.files[0]);
+
+  if (!file.type.startsWith('image/')) {
+    alert('กรุณาเลือกไฟล์รูปภาพ');
+    return;
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    alert('รูปสลิปต้องมีขนาดไม่เกิน 5 MB');
+    return;
+  }
+
+  const bills = loadData(STORAGE.BILLS, []);
+  const idx = bills.findIndex(b => b.billNo === billId);
+
+  if (idx === -1) {
+    alert('ไม่พบบิลนี้ กรุณาโหลดข้อมูลใหม่');
+    return;
+  }
+
+  // ยังไม่บันทึกจนกว่าจะมี URL รูปจาก Storage
+  alert(
+    'ยังไม่ได้ส่งสลิป: ต้องเชื่อม Supabase Storage ก่อน\n' +
+    'ข้อมูลบิลเดิมยังไม่ได้ถูกแก้ไข'
+  );
+
+  console.warn(
+    'ต้องอัปโหลดไฟล์ไป Supabase Storage ก่อนบันทึก slipImage URL'
+  );
 }
 
 // =====================================================
