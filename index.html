@@ -474,24 +474,24 @@ function showPage(pageId) {
 // =====================================================
 
 async function submitRegistration() {
-    const name = document.getElementById('reg-name').value.trim();
-    const address = document.getElementById('reg-address').value.trim();
-    const phone = document.getElementById('reg-phone').value.trim();
-    const email = document.getElementById('reg-email').value.trim();
+    const name = document.getElementById('reg-name')?.value.trim() || '';
+    const address = document.getElementById('reg-address')?.value.trim() || '';
+    const phone = document.getElementById('reg-phone')?.value.trim() || '';
+    const email = document.getElementById('reg-email')?.value.trim() || '';
     const msg = document.getElementById('reg-message');
 
     if (!msg) {
-        alert('ไม่พบช่องแสดงข้อความลงทะเบียน');
+        alert('ไม่พบช่อง reg-message ในหน้า HTML');
         return;
     }
 
     if (!name || !address || !phone) {
-        msg.textContent = '⚠️ กรุณากรอกชื่อ ที่อยู่ และเบอร์โทรให้ครบ';
+        msg.textContent = 'กรุณากรอกชื่อ ที่อยู่ และเบอร์โทรให้ครบ';
         return;
     }
 
     if (!/^[0-9]{9,10}$/.test(phone)) {
-        msg.textContent = '⚠️ เบอร์โทรต้องเป็นตัวเลข 9-10 หลัก';
+        msg.textContent = 'เบอร์โทรต้องเป็นตัวเลข 9-10 หลัก';
         return;
     }
 
@@ -499,47 +499,66 @@ async function submitRegistration() {
 
     if (!client) {
         msg.textContent =
-            '❌ เชื่อมต่อ Supabase ไม่สำเร็จ กรุณาตรวจสอบไลบรารี';
+            'เชื่อมต่อ Supabase ไม่สำเร็จ ตรวจสอบไลบรารีและการสร้าง client';
         return;
     }
 
-    msg.textContent = '⏳ กำลังบันทึกข้อมูล...';
+    const button = document.querySelector(
+        '#page-register button[onclick*="submitRegistration"]'
+    );
+
+    if (button) button.disabled = true;
+    msg.textContent = 'กำลังบันทึกข้อมูลลง Supabase...';
 
     try {
-        // 1. บันทึกคำขอลงทะเบียนลงตาราง registrations
         const { data: regData, error: regError } = await client
             .from('registrations')
-            .insert([{ name, address, phone, email: email || '' }])
+            .insert([{
+                name: name,
+                address: address,
+                phone: phone,
+                email: email || ''
+            }])
             .select('id')
             .single();
 
         if (regError) throw regError;
 
-        // 2. สร้างรหัสใบอนุญาต
         const newKey = 'KIDAIR-' + regData.id;
 
-        // 3. บันทึกใบอนุญาตลงตาราง license_keys
         const { error: keyError } = await client
             .from('license_keys')
-            .insert([{ license_key: newKey, is_active: true }]);
+            .insert([{
+                license_key: newKey,
+                is_active: true
+            }]);
 
-        if (keyError) throw keyError;
+        if (keyError) {
+            throw new Error(
+                'บันทึกคำขอแล้ว แต่สร้างใบอนุญาตไม่สำเร็จ: ' +
+                keyError.message
+            );
+        }
 
-        // 4. บันทึกข้อมูลลงเครื่องเดิม
         saveData(STORAGE.REG, {
-            name,
-            address,
-            phone,
-            email,
+            name: name,
+            address: address,
+            phone: phone,
+            email: email,
             date: new Date().toISOString()
         });
 
-        msg.innerHTML =
-            '✅ ลงทะเบียนสำเร็จ<br><br>' +
-            '🔑 รหัสใบอนุญาต: <strong></strong><br>' +
-            'กรุณาจดรหัสนี้ไว้ แล้วกดปุ่มด้านล่าง';
+        msg.textContent = '';
 
-        msg.querySelector('strong').textContent = newKey;
+        const result = document.createElement('div');
+        result.className = 'license-box valid';
+        result.style.display = 'block';
+
+        const title = document.createElement('strong');
+        title.textContent = 'ลงทะเบียนสำเร็จ';
+
+        const keyText = document.createElement('p');
+        keyText.textContent = 'รหัสใบอนุญาต: ' + newKey;
 
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -547,19 +566,20 @@ async function submitRegistration() {
         btn.textContent = 'ใช้รหัสใบอนุญาต';
 
         btn.onclick = function () {
-            const keyInput = document.getElementById('license-key');
-            if (keyInput) keyInput.value = newKey;
+            const input = document.getElementById('license-key');
+            if (input) input.value = newKey;
             showPage('page-enter-license');
         };
 
-        msg.appendChild(document.createElement('br'));
-        msg.appendChild(btn);
+        result.append(title, keyText, btn);
+        msg.appendChild(result);
 
     } catch (err) {
-        console.error('Registration/Supabase error:', err);
-        msg.textContent =
-            '❌ บันทึกไม่สำเร็จ: ' +
+        console.error('Registration error:', err);
+        msg.textContent = 'ลงทะเบียนไม่สำเร็จ: ' +
             (err.message || String(err));
+    } finally {
+        if (button) button.disabled = false;
     }
 }
 
