@@ -1120,42 +1120,56 @@ function createBill() {
 function renderBillList() {
   const bills = loadData(STORAGE.BILLS, []);
   const container = document.getElementById('bill-list');
-  
-  if (bills.length === 0) {
-    container.innerHTML = '<p style="color:#64748b;text-align:center;padding:16px;">ยังไม่มีใบแจ้งหนี้</p>';
+
+  if (!container) {
+    console.error('ไม่พบ element #bill-list');
     return;
   }
-  
+
+  if (!Array.isArray(bills) || bills.length === 0) {
+    container.innerHTML =
+      '<p style="color:#64748b;text-align:center;padding:16px;">ยังไม่มีใบแจ้งหนี้</p>';
+    return;
+  }
+
+  const money = value => {
+    const number = Number(value);
+    return (Number.isFinite(number) ? number : 0).toLocaleString('th-TH');
+  };
+
   container.innerHTML = bills.map(bill => {
-    const statusBadge = bill.paid 
+    bill = bill || {};
+
+    const billNo = String(bill.billNo ?? '');
+    const statusBadge = bill.paid
       ? '<span class="badge badge-success">✅ ชำระแล้ว</span>'
       : bill.pending
       ? '<span class="badge badge-warning">⏳ รอตรวจสอบ</span>'
       : '<span class="badge badge-info">📝 ค้างชำระ</span>';
-    
+
     return `
       <div class="bill-card">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
           <div>
-            <strong>🧾 บิลที่: ${bill.billNo}</strong>
-            <p>ห้อง: ${bill.room} | เดือน: ${bill.month}</p>
+            <strong>🧾 บิลที่: ${billNo}</strong>
+            <p>ห้อง: ${bill.room ?? '-'} | เดือน: ${bill.month ?? '-'}</p>
           </div>
           <div>${statusBadge}</div>
         </div>
         <hr>
-        <p>ค่าเช่า: ฿${bill.rent.toLocaleString()}</p>
-        <p>ค่าไฟ: ฿${bill.elecTotal.toLocaleString()}</p>
-        <p>ค่าน้ำ: ฿${bill.waterTotal.toLocaleString()}</p>
-        <p><strong>รวมทั้งสิ้น: ฿${bill.total.toLocaleString()}</strong></p>
-        ${bill.slipImage ? `<p>📎 มีสลิปแนบ</p>` : ''}
+        <p>ค่าเช่า: ฿${money(bill.rent)}</p>
+        <p>ค่าไฟ: ฿${money(bill.elecTotal)}</p>
+        <p>ค่าน้ำ: ฿${money(bill.waterTotal)}</p>
+        <p><strong>รวมทั้งสิ้น: ฿${money(bill.total)}</strong></p>
+        ${bill.slipImage ? '<p>📎 มีสลิปแนบ</p>' : ''}
         <div class="btn-row" style="margin-top:8px;">
-          ${!bill.paid && bill.pending 
-            ? `<button class="btn-success btn-sm" onclick="confirmPayment('${bill.billNo}')">✅ ยืนยันชำระ</button>` 
+          ${!bill.paid && bill.pending
+            ? `<button class="btn-success btn-sm" onclick="confirmPayment('${billNo}')">✅ ยืนยันชำระ</button>`
             : ''}
-          ${!bill.paid 
-            ? `<button class="btn-sm" onclick="markPaid('${bill.billNo}')">✓ ทำเครื่องหมายชำระ</button>` 
+          ${!bill.paid
+            ? `<button class="btn-sm" onclick="markPaid('${billNo}')">✓ ทำเครื่องหมายชำระ</button>`
             : ''}
-          <button class="btn-sm btn-danger" onclick="deleteBill('${bill.billNo}')">🗑️ ลบบิล</button>
+          <button class="btn-sm btn-danger" onclick="deleteBill('${billNo}')">🗑️ ลบบิล</button>
         </div>
       </div>
     `;
