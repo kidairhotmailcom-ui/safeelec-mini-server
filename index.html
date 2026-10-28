@@ -614,8 +614,15 @@ async function verifyLicense() {
         return;
     }
     try {
-        const { data, error } = await supabase
-            .from('license_keys')
+         const client = window.dormSupabaseClient;
+
+if (!client) {
+    status.textContent = 'เชื่อมต่อ Supabase ไม่สำเร็จ';
+    return;
+}
+
+const { data, error } = await client
+    .from('license_keys')
             .select('license_key,is_active')
             .eq('license_key', key)
             .eq('is_active', true)
