@@ -588,60 +588,74 @@ window.submitRegistration = submitRegistration;
 // =====================================================
 // 🔑 ตรวจสอบรหัสใบอนุญาต
 // =====================================================
-async function verifyLicense() {
-    const key = document.getElementById('license-key').value.trim();
-    const status = document.getElementById('license-status');
-    if (!key) {
-        status.textContent = '⚠️ กรุณาป้อนรหัส';
-        status.className = 'license-box invalid';
-        return;
-    }
+  async function verifyLicense() {
+     const keyEl = document.getElementById(‘license-key’);
+     const status = document.getElementById(‘license-status’);
+
+if (!keyEl || !status) {
+    alert('ไม่พบช่องกรอกรหัสใบอนุญาตในหน้า HTML');
+    return;
+}
+const key = keyEl.value.trim();
+if (!key) {
+    status.textContent = '⚠️ กรุณาป้อนรหัส';
+    status.className = 'license-box invalid';
     status.style.display = 'block';
-    status.className = 'license-box';
-    status.textContent = '⏳ กำลังตรวจสอบรหัส...';
-
-    // เก็บรหัสทดลองเดิมไว้ ไม่กระทบผู้ใช้ที่เคยใช้ DEMO2026
-    if (key === 'DEMO2026') {
-        status.textContent = '✅ รหัสทดลองถูกต้อง';
-        status.className = 'license-box valid';
-        saveData(STORAGE.LICENSE, { key, verifiedAt: new Date().toISOString() });
-        setTimeout(() => showPage('page-setup'), 700);
-        return;
+    return;
+}
+status.style.display = 'block';
+status.className = 'license-box';
+status.textContent = '⏳ กำลังตรวจสอบรหัส...';
+// รองรับรหัสทดลองเดิม
+if (key === 'DEMO2026') {
+    saveData(STORAGE.LICENSE, {
+        key: key,
+        verifiedAt: new Date().toISOString()
+    });
+    status.textContent = '✅ รหัสทดลองถูกต้อง';
+    status.className = 'license-box valid';
+    setTimeout(() => showPage('page-setup'), 700);
+    return;
+}
+// ใช้ Supabase client ที่สร้างไว้แล้ว
+const client = window.dormSupabaseClient;
+if (!client || typeof client.from !== 'function') {
+    status.textContent =
+        '❌ เชื่อมต่อ Supabase ไม่สำเร็จ: ไม่พบ client ที่ใช้งานได้';
+    status.className = 'license-box invalid';
+    return;
+}
+try {
+    const { data, error } = await client
+        .from('license_keys')
+        .select('license_key, is_active')
+        .eq('license_key', key)
+        .eq('is_active', true)
+        .maybeSingle();
+    if (error) {
+        throw error;
     }
-    if (!supabase) {
-        status.textContent = '❌ เชื่อมต่อ Supabase ไม่สำเร็จ';
+    if (!data) {
+        status.textContent = '❌ รหัสไม่ถูกต้องหรือไม่ได้เปิดใช้งาน';
         status.className = 'license-box invalid';
         return;
     }
-    try {
-         const client = window.dormSupabaseClient;
-
-     if (!client) {
-         status.textContent = 'เชื่อมต่อ Supabase ไม่สำเร็จ';
-         return;
+    // บันทึกสถานะใบอนุญาตในเบราว์เซอร์นี้
+    saveData(STORAGE.LICENSE, {
+        key: key,
+        verifiedAt: new Date().toISOString()
+    });
+    status.textContent = '✅ รหัสถูกต้อง';
+    status.className = 'license-box valid';
+    setTimeout(() => showPage('page-setup'), 700);
+} catch (err) {
+    console.error('License verification error:', err);
+    status.textContent =
+        '❌ ตรวจสอบรหัสไม่สำเร็จ: ' +
+        (err.message || String(err));
+    status.className = 'license-box invalid';
 }
 
-         const { data, error } = await client
-            .from('license_keys')
-            .select('license_key,is_active')
-            .eq('license_key', key)
-            .eq('is_active', true)
-            .maybeSingle();
-        if (error) throw error;
-        if (!data) {
-            status.textContent = '❌ รหัสไม่ถูกต้องหรือไม่ได้เปิดใช้งาน';
-            status.className = 'license-box invalid';
-            return;
-        }
-        status.textContent = '✅ รหัสถูกต้อง';
-        status.className = 'license-box valid';
-        saveData(STORAGE.LICENSE, { key, verifiedAt: new Date().toISOString() });
-        setTimeout(() => showPage('page-setup'), 700);
-    } catch (err) {
-        console.error('License verification error:', err);
-        status.textContent = '❌ ตรวจสอบรหัสไม่สำเร็จ: ' + (err.message || err);
-        status.className = 'license-box invalid';
-    }
 }
 function changeLicense() {
     localStorage.removeItem(STORAGE.LICENSE);
