@@ -491,7 +491,7 @@ async function submitRegistration() {
         msg.innerHTML = '<div class="license-box invalid" style="display:block">⚠️ เบอร์โทรต้องเป็นตัวเลข 9-10 หลัก</div>';
         return;
     }
-    if (!supabase) {
+    if (!window.dormSupabaseClient) {
         msg.innerHTML = '<div class="license-box invalid" style="display:block">❌ เชื่อมต่อ Supabase ไม่สำเร็จ กรุณาตรวจสอบการโหลดไลบรารี</div>';
         return;
     }
