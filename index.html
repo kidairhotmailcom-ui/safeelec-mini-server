@@ -500,7 +500,7 @@ async function submitRegistration() {
     try {
         // บันทึกคำขอลงทะเบียนลงตารางเดิมใน Supabase
         const { data: regData, error: regError } = await supabase
-            .from('registrations')
+    .from('license_keys')
             .insert([{ name, address, phone, email: email || '' }])
             .select('id')
             .single();
