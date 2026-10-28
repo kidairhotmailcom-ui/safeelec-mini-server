@@ -1096,25 +1096,66 @@ function loadWaterFromESP() {
 }
 
 // 🧾 บิลค่าเช่า
+
 function createBill() {
-  const room = document.getElementById('bill-room').value.trim();
-  const month = document.getElementById('bill-month').value;
-  
-  if (!room || !month) { alert('⚠️ กรอกห้องและเดือน'); return; }
-  
+  const roomEl = document.getElementById('bill-room');
+  const monthEl = document.getElementById('bill-month');
+
+  const room = String(roomEl?.value ?? '').trim();
+  const month = String(monthEl?.value ?? '').trim();
+
+  if (!room || !month) {
+    alert('⚠️ กรุณาเลือกห้องและเดือนที่ต้องการออกบิล');
+    return;
+  }
+
   const rooms = loadData(STORAGE.ROOMS, []);
-  const roomInfo = rooms.find(r => r.id === room);
-  if (!roomInfo) { alert('❌ ไม่พบห้องนี้'); return; }
-  
-  const elecList = loadData(STORAGE.ELECTRIC, []).filter(e => e.room === room && e.month === month);
-  const waterList = loadData(STORAGE.WATER, []).filter(w => w.room === room && w.month === month);
-  
-  const elecTotal = elecList.reduce((s, x) => s + x.total, 0);
-  const waterTotal = waterList.reduce((s, x) => s + x.total, 0);
-  const rent = roomInfo.price || 0;
+  const roomInfo = Array.isArray(rooms)
+    ? rooms.find(r => String(r.id) === room)
+    : null;
+
+  if (!roomInfo) {
+    alert('❌ ไม่พบห้องนี้ในรายการห้องพัก กรุณาตรวจสอบข้อมูลห้อง');
+    return;
+  }
+
+  const bills = loadData(STORAGE.BILLS, []);
+  const existingIndex = bills.findIndex(
+    b => String(b.room) === room && b.month === month
+  );
+
+  if (existingIndex >= 0) {
+    const existingBill = bills[existingIndex];
+
+    if (existingBill.paid || existingBill.pending) {
+      alert('⚠️ บิลเดือนนี้มีสถานะชำระแล้วหรือรอตรวจสอบ จึงไม่เขียนทับเพื่อป้องกันข้อมูลสูญหาย');
+      return;
+    }
+
+    if (!confirm('มีบิลห้องนี้ในเดือนดังกล่าวแล้ว ต้องการสร้างใหม่และแทนที่บิลเดิมหรือไม่?')) {
+      return;
+    }
+  }
+
+  const electric = loadData(STORAGE.ELECTRIC, []);
+  const water = loadData(STORAGE.WATER, []);
+
+  const elecRecord = electric.find(
+    e => String(e.room) === room && e.month === month
+  );
+
+  const waterRecord = water.find(
+    w => String(w.room) === room && w.month === month
+  );
+
+  const rent = Number(roomInfo.price) || 0;
+  const elecTotal = Number(elecRecord?.total) || 0;
+  const waterTotal = Number(waterRecord?.total) || 0;
+
   const total = rent + elecTotal + waterTotal;
+
   const billNo = `B${month.replace('-', '')}${room}`;
-  
+
   const bill = {
     id: Date.now().toString(),
     billNo,
@@ -1128,20 +1169,31 @@ function createBill() {
     pending: false,
     createdAt: new Date().toISOString()
   };
-  
-  const bills = loadData(STORAGE.BILLS, []);
-  const existing = bills.findIndex(b => b.room === room && b.month === month);
-  if (existing >= 0) {
-    if (!confirm('มีบิลเดือนนี้แล้ว ต้องการเขียนทับ?')) return;
-    bills[existing] = bill;
+
+  if (existingIndex >= 0) {
+    bills[existingIndex] = bill;
   } else {
     bills.unshift(bill);
   }
-  
+
   saveData(STORAGE.BILLS, bills);
-  alert(`✅ สร้างบิลสำเร็จ\nเลขที่: ${billNo}\nห้อง: ${room}\nรวมทั้งสิ้น: ฿${total.toLocaleString()}`);
-  
-  document.getElementById('bill-room').value = '';
+
+  alert(
+    `✅ สร้างบิลสำเร็จ\n` +
+    `เลขที่: ${billNo}\n` +
+    `ห้อง: ${room}\n` +
+    `ค่าเช่า: ฿${rent.toLocaleString('th-TH')}\n` +
+    `ค่าไฟ: ฿${elecTotal.toLocaleString('th-TH')}\n` +
+    `ค่าน้ำ: ฿${waterTotal.toLocaleString('th-TH')}\n` +
+    `รวมทั้งสิ้น: ฿${total.toLocaleString('th-TH')}`
+  );
+
+  if (roomEl.tagName === 'SELECT') {
+    roomEl.selectedIndex = 0;
+  } else {
+    roomEl.value = '';
+  }
+
   renderBillList();
   updateDashboard();
 }
