@@ -472,6 +472,7 @@ function showPage(pageId) {
 // =====================================================
 // 📝 ลงทะเบียน
 // =====================================================
+
 async function submitRegistration() {
     const name = document.getElementById('reg-name').value.trim();
     const address = document.getElementById('reg-address').value.trim();
@@ -483,44 +484,87 @@ async function submitRegistration() {
         alert('ไม่พบช่องแสดงข้อความลงทะเบียน');
         return;
     }
+
     if (!name || !address || !phone) {
-        msg.innerHTML = '<div class="license-box invalid" style="display:block">⚠️ กรอกชื่อ ที่อยู่ และเบอร์โทรให้ครบ</div>';
-        return;
-    }
-    if (!/^[0-9]{9,10}$/.test(phone)) {
-        msg.innerHTML = '<div class="license-box invalid" style="display:block">⚠️ เบอร์โทรต้องเป็นตัวเลข 9-10 หลัก</div>';
-        return;
-    }
-    if (!window.dormSupabaseClient) {
-        msg.innerHTML = '<div class="license-box invalid" style="display:block">❌ เชื่อมต่อ Supabase ไม่สำเร็จ กรุณาตรวจสอบการโหลดไลบรารี</div>';
+        msg.textContent = '⚠️ กรุณากรอกชื่อ ที่อยู่ และเบอร์โทรให้ครบ';
         return;
     }
 
-    msg.innerHTML = '<div class="license-box" style="display:block;background:#e0f2fe;color:#0c4a6e;">⏳ กำลังบันทึกข้อมูล...</div>';
+    if (!/^[0-9]{9,10}$/.test(phone)) {
+        msg.textContent = '⚠️ เบอร์โทรต้องเป็นตัวเลข 9-10 หลัก';
+        return;
+    }
+
+    const client = window.dormSupabaseClient;
+
+    if (!client) {
+        msg.textContent =
+            '❌ เชื่อมต่อ Supabase ไม่สำเร็จ กรุณาตรวจสอบไลบรารี';
+        return;
+    }
+
+    msg.textContent = '⏳ กำลังบันทึกข้อมูล...';
+
     try {
-        // บันทึกคำขอลงทะเบียนลงตารางเดิมใน Supabase
-        const { data: regData, error: regError } = await supabase
-    .from('license_keys')
+        // 1. บันทึกคำขอลงทะเบียนลงตาราง registrations
+        const { data: regData, error: regError } = await client
+            .from('registrations')
             .insert([{ name, address, phone, email: email || '' }])
             .select('id')
             .single();
+
         if (regError) throw regError;
 
-        // สร้างรหัสใบอนุญาตและบันทึกลงตาราง license_keys ที่เตรียมไว้
+        // 2. สร้างรหัสใบอนุญาต
         const newKey = 'KIDAIR-' + regData.id;
-        const { error: keyError } = await supabase
+
+        // 3. บันทึกใบอนุญาตลงตาราง license_keys
+        const { error: keyError } = await client
             .from('license_keys')
             .insert([{ license_key: newKey, is_active: true }]);
+
         if (keyError) throw keyError;
 
-        saveData(STORAGE.REG, { name, address, phone, email, date: new Date().toISOString() });
-        msg.innerHTML = `<div class="license-box valid" style="display:block">✅ ลงทะเบียนสำเร็จ<br><br>🔑 รหัสใบอนุญาต: <strong>${newKey}</strong><br>กรุณาจดรหัสนี้ไว้ แล้วกดปุ่มด้านล่าง<br><button type="button" class="btn-success" onclick="document.getElementById('license-key').value='${newKey}';showPage('page-enter-license')">ใช้รหัสใบอนุญาต</button></div>`;
+        // 4. บันทึกข้อมูลลงเครื่องเดิม
+        saveData(STORAGE.REG, {
+            name,
+            address,
+            phone,
+            email,
+            date: new Date().toISOString()
+        });
+
+        msg.innerHTML =
+            '✅ ลงทะเบียนสำเร็จ<br><br>' +
+            '🔑 รหัสใบอนุญาต: <strong></strong><br>' +
+            'กรุณาจดรหัสนี้ไว้ แล้วกดปุ่มด้านล่าง';
+
+        msg.querySelector('strong').textContent = newKey;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn-success';
+        btn.textContent = 'ใช้รหัสใบอนุญาต';
+
+        btn.onclick = function () {
+            const keyInput = document.getElementById('license-key');
+            if (keyInput) keyInput.value = newKey;
+            showPage('page-enter-license');
+        };
+
+        msg.appendChild(document.createElement('br'));
+        msg.appendChild(btn);
+
     } catch (err) {
         console.error('Registration/Supabase error:', err);
-        msg.innerHTML = `<div class="license-box invalid" style="display:block">❌ บันทึกไม่สำเร็จ: ${String(err.message || err).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}<br>ตรวจสอบชื่อตาราง/คอลัมน์และสิทธิ์ RLS ใน Supabase</div>`;
+        msg.textContent =
+            '❌ บันทึกไม่สำเร็จ: ' +
+            (err.message || String(err));
     }
 }
-     window.submitRegistration = submitRegistration;
+
+window.submitRegistration = submitRegistration;
+
 // =====================================================
 // 🔑 ตรวจสอบรหัสใบอนุญาต
 // =====================================================
