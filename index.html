@@ -948,17 +948,42 @@ function deleteRoom(id) {
   updateDashboard();
 }
  
+
 function doTenantLogin() {
   const id = document.getElementById('tenant-room').value.trim();
   const password = document.getElementById('tenant-pass').value;
-  if (!id || !password) { alert('กรุณากรอกหมายเลขห้องและรหัสผ่าน'); return; }
+
+  if (!id || !password) {
+    alert('กรุณากรอกหมายเลขห้องและรหัสผ่าน');
+    return;
+  }
+
   const rooms = loadData(STORAGE.ROOMS, []);
-  const room = rooms.find(r => String(r.id) === id);
-  if (!room || !room.password || room.password !== password) { alert('หมายเลขห้องหรือรหัสผ่านไม่ถูกต้อง'); return; }
+  const room = rooms.find(
+    r => String(r.id).trim() === id
+  );
+
+  if (!room || !room.password || room.password !== password) {
+    alert('หมายเลขห้องหรือรหัสผ่านไม่ถูกต้อง');
+    return;
+  }
+
+  // บันทึกห้องที่เข้าสู่ระบบใน session ปัจจุบัน
   sessionStorage.setItem('tenantRoomId', String(room.id));
-  document.getElementById('tenant-room-no').textContent = room.id;
+
+  // แสดงหมายเลขห้อง
+  const roomEl = document.getElementById('tenant-room-no');
+  if (roomEl) {
+    roomEl.textContent = room.id;
+  }
+
+  // เปิดหน้าผู้เช่า
   showPage('page-tenant');
+
+  // โหลดบิลของห้องที่ล็อกอิน
+  initTenantPage(String(room.id));
 }
+
 
 // ⚡ ค่าไฟฟ้า
 function saveElectric() {
