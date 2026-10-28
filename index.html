@@ -707,7 +707,7 @@ window.onload = function() {
   else if (!lic) { showPage("page-enter-license"); }
   else if (!admin) { showPage("page-setup"); }
   else { showPage("page-choose"); }
-
+  
   const today = new Date();
   const currentMonth = today.toISOString().slice(0,7);
   document.querySelectorAll('input[type="month"]').forEach(el => {
@@ -717,17 +717,39 @@ window.onload = function() {
   document.getElementById('tab‑dashboard').classList.remove('hidden');
 };
 
-function submitRegistration(){
-  let name = document.getElementById('reg‑name').value.trim();
-  let addr = document.getElementById('reg‑address').value.trim();
-  let phone = document.getElementById('reg‑phone').value.trim();
-  let email = document.getElementById('reg‑email').value.trim();
-  if(!name || !addr || !phone){
-    document.getElementById('reg‑message').innerHTML = '<div class="license‑box invalid">กรอกข้อมูลให้ครบ</div>';
+
+function submitRegistration() {
+  const nameEl = document.getElementById('reg-name');
+  const addrEl = document.getElementById('reg-address');
+  const phoneEl = document.getElementById('reg-phone');
+  const emailEl = document.getElementById('reg-email');
+  const messageEl = document.getElementById('reg-message');
+
+  if (!nameEl || !addrEl || !phoneEl || !emailEl || !messageEl) {
+    console.error('ไม่พบช่องกรอกข้อมูลลงทะเบียน กรุณาตรวจสอบ ID ใน HTML');
     return;
   }
-  saveData(STORAGE.REGISTRAT, {name,addr,phone,email,date:new Date().toISOString()});
-  showPage('page‑enter‑license');
+
+  const name = nameEl.value.trim();
+  const addr = addrEl.value.trim();
+  const phone = phoneEl.value.trim();
+  const email = emailEl.value.trim();
+
+  if (!name || !addr || !phone) {
+    messageEl.textContent = 'กรุณากรอกชื่อ ที่อยู่ และเบอร์โทรศัพท์ให้ครบ';
+    messageEl.className = 'license-box invalid';
+    return;
+  }
+
+  saveData(STORAGE.REGISTRAT, {
+    name,
+    addr,
+    phone,
+    email,
+    date: new Date().toISOString()
+  });
+
+  showPage('page-enter-license');
 }
 
 function verifyLicense(){
