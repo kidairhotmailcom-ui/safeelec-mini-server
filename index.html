@@ -860,13 +860,14 @@ function populateRoomSelects() {
     }
   });
 }
-
 function saveRoom() {
   const id = document.getElementById('room-id').value.trim();
   const price = parseInt(document.getElementById('room-price').value) || 0;
   const tenant = document.getElementById('room-tenant').value.trim();
   const status = document.getElementById('room-status').value;
-  
+  const passInput = document.getElementById('room-pass');
+  const password = passInput ? passInput.value.trim() : '';
+
   if (!id) { alert('⚠️ กรุณากรอกหมายเลขห้อง'); return; }
   
   const rooms = loadData(STORAGE.ROOMS, []);
