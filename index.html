@@ -520,6 +520,7 @@ async function submitRegistration() {
         msg.innerHTML = `<div class="license-box invalid" style="display:block">❌ บันทึกไม่สำเร็จ: ${String(err.message || err).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}<br>ตรวจสอบชื่อตาราง/คอลัมน์และสิทธิ์ RLS ใน Supabase</div>`;
     }
 }
+     window.submitRegistration = submitRegistration;
 // =====================================================
 // 🔑 ตรวจสอบรหัสใบอนุญาต
 // =====================================================
