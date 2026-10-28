@@ -872,7 +872,9 @@ function saveRoom() {
   
   const rooms = loadData(STORAGE.ROOMS, []);
   const idx = rooms.findIndex(r => r.id === id);
-  const roomData = { id, price, tenant, status };
+  const oldRoom = idx >= 0 ? rooms[idx] : null;
+  if (status === 'มีผู้เช่า' && !password && !(oldRoom && oldRoom.password)) { alert('⚠️ กรุณากำหนดรหัสผ่านผู้เช่า'); if (passInput) passInput.focus(); return; }
+  const roomData = { ...(oldRoom || {}), id, price, tenant, status, password: password || (oldRoom && oldRoom.password) || '' };
   
   if (idx >= 0) rooms[idx] = roomData;
   else rooms.push(roomData);
