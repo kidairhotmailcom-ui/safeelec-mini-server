@@ -638,11 +638,7 @@ const SUPABASE_URL = 'https://bhihjcstmamwoinmbfiy.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoaWhqY3N0bWFtd29pbm1iZml5Iiwicm9sIjoiYW5vbiIsImlhdCI6MTc5MjQ4NTAzNiwiZXhwIjoyMTA4MDYxMDM2fQ.XZP2d6dJ_Z1QNN5baMYmTH87UEkHEeT8fwecMCO8gAY';
 
 if (
-  typeof SUPABASE_URL === 'string' &&
-  SUPABASE_URL.length > 0 &&
-  typeof SUPABASE_KEY === 'string' &&
-  SUPABASE_KEY.length > 0 &&
-  window.supabase &&
+  typeof window.supabase === 'object' &&
   typeof window.supabase.createClient === 'function'
 ) {
   try {
@@ -652,18 +648,12 @@ if (
     );
     console.log('Supabase client created successfully');
   } catch (error) {
-    console.error('สร้าง Supabase Client ไม่สำเร็จ:', error);
+    console.error('Supabase Client Error:', error);
   }
 } else {
-  console.error('Supabase library หรือ URL/KEY ไม่พร้อมใช้งาน', {
-    libraryLoaded: !!window.supabase,
-    createClientAvailable:
-      typeof window.supabase?.createClient === 'function',
-    urlConfigured:
-      typeof SUPABASE_URL === 'string' && SUPABASE_URL.length > 0,
-    keyConfigured:
-      typeof SUPABASE_KEY === 'string' && SUPABASE_KEY.length > 0
-  });
+  console.error(
+    'ไม่พบ Supabase Library กรุณาตรวจสอบการโหลด CDN'
+  );
 }
 
 const STORAGE = {
