@@ -777,41 +777,75 @@ function renderTenantBills(room) {
 // =====================================================
 
 async function uploadSlip(billId) {
-  const fileInput = document.getElementById('slip-file');
+  const client = window.dormSupabaseClient;
+  const BUCKET = 'BUCKET_NAME_HERE';
+  const fileInput = document.getElementById('slip-' + billId);
   const file = fileInput?.files?.[0];
-
   if (!file) {
     alert('กรุณาเลือกรูปสลิปก่อน');
     return;
   }
-
   if (!file.type.startsWith('image/')) {
     alert('กรุณาเลือกไฟล์รูปภาพ');
     return;
   }
-
   if (file.size > 5 * 1024 * 1024) {
     alert('รูปสลิปต้องมีขนาดไม่เกิน 5 MB');
     return;
   }
-
   const bills = loadData(STORAGE.BILLS, []);
-  const idx = bills.findIndex(b => b.billNo === billId);
-
+  const idx = bills.findIndex(
+    b => String(b.billNo) === String(billId)
+  );
   if (idx === -1) {
-    alert('ไม่พบบิลนี้ กรุณาโหลดข้อมูลใหม่');
+    alert('ไม่พบบิลนี้');
     return;
   }
-
-  // ยังไม่บันทึกจนกว่าจะมี URL รูปจาก Storage
-  alert(
-    'ยังไม่ได้ส่งสลิป: ต้องเชื่อม Supabase Storage ก่อน\n' +
-    'ข้อมูลบิลเดิมยังไม่ได้ถูกแก้ไข'
-  );
-
-  console.warn(
-    'ต้องอัปโหลดไฟล์ไป Supabase Storage ก่อนบันทึก slipImage URL'
-  );
+  try {
+    const path =
+      'slips/' + encodeURIComponent(String(billId)) +
+      '/' + Date.now() + '-' +
+      file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const { data: uploaded, error: uploadError } =
+      await client.storage
+        .from(BUCKET)
+        .upload(path, file, {
+          contentType: file.type,
+          upsert: false
+        });
+    if (uploadError) throw uploadError;
+    // สำรองข้อมูลบิลเดิมก่อนเปลี่ยนแปลง
+    const previousBill = { ...bills[idx] };
+    bills[idx].slipPath = uploaded.path;
+    bills[idx].pending = true;
+    bills[idx].submittedAt =
+      new Date().toLocaleString('th-TH');
+    // ไม่เก็บ Base64 ลง localStorage
+    if (
+      typeof bills[idx].slipImage === 'string' &&
+      bills[idx].slipImage.startsWith('data:image/')
+    ) {
+      delete bills[idx].slipImage;
+    }
+    try {
+      saveData(STORAGE.BILLS, bills);
+    } catch (saveError) {
+      bills[idx] = previousBill;
+      console.error('บันทึกข้อมูลบิลไม่สำเร็จ:', saveError);
+      alert(
+        'อัปโหลดรูปเข้า Storage แล้ว แต่บันทึกสถานะบิลในเครื่องไม่สำเร็จ\n' +
+        'กรุณาอย่าส่งซ้ำ และตรวจสอบพื้นที่จัดเก็บก่อน'
+      );
+      return;
+    }
+    alert('อัปโหลดสลิปเข้า Storage แล้ว และบันทึกสถานะในเครื่องแล้ว');
+    renderTenantBills(
+      localStorage.getItem('current_tenant_room')
+    );
+  } catch (error) {
+    console.error('uploadSlip error:', error);
+    alert('ส่งสลิปไม่สำเร็จ: ' + (error.message || error));
+  }
 }
 
 // =====================================================
