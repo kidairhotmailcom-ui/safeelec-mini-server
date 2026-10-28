@@ -1388,28 +1388,28 @@ function loadSettingsInfo() {
 // =====================================================
 document.addEventListener('DOMContentLoaded', function() {
   const lic = loadData(STORAGE.LICENSE, null);
-  
+
   if (!lic || !lic.key) {
     showPage('page-register');
     return;
   }
-  
+
   const reg = loadData(STORAGE.REG, null);
-  const adminPass = loadData(STORAGE.ADMIN_PASS, '');
-  
+
   if (!reg) {
     showPage('page-register');
     return;
   }
-  
+
+  const adminPass = loadData(STORAGE.ADMIN_PASS, '');
+
   if (!adminPass) {
     showPage('page-setup');
     return;
   }
-  
+
   showPage('page-choose');
 });
-
 // เมื่อเข้าหน้าเจ้าของระบบ ให้โหลดข้อมูลต่างๆ
 const originalShowPage = showPage;
 showPage = function(pageId) {
