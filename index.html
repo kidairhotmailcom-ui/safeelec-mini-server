@@ -831,6 +831,35 @@ function updateDashboard() {
   if (document.getElementById('stat-unpaid')) document.getElementById('stat-unpaid').textContent = unpaid;
 }
 
+function populateRoomSelects() {
+  const rooms = loadData(STORAGE.ROOMS, []);
+  const roomList = Array.isArray(rooms) ? rooms : [];
+
+  ['elec-room', 'water-room', 'bill-room'].forEach(id => {
+    const select = document.getElementById(id);
+    if (!select) return;
+
+    const previousValue = select.value;
+    select.innerHTML = '<option value="">— เลือกห้อง —</option>';
+
+    roomList.forEach(room => {
+      if (!room || room.id == null) return;
+
+      const option = document.createElement('option');
+      option.value = String(room.id);
+      option.textContent =
+        `ห้อง ${room.id}` +
+        (room.tenant ? ` — ${room.tenant}` : '');
+
+      select.appendChild(option);
+    });
+
+    if ([...select.options].some(o => o.value === previousValue)) {
+      select.value = previousValue;
+    }
+  });
+}
+
 function saveRoom() {
   const id = document.getElementById('room-id').value.trim();
   const price = parseInt(document.getElementById('room-price').value) || 0;
