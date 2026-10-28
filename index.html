@@ -947,6 +947,18 @@ function deleteRoom(id) {
   renderRoomList();
   updateDashboard();
 }
+ 
+function doTenantLogin() {
+  const id = document.getElementById('tenant-room').value.trim();
+  const password = document.getElementById('tenant-pass').value;
+  if (!id || !password) { alert('กรุณากรอกหมายเลขห้องและรหัสผ่าน'); return; }
+  const rooms = loadData(STORAGE.ROOMS, []);
+  const room = rooms.find(r => String(r.id) === id);
+  if (!room || !room.password || room.password !== password) { alert('หมายเลขห้องหรือรหัสผ่านไม่ถูกต้อง'); return; }
+  sessionStorage.setItem('tenantRoomId', String(room.id));
+  document.getElementById('tenant-room-no').textContent = room.id;
+  showPage('page-tenant');
+}
 
 // ⚡ ค่าไฟฟ้า
 function saveElectric() {
