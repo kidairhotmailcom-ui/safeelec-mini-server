@@ -876,12 +876,13 @@ function saveRoom() {
   else rooms.push(roomData);
   
   saveData(STORAGE.ROOMS, rooms);
-  alert('✅ บันทึกข้อมูลห้องสำเร็จ');
-  document.getElementById('room-id').value = '';
-  document.getElementById('room-price').value = '';
-  document.getElementById('room-tenant').value = '';
-  renderRoomList();
-  updateDashboard();
+populateRoomSelects();
+alert('✅ บันทึกข้อมูลห้องสำเร็จ');
+document.getElementById('room-id').value = '';
+document.getElementById('room-price').value = '';
+document.getElementById('room-tenant').value = '';
+renderRoomList();
+updateDashboard();
 }
 
 function renderRoomList() {
