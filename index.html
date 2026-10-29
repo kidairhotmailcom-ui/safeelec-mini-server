@@ -2041,34 +2041,24 @@ function loadSettingsInfo() {
 // =====================================================
 // 🚀 เริ่มทำงานเมื่อโหลดหน้าเสร็จ
 // =====================================================
-document.addEventListener('DOMContentLoaded', async function() {
-  showPage('page‑choose');
+document.addEventListener('DOMContentLoaded', async () => {
   try {
-    const client = window.dormSupabaseClient;
-    if (client) {
-      const { data, error } = await client.auth.getSession();
-      if (!error && data.session && data.session.user) {
-        activeOwnerId = data.session.user.id;
-        localStorage.setItem('dorm_last_owner_id', activeOwnerId);
-        await loadOwnerStateCloud();
-        await loadBillLedgerCloud();
-        showPage('page‑owner');
-        updateDashboard(); renderRoomList(); populateRoomSelects(); renderBillList(); renderPaymentList();
-      } else {
-        // === วางโค้ดตรวจเซสชันผู้เช่า (จุดที่3) ที่นี่ ===
-        const savedToken = localStorage.getItem('session_token');
-        if (savedToken) {
-          const isValid = await checkSavedSession();
-          if (isValid) {
-            showPage('page‑tenant');
-            await initTenantPage();
-            return;
-          }
-        }
-      }
+    const hasTenantSession = await checkSavedSession();
+    if (hasTenantSession) {
+      showPage('page‑tenant');
+      await initTenantPage();
+      return;
     }
-  } catch (e) {
-    console.warn('Session restore skipped:', e);
+    const savedLicense = loadData(STORAGE.LICENSE, null);
+    if (savedLicense) {
+      showPage('page‑main');
+      await initMainPage();
+    } else {
+      showPage('page‑start');
+    }
+  } catch(err) {
+    console.error('โหลดหน้าเริ่มต้นผิดพลาด:', err);
+    showPage('page‑start');
   }
 });
 // เมื่อเข้าหน้าเจ้าของระบบ ให้โหลดข้อมูลต่างๆ
