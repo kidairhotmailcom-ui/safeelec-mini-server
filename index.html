@@ -642,24 +642,56 @@ function adminDoLogin() {
   }
 }
 
-function doTenantLogin() {
-  const room = document.getElementById('tenant-room').value.trim();
-  const pass = document.getElementById('tenant-pass').value;
-  const rooms = loadData(STORAGE.ROOMS, []);
-  const found = rooms.find(r => r.id === room);
-  const savedPass = localStorage.getItem('room_pass_' + room);
-  
-  if (!found) {
-    alert('❌ ไม่พบห้องนี้');
+async function doTenantLogin() {
+  const roomEl = document.getElementById('tenant-room');
+  const passEl = document.getElementById('tenant-pass');
+
+  const room = roomEl?.value.trim();
+  const pass = passEl?.value ?? '';
+
+  if (!room || !pass) {
+    alert('กรุณากรอกเลขห้องและรหัสผ่าน');
     return;
   }
-  if (savedPass && pass !== savedPass) {
-    alert('❌ รหัสผ่านห้องไม่ถูกต้อง');
+
+  const client = window.dormSupabaseClient;
+
+  if (!client) {
+    alert('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาลองใหม่');
     return;
   }
-  localStorage.setItem('current_tenant_room', room);
-  showPage('page-tenant');
-  initTenantPage(room);
+
+  try {
+    // ค้นหาห้องจากฐานข้อมูลกลาง แทน localStorage ของมือถือ
+    const { data, error } = await client
+      .from('dorm_rooms')
+      .select('room_id, password')
+      .eq('room_id', room)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!data) {
+      alert('ไม่พบห้องนี้ในฐานข้อมูล');
+      return;
+    }
+
+    if (!data.password || pass !== data.password) {
+      alert('รหัสผ่านห้องไม่ถูกต้อง');
+      return;
+    }
+
+    localStorage.setItem('current_tenant_room', room);
+    showPage('page-tenant');
+    initTenantPage(room);
+
+  } catch (error) {
+    console.error('Tenant login error:', error);
+    alert(
+      'เข้าสู่ระบบไม่สำเร็จ: ' +
+      (error.message || 'กรุณาตรวจสอบสิทธิ์การอ่านตาราง dorm_rooms')
+    );
+  }
 }
 
 // =====================================================
