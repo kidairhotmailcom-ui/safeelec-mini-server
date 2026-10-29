@@ -534,19 +534,107 @@ async function loadOwnerStateCloud() {
   }
 }
 function migrateLegacyLocalDataToOwner(ownerId) {
-  // One-time migration: existing shared local data goes to the first authenticated owner only.
-  const marker = 'dorm_legacy_data_migrated_v1';
-  if (localStorage.getItem(marker)) return;
-  const keys = ['dorm_rooms','dorm_electric','dorm_water','dorm_bills','dorm_payment_events','dorm_settings'];
-  keys.forEach(key => {
-    const scoped = 'owner:' + ownerId + ':' + key;
-    if (localStorage.getItem(scoped) === null && localStorage.getItem(key) !== null) {
-      localStorage.setItem(scoped, localStorage.getItem(key));
-    }
-  });
-  localStorage.setItem(marker, ownerId);
-}
+    const marker = 'dorm_legacy_data_migrated_v1';
+    const keys = [
+        'dorm_rooms',
+        'dorm_electric',
+        'dorm_water',
+        'dorm_bills',
+        'dorm_payment_events',
+        'dorm_settings'
+    ];
 
+    if (!ownerId) {
+        throw new Error('ไม่พบ Owner ID');
+    }
+
+    // ถ้าเคยย้ายครบแล้ว ไม่ทำซ้ำ
+    if (localStorage.getItem(marker) === ownerId) {
+        return;
+    }
+
+    const pending = [];
+    const conflicts = [];
+
+    // ตรวจข้อมูลก่อน โดยยังไม่เขียนหรือลบอะไร
+    for (const key of keys) {
+        const source = localStorage.getItem(key);
+        const scopedKey = 'owner:' + ownerId + ':' + key;
+        const target = localStorage.getItem(scopedKey);
+
+        if (source === null) continue;
+
+        if (target === null) {
+            pending.push({
+                key: key,
+                target: scopedKey,
+                value: source
+            });
+        } else if (target !== source) {
+            conflicts.push(key);
+        }
+    }
+
+    if (conflicts.length) {
+        console.error(
+            'พบข้อมูลเดิมและข้อมูลเจ้าของหอไม่ตรงกัน:',
+            conflicts
+        );
+        throw new Error(
+            'พบข้อมูลซ้ำที่ไม่ตรงกัน จึงหยุดย้ายเพื่อป้องกันข้อมูลทับกัน'
+        );
+    }
+
+    // ประเมินขนาดข้อมูลที่ต้องเพิ่ม
+    const bytes = pending.reduce(
+        (sum, item) =>
+            sum + item.target.length * 2 + item.value.length * 2,
+        0
+    );
+
+    console.log(
+        'ข้อมูลที่รอย้าย:',
+        pending.map(item => item.key),
+        'ขนาดโดยประมาณ:',
+        Math.ceil(bytes / 1024),
+        'KB'
+    );
+
+    // สำคัญ: ไม่พยายามคัดลอกก้อนใหญ่ถ้าพื้นที่เต็ม
+    // ไม่ลบข้อมูลต้นฉบับ และไม่ตั้ง marker ว่าย้ายสำเร็จ
+    try {
+        for (const item of pending) {
+            localStorage.setItem(item.target, item.value);
+        }
+
+        // ตั้ง marker เฉพาะเมื่อเขียนทุกคีย์สำเร็จ
+        localStorage.setItem(marker, ownerId);
+
+    } catch (error) {
+        console.error(
+            'ย้ายข้อมูลไม่ครบ ข้อมูลต้นฉบับยังคงอยู่:',
+            error
+        );
+
+        // ลบเฉพาะสำเนาที่ฟังก์ชันนี้เพิ่งสร้าง
+        // เพื่อให้การลองใหม่ไม่ชนกับสำเนาที่คัดลอกค้างไว้
+        // ห้ามลบข้อมูลที่มีอยู่ก่อนเริ่มย้าย
+        for (const item of pending) {
+            try {
+                if (localStorage.getItem(item.target) === item.value) {
+                    localStorage.removeItem(item.target);
+                }
+            } catch (cleanupError) {
+                console.error(
+                    'ลบสำเนาที่คัดลอกค้างไว้ไม่สำเร็จ:',
+                    cleanupError
+                );
+            }
+        }
+
+        throw error;
+    }
+}
 
 // Supabase cloud ledger: payment data is scoped to the authenticated owner.
 async function getOwnerSession() {
