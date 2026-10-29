@@ -438,263 +438,100 @@
 // =====================================================
 // ⚙️ การตั้งค่าระบบ
 // =====================================================
+/* app.js — Supabase client */
+(() => {
+  const SUPABASE_URL = 'https://bhihjcstmamwoinmbfiy.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoaWhqY3N0bWFtd29pbm1iZml5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0ODUwMzYsImV4cCI6MjEwODA2MTAzNn0.XZP2d6dJ_Z1QNN5baMYmTH87UEkHEeT8fwecMCO8gAY';
 
+  if (!window.supabase?.createClient) {
+    console.error('กรุณาโหลด Supabase JavaScript SDK ก่อน app.js');
+    return;
+  }
 
-window.dormSupabaseClient = null;
-
-if (
-    SUPABASE_URL &&
-    SUPABASE_KEY &&
-    window.supabase &&
-    typeof window.supabase.createClient === 'function'
-) {
-    window.dormSupabaseClient =
-        window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-}
+  window.dormSupabaseClient =
+    window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
+})();
 
 const STORAGE = {
-    REG: 'dorm_reg',
-    LICENSE: 'dorm_license',
-    ADMIN_PASS: 'dorm_admin_pass',
-    ROOMS: 'dorm_rooms',
-    ELECTRIC: 'dorm_electric',
-    WATER: 'dorm_water',
-    BILLS: 'dorm_bills'
+  REG: 'dorm_reg',
+  LICENSE: 'dorm_license',
+  ADMIN_PASS: 'dorm_admin_pass',
+  ROOMS: 'dorm_rooms',
+  ELECTRIC: 'dorm_electric',
+  WATER: 'dorm_water',
+  BILLS: 'dorm_bills'
 };
 
-(async function checkDormSupabase() {
-    const client = window.dormSupabaseClient;
-
-    if (!client) {
-        console.error('[SUPABASE] ไม่พบ Client');
-        return;
-    }
-
-    console.log('[SUPABASE] สร้าง Client สำเร็จ');
-
-    const { data, error } = await client
-        .from('dorm_rooms')
-        .select('id')
-        .limit(1);
-
-    if (error) {
-        console.error('[SUPABASE] อ่านตารางไม่สำเร็จ', {
-            code: error.code,
-            message: error.message
-        });
-        return;
-    }
-
-    console.log('[SUPABASE] อ่านตารางสำเร็จ', {
-        rowsFound: data.length
-    });
-})();
- 
-async function saveRoomToSupabase(room) {
-    const client = window.dormSupabaseClient;
-
-    if (!client) {
-        console.error('[SUPABASE] ไม่พบ Client');
-        alert('เชื่อมต่อ Supabase ไม่สำเร็จ');
-        return false;
-    }
-
-    // ต้องเป็น UUID ของเจ้าของที่ยืนยันตัวตนแล้ว
-    const { data: authData, error: authError } =
-        await client.auth.getUser();
-
-    if (authError || !authData.user) {
-        console.error('[SUPABASE] ตรวจสอบบัญชีเจ้าของไม่สำเร็จ',
-            authError);
-        alert('กรุณาเข้าสู่ระบบเจ้าของก่อนบันทึกห้อง');
-        return false;
-    }
-
-    const roomId = String(room.room_id ?? '').trim();
-
-    if (!roomId) {
-        alert('กรุณาระบุเลขห้อง');
-        return false;
-    }
-
-    const payload = {
-        user_id: authData.user.id,
-        room_id: roomId,
-        price: Number(room.price) || 0,
-        tenant_name: String(room.tenant_name ?? ''),
-        esp_ip: String(room.esp_ip ?? ''),
-        init_elec: Number(room.init_elec) || 0,
-        init_water: Number(room.init_water) || 0
-    };
-
-    // เขียนรหัสผ่านเฉพาะเมื่อมีค่าที่ได้รับจากฟอร์ม
-    // ไม่เขียนทับรหัสผ่านเดิมด้วยค่าว่าง
-    const roomPassword = String(room.password ?? '').trim();
-
-    if (roomPassword) {
-        payload.password = roomPassword;
-    }
-
-    const { data, error } = await client
-        .from('dorm_rooms')
-        .upsert(payload, {
-            onConflict: 'user_id,room_id'
-        })
-        .select('id,user_id,room_id')
-        .single();
-
-    if (error) {
-        console.error('[SUPABASE] บันทึกห้องไม่สำเร็จ', {
-            code: error.code,
-            message: error.message,
-            details: error.details,
-            hint: error.hint
-        });
-
-        alert('บันทึกห้องไม่สำเร็จ: ' + error.message);
-        return false;
-    }
-
-    console.log('[SUPABASE] บันทึกห้องสำเร็จ', data);
-    alert('บันทึกห้องลง Supabase สำเร็จ: ' + data.room_id);
-    return true;
-}
-
-// =====================================================
-// 💾 บันทึก/โหลดข้อมูล
-// =====================================================
 function saveData(key, data) {
-    localStorage.setItem(key, JSON.stringify(data));
-}
-function loadData(key, def = []) {
-    const d = localStorage.getItem(key);
-    return d ? JSON.parse(d) : def;
+  localStorage.setItem(key, JSON.stringify(data));
 }
 
-// =====================================================
-// 📄 เปลี่ยนหน้า
-// =====================================================
+function loadData(key, fallback = []) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw === null ? fallback : JSON.parse(raw);
+  } catch (error) {
+    console.error('อ่านข้อมูลในเครื่องไม่สำเร็จ:', error);
+    return fallback;
+  }
+}
+
+function getSupabase() {
+  const client = window.dormSupabaseClient;
+
+  if (!client) {
+    throw new Error('ไม่พบ Supabase Client');
+  }
+
+  return client;
+}
+
+async function requireOwner() {
+  const client = getSupabase();
+  const { data, error } = await client.auth.getUser();
+
+  if (error || !data?.user) {
+    throw new Error('กรุณาเข้าสู่ระบบเจ้าของผ่าน Supabase Auth');
+  }
+
+  return data.user;
+}
+
 function showPage(pageId) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    const p = document.getElementById(pageId);
-    if (p) p.classList.add('active');
+  document.querySelectorAll('.page').forEach(page => {
+    page.classList.remove('active');
+  });
+
+  document.getElementById(pageId)?.classList.add('active');
 }
 
-// =====================================================
-// 📝 ลงทะเบียน
-// =====================================================
+function switchOwnerTab(tabName, clickedTab) {
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.classList.remove('active');
+  });
 
-async function submitRegistration() {
-    const name = document.getElementById('reg-name')?.value.trim() || '';
-    const address = document.getElementById('reg-address')?.value.trim() || '';
-    const phone = document.getElementById('reg-phone')?.value.trim() || '';
-    const email = document.getElementById('reg-email')?.value.trim() || '';
-    const msg = document.getElementById('reg-message');
+  document.querySelectorAll('.tab-content').forEach(content => {
+    content.classList.add('hidden');
+  });
 
-    if (!msg) {
-        alert('ไม่พบช่อง reg-message ในหน้า HTML');
-        return;
-    }
+  clickedTab?.classList.add('active');
+  document.getElementById('tab-' + tabName)?.classList.remove('hidden');
 
-    if (!name || !address || !phone) {
-        msg.textContent = 'กรุณากรอกชื่อ ที่อยู่ และเบอร์โทรให้ครบ';
-        return;
-    }
+  const renderers = {
+    dashboard: updateDashboard,
+    rooms: renderRoomList,
+    electric: renderElectricList,
+    water: renderWaterList,
+    bills: renderBillList,
+    payments: renderPaymentList,
+    summary: renderSummary
+  };
 
-    if (!/^[0-9]{9,10}$/.test(phone)) {
-        msg.textContent = 'เบอร์โทรต้องเป็นตัวเลข 9-10 หลัก';
-        return;
-    }
-
-    const client = window.dormSupabaseClient;
-
-    if (!client) {
-        msg.textContent =
-            'เชื่อมต่อ Supabase ไม่สำเร็จ ตรวจสอบไลบรารีและการสร้าง client';
-        return;
-    }
-
-    const button = document.querySelector(
-        '#page-register button[onclick*="submitRegistration"]'
-    );
-
-    if (button) button.disabled = true;
-    msg.textContent = 'กำลังบันทึกข้อมูลลง Supabase...';
-
-    try {
-        const { data: regData, error: regError } = await client
-            .from('registrations')
-            .insert([{
-                name: name,
-                address: address,
-                phone: phone,
-                email: email || ''
-            }])
-            .select('id')
-            .single();
-
-        if (regError) throw regError;
-
-        const newKey = 'KIDAIR-' + regData.id;
-
-        const { error: keyError } = await client
-            .from('license_keys')
-            .insert([{
-                license_key: newKey,
-                is_active: true
-            }]);
-
-        if (keyError) {
-            throw new Error(
-                'บันทึกคำขอแล้ว แต่สร้างใบอนุญาตไม่สำเร็จ: ' +
-                keyError.message
-            );
-        }
-
-        saveData(STORAGE.REG, {
-            name: name,
-            address: address,
-            phone: phone,
-            email: email,
-            date: new Date().toISOString()
-        });
-
-        msg.textContent = '';
-
-        const result = document.createElement('div');
-        result.className = 'license-box valid';
-        result.style.display = 'block';
-
-        const title = document.createElement('strong');
-        title.textContent = 'ลงทะเบียนสำเร็จ';
-
-        const keyText = document.createElement('p');
-        keyText.textContent = 'รหัสใบอนุญาต: ' + newKey;
-
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'btn-success';
-        btn.textContent = 'ใช้รหัสใบอนุญาต';
-
-        btn.onclick = function () {
-            const input = document.getElementById('license-key');
-            if (input) input.value = newKey;
-            showPage('page-enter-license');
-        };
-
-        result.append(title, keyText, btn);
-        msg.appendChild(result);
-
-    } catch (err) {
-        console.error('Registration error:', err);
-        msg.textContent = 'ลงทะเบียนไม่สำเร็จ: ' +
-            (err.message || String(err));
-    } finally {
-        if (button) button.disabled = false;
-    }
+  renderers[tabName]?.();
 }
-
-window.submitRegistration = submitRegistration;
 
 // =====================================================
 // 🔑 ตรวจสอบรหัสใบอนุญาต
