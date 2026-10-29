@@ -834,29 +834,118 @@ function tenantLogout() {
 // =====================================================
 // 🔐 เข้าระบบ
 // =====================================================
+
 async function adminDoLogin() {
-  const email = (document.getElementById('admin-login-email')?.value || '').trim();
-  const pass = document.getElementById('admin-login-pass')?.value || '';
-  const client = window.dormSupabaseClient;
-  if (!client) { alert('❌ เชื่อมต่อ Supabase ไม่สำเร็จ'); return; }
-  if (!email || !pass) { alert('กรุณากรอกอีเมลและรหัสผ่านบัญชีเจ้าของหอ'); return; }
-  const button = document.querySelector('#page-owner-login button[onclick*="adminDoLogin"]');
-  if (button) button.disabled = true;
-  try {
-    const { data, error } = await client.auth.signInWithPassword({ email, password: pass });
-    if (error) throw error;
-    if (!data.user) throw new Error('ไม่พบผู้ใช้ที่เข้าสู่ระบบ');
-    activeOwnerId = data.user.id;
-    localStorage.setItem('dorm_last_owner_id', activeOwnerId);
-    migrateLegacyLocalDataToOwner(activeOwnerId);
-    await loadOwnerStateCloud();
-    await loadBillLedgerCloud();
-    showPage('page-owner');
-    updateDashboard(); renderRoomList(); populateRoomSelects(); renderBillList(); renderPaymentList();
-  } catch (error) {
-    console.error('owner login error:', error);
-    alert('❌ เข้าสู่ระบบ/โหลดข้อมูลไม่สำเร็จ: ' + (error.message || String(error)));
-  } finally { if (button) button.disabled = false; }
+    const email = (
+        document.getElementById('admin-login-email')?.value || ''
+    ).trim();
+
+    const pass =
+        document.getElementById('admin-login-pass')?.value || '';
+
+    const client = window.dormSupabaseClient;
+
+    if (!client) {
+        alert('❌ เชื่อมต่อ Supabase ไม่สำเร็จ กรุณาตรวจสอบการโหลด Supabase');
+        return;
+    }
+
+    if (!email || !pass) {
+        alert('กรุณากรอกอีเมลและรหัสผ่านบัญชีเจ้าของหอ');
+        return;
+    }
+
+    const button = document.querySelector(
+        '#page-owner-login button[onclick*="adminDoLogin"]'
+    );
+
+    if (button) button.disabled = true;
+
+    try {
+        // ขั้นที่ 1: เข้าสู่ระบบ
+        const { data, error } =
+            await client.auth.signInWithPassword({
+                email: email,
+                password: pass
+            });
+
+        if (error) throw error;
+
+        if (!data.user) {
+            throw new Error('ไม่พบผู้ใช้ที่เข้าสู่ระบบ');
+        }
+
+        // ขั้นที่ 2: กำหนดเจ้าของหอ
+        activeOwnerId = data.user.id;
+
+        localStorage.setItem(
+            'dorm_last_owner_id',
+            activeOwnerId
+        );
+
+        // ขั้นที่ 3: ย้ายข้อมูลเดิม หากมี
+        try {
+            migrateLegacyLocalDataToOwner(activeOwnerId);
+        } catch (e) {
+            console.error('ย้ายข้อมูลเดิมไม่สำเร็จ:', e);
+        }
+
+        // ขั้นที่ 4: เปิดหน้าหลักหลังยืนยันตัวตนสำเร็จ
+        showPage('page-owner');
+
+        updateDashboard();
+        renderRoomList();
+        populateRoomSelects();
+        renderBillList();
+        renderPaymentList();
+
+        // ขั้นที่ 5: โหลดข้อมูลคลาวด์และแยกตรวจข้อผิดพลาด
+        let ownerStateOK = true;
+        let billLedgerOK = true;
+
+        try {
+            await loadOwnerStateCloud();
+        } catch (e) {
+            ownerStateOK = false;
+            console.error('โหลด dorm_owner_state ไม่สำเร็จ:', e);
+        }
+
+        try {
+            await loadBillLedgerCloud();
+        } catch (e) {
+            billLedgerOK = false;
+            console.error('โหลด dorm_payment_ledger ไม่สำเร็จ:', e);
+        }
+
+        // ขั้นที่ 6: วาดหน้าจอใหม่หลังโหลดข้อมูล
+        updateDashboard();
+        renderRoomList();
+        populateRoomSelects();
+        renderBillList();
+        renderPaymentList();
+
+        if (!ownerStateOK || !billLedgerOK) {
+            alert(
+                'เข้าสู่ระบบสำเร็จ แต่โหลดข้อมูลจากคลาวด์ไม่ครบ\n' +
+                'ข้อมูลห้อง: ' +
+                (ownerStateOK ? 'สำเร็จ' : 'ไม่สำเร็จ') +
+                '\nข้อมูลบิล: ' +
+                (billLedgerOK ? 'สำเร็จ' : 'ไม่สำเร็จ') +
+                '\nโปรดตรวจข้อผิดพลาดใน Console'
+            );
+        }
+
+    } catch (error) {
+        console.error('owner login error:', error);
+
+        alert(
+            '❌ เข้าสู่ระบบไม่สำเร็จ: ' +
+            (error.message || String(error))
+        );
+
+    } finally {
+        if (button) button.disabled = false;
+    }
 }
 
 // =====================================================
