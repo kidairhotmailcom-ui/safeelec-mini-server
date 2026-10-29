@@ -421,7 +421,19 @@
     </div>
   </div>
 </div>
+<!-- โหลด Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
+<!-- ตั้งค่าเชื่อมต่อโปรเจกต์ -->
+<script>
+  const SUPABASE_URL = 'https://bhihjcstmamwoinmbfiy.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoaWhqY3N0bWFtd29pbm1iZml5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0ODUwMzYsImV4cCI6MjEwODA2MTAzNn0.XZP2d6dJ_Z1QNN5baMYmTH87UEkHEeT8fwecMCO8gAY';
+  const { createClient } = window.supabase;
+  window.dormSupabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+</script>
+
+<!-- โหลดไฟล์ app.js -->
+<script src="./app.js"></script>
 <script>
 // =====================================================
 // ⚙️ การตั้งค่าระบบ
