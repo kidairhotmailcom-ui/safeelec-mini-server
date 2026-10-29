@@ -1288,26 +1288,28 @@ function deleteRoom(id) {
   renderRoomList();
   updateDashboard();
 }
- 
-
-function doTenantLogin() {
-  const id = String(document.getElementById('tenant-room')?.value || '').trim();
-  const password = String(document.getElementById('tenant-pass')?.value || '');
-  if (!id || !password) { alert('กรุณากรอกหมายเลขห้องและรหัสผ่าน'); return; }
-
-  const rooms = loadData(STORAGE.ROOMS, []);
-  const room = (Array.isArray(rooms) ? rooms : []).find(r => String(r?.id ?? '').trim() === id);
-  const savedPass = room?.password || localStorage.getItem('room_pass_' + id) || '';
-  if (!room || !savedPass || savedPass !== password) {
-    alert('หมายเลขห้องหรือรหัสผ่านไม่ถูกต้อง หรือห้องนี้ยังไม่ได้กำหนดรหัสผ่าน');
+async function doTenantLogin() {
+  const roomCode = document.getElementById('tenant-room')?.value.trim();
+  const roomPass = document.getElementById('tenant-pass')?.value.trim();
+  if (!roomCode || !roomPass) {
+    alert('กรุณากรอกหมายเลขห้องและรหัสผ่าน');
     return;
   }
-  sessionStorage.setItem('tenantRoomId', id);
-  localStorage.setItem('current_tenant_room', id);
+  // เรียก RPC บนคลาวด์เพื่อตรวจ + สร้างเซสชัน
+  const { data, error } = await dormSupabaseClient.rpc('tenant_login', {
+    p_room_code: roomCode,
+    p_pass: roomPass
+  });
+  if (error || !data?.success) {
+    alert(data?.message || 'หมายเลขห้องหรือรหัสผ่านไม่ถูกต้อง');
+    return;
+  }
+  // บันทึกโทเค็นเซสชัน
+  localStorage.setItem('session_token', data.session_token);
+  localStorage.setItem('current_tenant_room', data.room_id);
   showPage('page-tenant');
-  initTenantPage(id);
-}
-
+  await initTenantPage();
+} 
 // ⚡ ค่าไฟฟ้า
 function saveElectric() {
   const room = document.getElementById('elec-room').value.trim();
