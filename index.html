@@ -478,6 +478,76 @@ const STORAGE = {
         rowsFound: data.length
     });
 })();
+ 
+async function saveRoomToSupabase(room) {
+    const client = window.dormSupabaseClient;
+
+    if (!client) {
+        console.error('[SUPABASE] ไม่พบ Client');
+        alert('เชื่อมต่อ Supabase ไม่สำเร็จ');
+        return false;
+    }
+
+    // ต้องเป็น UUID ของเจ้าของที่ยืนยันตัวตนแล้ว
+    const { data: authData, error: authError } =
+        await client.auth.getUser();
+
+    if (authError || !authData.user) {
+        console.error('[SUPABASE] ตรวจสอบบัญชีเจ้าของไม่สำเร็จ',
+            authError);
+        alert('กรุณาเข้าสู่ระบบเจ้าของก่อนบันทึกห้อง');
+        return false;
+    }
+
+    const roomId = String(room.room_id ?? '').trim();
+
+    if (!roomId) {
+        alert('กรุณาระบุเลขห้อง');
+        return false;
+    }
+
+    const payload = {
+        user_id: authData.user.id,
+        room_id: roomId,
+        price: Number(room.price) || 0,
+        tenant_name: String(room.tenant_name ?? ''),
+        esp_ip: String(room.esp_ip ?? ''),
+        init_elec: Number(room.init_elec) || 0,
+        init_water: Number(room.init_water) || 0
+    };
+
+    // เขียนรหัสผ่านเฉพาะเมื่อมีค่าที่ได้รับจากฟอร์ม
+    // ไม่เขียนทับรหัสผ่านเดิมด้วยค่าว่าง
+    const roomPassword = String(room.password ?? '').trim();
+
+    if (roomPassword) {
+        payload.password = roomPassword;
+    }
+
+    const { data, error } = await client
+        .from('dorm_rooms')
+        .upsert(payload, {
+            onConflict: 'user_id,room_id'
+        })
+        .select('id,user_id,room_id')
+        .single();
+
+    if (error) {
+        console.error('[SUPABASE] บันทึกห้องไม่สำเร็จ', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint
+        });
+
+        alert('บันทึกห้องไม่สำเร็จ: ' + error.message);
+        return false;
+    }
+
+    console.log('[SUPABASE] บันทึกห้องสำเร็จ', data);
+    alert('บันทึกห้องลง Supabase สำเร็จ: ' + data.room_id);
+    return true;
+}
 
 // =====================================================
 // 💾 บันทึก/โหลดข้อมูล
