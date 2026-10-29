@@ -1076,7 +1076,8 @@ function saveRoom() {
   })();
 
   populateRoomSelects();
-
+  alert('บันทึกข้อมูลห้องในเครื่องแล้ว กำลังซิงก์ Supabase');
+}
 
 function renderRoomList() {
   const rooms = loadData(STORAGE.ROOMS, []);
