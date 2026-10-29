@@ -450,6 +450,35 @@ const STORAGE = {
     WATER: 'dorm_water',
     BILLS: 'dorm_bills'
 };
+
+(async function checkDormSupabase() {
+    const client = window.dormSupabaseClient;
+
+    if (!client) {
+        console.error('[SUPABASE] ไม่พบ Client');
+        return;
+    }
+
+    console.log('[SUPABASE] สร้าง Client สำเร็จ');
+
+    const { data, error } = await client
+        .from('dorm_rooms')
+        .select('id')
+        .limit(1);
+
+    if (error) {
+        console.error('[SUPABASE] อ่านตารางไม่สำเร็จ', {
+            code: error.code,
+            message: error.message
+        });
+        return;
+    }
+
+    console.log('[SUPABASE] อ่านตารางสำเร็จ', {
+        rowsFound: data.length
+    });
+})();
+
 // =====================================================
 // 💾 บันทึก/โหลดข้อมูล
 // =====================================================
