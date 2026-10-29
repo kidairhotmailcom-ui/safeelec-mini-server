@@ -1039,12 +1039,50 @@ async function adminDoLogin() {
 // =====================================================
 // 👤 หน้าผู้เช่า
 // =====================================================
-function initTenantPage(room) {
+async function initTenantPage() {
+  // ดึงข้อมูลห้องจากเซสชันคลาวด์ ไม่รับค่าจากพารามิเตอร์เดิม
+  const savedToken = localStorage.getItem('session_token');
+  const { data: sessionData } = await dormSupabaseClient.rpc('check_user_session', { p_token: savedToken });
+  if (!sessionData?.success) {
+    showPage('page-choose');
+    return;
+  }
+  const roomId = sessionData.room_id;
   const el = document.getElementById('tenant-room-no');
-  if (el) el.textContent = room;
-  renderTenantBills(room);
+  if (el) el.textContent = roomId;
+  await renderTenantBills();
 }
 
+async function renderTenantBills() {
+  const savedToken = localStorage.getItem('session_token');
+  const { data: sessionData } = await dormSupabaseClient.rpc('check_user_session', { p_token: savedToken });
+  if (!sessionData?.success) return;
+
+  // ดึงบิลจาก Supabase โดยตรง
+  const { data: bills, error } = await dormSupabaseClient
+    .from('dorm_bills')
+    .select('*')
+    .eq('room_id', sessionData.room_id)
+    .order('bill_date', { ascending: false });
+
+  const container = document.getElementById('tenant-bills');
+  if (error || !bills || bills.length === 0) {
+    container.innerHTML = '<p style="color:#64748b;text‑align:center;padding:20px;">ยังไม่มีข้อมูลบิล</p>';
+    return;
+  }
+
+  container.innerHTML = bills.map(bill => {
+    const statusText = bill.paid ? 'ชำระแล้ว' : 'ค้างชำระ';
+    const statusClass = bill.paid ? 'badge‑success' : 'badge‑warning';
+    return `
+      <div class="bill‑card">
+        <div><strong>เดือน ${bill.bill_month}</strong></div>
+        <div>ค่าใช้จ่าย: ${bill.total_amount} บาท</div>
+        <span class="badge ${statusClass}">${statusText}</span>
+      </div>
+    `;
+  }).join('');
+}
 function renderTenantBills(room) {
   const bills = loadData(STORAGE.BILLS, []).filter(b => String(b?.room ?? '') === String(room));
   const container = document.getElementById('tenant-bills');
