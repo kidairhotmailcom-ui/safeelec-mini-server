@@ -450,6 +450,34 @@ const STORAGE = {
     WATER: 'dorm_water',
     BILLS: 'dorm_bills'
 };
+<script>
+// =====================================================
+// ⚙️ การตั้งค่าระบบ
+// =====================================================
+const SUPABASE_URL = 'https://bhihjcstmamwoinmbfiy.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoaWhqY3N0bWFtd29pbm1iZml5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0ODUwMzYsImV4cCI6MjEwODA2MTAzNn0.XZP2d6dJ_Z1QNN5baMYmTH87UEkHEeT8fwecMCO8gAY';
+
+window.dormSupabaseClient = null;
+
+if (
+    SUPABASE_URL &&
+    SUPABASE_KEY &&
+    window.supabase &&
+    typeof window.supabase.createClient === 'function'
+) {
+    window.dormSupabaseClient =
+        window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+}
+
+const STORAGE = {
+    REG: 'dorm_reg',
+    LICENSE: 'dorm_license',
+    ADMIN_PASS: 'dorm_admin_pass',
+    ROOMS: 'dorm_rooms',
+    ELECTRIC: 'dorm_electric',
+    WATER: 'dorm_water',
+    BILLS: 'dorm_bills'
+};
 // =====================================================
 // 💾 บันทึก/โหลดข้อมูล
 // =====================================================
