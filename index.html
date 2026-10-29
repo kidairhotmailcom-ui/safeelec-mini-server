@@ -2037,7 +2037,26 @@ function loadSettingsInfo() {
   
   renderPassTable();
 }
-
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const hasTenantSession = await checkSavedSession();
+    if (hasTenantSession) {
+      showPage('page‑tenant');
+      await initTenantPage();
+      return;
+    }
+    const savedLicense = loadData(STORAGE.LICENSE, null);
+    if (savedLicense) {
+      showPage('page‑main');
+      await initMainPage();
+    } else {
+      showPage('page‑start');
+    }
+  } catch(err) {
+    console.error('โหลดหน้าเริ่มต้นผิดพลาด:', err);
+    showPage('page‑start');
+  }
+});
 // =====================================================
 // 🚀 เริ่มทำงานเมื่อโหลดหน้าเสร็จ
 // =====================================================
