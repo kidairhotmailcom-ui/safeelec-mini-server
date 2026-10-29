@@ -1028,15 +1028,55 @@ function saveRoom() {
   if (idx >= 0) rooms[idx] = roomData;
   else rooms.push(roomData);
   
+  
   saveData(STORAGE.ROOMS, rooms);
-populateRoomSelects();
-alert('✅ บันทึกข้อมูลห้องสำเร็จ');
-document.getElementById('room-id').value = '';
-document.getElementById('room-price').value = '';
-document.getElementById('room-tenant').value = '';
-renderRoomList();
-updateDashboard();
-}
+
+  // บันทึกข้อมูลห้องลง Supabase สำหรับใช้งานข้ามเครื่อง
+  (async () => {
+    try {
+      const client = window.dormSupabaseClient;
+      if (!client) {
+        throw new Error('ไม่พบการเชื่อมต่อ Supabase');
+      }
+
+      const { data: sessionData, error: sessionError } =
+        await client.auth.getSession();
+
+      if (sessionError) throw sessionError;
+
+      const user = sessionData?.session?.user;
+      if (!user) {
+        throw new Error('กรุณาเข้าสู่ระบบเจ้าของหอก่อนบันทึก');
+      }
+
+      const payload = {
+        user_id: user.id,
+        room_id: String(id),
+        price: price,
+        tenant_name: tenant,
+        password: roomData.password
+      };
+
+      const { error } = await client
+        .from('dorm_rooms')
+        .upsert(payload, {
+          onConflict: 'user_id,room_id'
+        });
+
+      if (error) throw error;
+
+      alert('✅ บันทึกห้องในเครื่องและ Supabase สำเร็จ');
+    } catch (error) {
+      console.error('บันทึกห้องลง Supabase ไม่สำเร็จ:', error);
+      alert(
+        '⚠️ ข้อมูลห้องถูกบันทึกในเครื่องแล้ว แต่ซิงก์ Supabase ไม่สำเร็จ: ' +
+        (error.message || String(error))
+      );
+    }
+  })();
+
+  populateRoomSelects();
+
 
 function renderRoomList() {
   const rooms = loadData(STORAGE.ROOMS, []);
