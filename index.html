@@ -1045,7 +1045,7 @@ function uploadSlip(billId) {
     try {
       // ลดขนาดภาพก่อนเก็บ เพื่อลดโอกาส localStorage เต็ม
       const image = new Image();
-      image.onload = function() {
+      image.onload = async function() {
         try {
           const maxSide = 1200;
           const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
@@ -1057,11 +1057,12 @@ function uploadSlip(billId) {
           const compressed = canvas.toDataURL('image/jpeg', 0.72);
           bills[idx].pending = true;
           bills[idx].slipImage = compressed;
-          bills[idx].submittedAt = new Date().toLocaleString('th-TH');
+          bills[idx].submittedAt = new Date().toISOString();
           delete bills[idx].slipPath;
+          await saveBillLedgerCloud(bills[idx]);
           saveData(STORAGE.BILLS, bills);
           alert('✅ ส่งสลิปเรียบร้อย! รอตรวจสอบ');
-          renderTenantBills(localStorage.getItem('current_tenant_room'));
+          await renderTenantBills();
         } catch (saveError) {
           console.error('uploadSlip save error:', saveError);
           alert('❌ บันทึกสลิปไม่สำเร็จ พื้นที่จัดเก็บอาจเต็ม กรุณาลองรูปที่เล็กลง');
@@ -1077,7 +1078,6 @@ function uploadSlip(billId) {
   reader.onerror = function() { alert('❌ อ่านไฟล์รูปสลิปไม่สำเร็จ'); };
   reader.readAsDataURL(file);
 }
-
 // =====================================================
 // 📊 เมนูแท็บเจ้าของระบบ
 // =====================================================
@@ -1834,17 +1834,20 @@ async function rejectPayment(billNo) {
   const idx = bills.findIndex(b => String(b.billNo) === String(billNo));
   if (idx === -1) { alert('❌ ไม่พบบิลนี้'); return; }
   const updated = { ...bills[idx], pending: false, slipImage: null, slipRejectedAt: new Date().toISOString() };
-  delete updated.slipPath; delete updated.submittedAt;
+  delete updated.slipPath;
+  delete updated.submittedAt;
   try {
     await saveBillLedgerCloud(updated);
-    bills[idx] = updated; saveData(STORAGE.BILLS, bills);
-    alert('✅ ปฏิเสธสลิปแล้ว'); await renderPaymentList(); renderTenantBills(localStorage.getItem('current_tenant_room'));
+    bills[idx] = updated;
+    saveData(STORAGE.BILLS, bills);
+    alert('✅ ปฏิเสธสลิปแล้ว');
+    await renderPaymentList();
+    await renderTenantBills();
   } catch (error) {
     console.error('reject slip cloud save error:', error);
     alert('❌ บันทึกผลการปฏิเสธลง Supabase ไม่สำเร็จ: ' + (error.message || String(error)));
   }
 }
-
 // 📈 สรุปรายรับ
 function renderSummary() {
   const rooms = loadData(STORAGE.ROOMS, []);
