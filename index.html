@@ -509,8 +509,11 @@ async function submitRegistration() {
 // 🔑 ตรวจสอบรหัสใบอนุญาต
 // =====================================================
 async function verifyLicense() {
+  alert("👉 เริ่มตรวจสอบ"); // ย้ายมาอยู่ต้นฟังก์ชัน
   if (!dormSupabaseClient) {
-  alert("👉 เริ่มตรวจสอบ");
+    msgBox.innerHTML = '<div class="license-box invalid">⏳ กำลังเชื่อมต่อฐานข้อมูล กรุณารอสักครู่แล้วลองอีกครั้ง</div>';
+    return;
+  }
   const keyInput = document.getElementById('license-key').value.trim();
   const msgBox = document.getElementById('license-status');
 
