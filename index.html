@@ -1167,40 +1167,38 @@ function rejectPayment(billNo) {
 function renderSummary() {
   const rooms = loadData(STORAGE.ROOMS, []);
   const bills = loadData(STORAGE.BILLS, []);
-  const tbody = document.getElementById('summary-table');
-  
-  let sumRent = 0, sumElec = 0, sumWater = 0, sumAll = 0, sumPaid = 0, sumDue = 0;
-  
+  const tbody = document.getElementById('summary‑table');
+  let sumRent = 0, sumElec = 0, sumWater = 0, sumAll = 0;
+
   tbody.innerHTML = rooms.map(room => {
     const roomBills = bills.filter(b => b.room === room.id);
     const rent = roomBills.reduce((s, b) => s + (b.rent || 0), 0);
-    const elec = roomBills.reduce((s, b) => s + (b.elecTotal || 0), 0);
-    const water = roomBills.reduce((s, b) => s + (b.waterTotal || 0), 0);
+    const elec = roomBills.reduce((s, b) => s + (b.elec || 0), 0);
+    const water = roomBills.reduce((s, b) => s + (b.water || 0), 0);
     const total = rent + elec + water;
     const paid = roomBills.filter(b => b.paid).reduce((s, b) => s + (b.total || 0), 0);
-    b => b.paid).reduce((s, b) => s + (b.total || 0), 0);
     const due = total - paid;
-    
+
     sumRent += rent;
     sumElec += elec;
     sumWater += water;
     sumAll += total;
     sumPaid += paid;
     sumDue += due;
-    
+
     return `
       <tr>
         <td>${room.id}</td>
         <td>${room.tenant || '-'}</td>
-        <td class="text-right">${rent.toLocaleString()}</td>
-        <td class="text-right">${elec.toLocaleString()}</td>
-        <td class="text-right">${water.toLocaleString()}</td>
-        <td class="text-right">${total.toLocaleString()}</td>
-        <td class="text-right">${paid.toLocaleString()}</td>
-        <td class="text-right">${due.toLocaleString()}</td>
+        <td class="text‑right">${rent.toLocaleString()}</td>
+        <td class="text‑right">${elec.toLocaleString()}</td>
+        <td class="text‑right">${water.toLocaleString()}</td>
+        <td class="text‑right">${total.toLocaleString()}</td>
+        <td class="text‑right">${due.toLocaleString()}</td>
       </tr>
     `;
   }).join('');
+}
   
   document.getElementById('sum-rent').textContent = sumRent.toLocaleString() + ' ฿';
   document.getElementById('sum-elec').textContent = sumElec.toLocaleString() + ' ฿';
