@@ -512,7 +512,6 @@ async function verifyLicense() {
   const keyInput = document.getElementById('license-key').value.trim();
   const msgBox = document.getElementById('license-status');
 
-  // ป้องกันกรณีหากล่องข้อความไม่เจอ
   if (!msgBox) {
     alert('❌ ไม่พบช่องแสดงผล กรุณารีเฟรชหน้า');
     return;
@@ -550,9 +549,11 @@ async function verifyLicense() {
     msgBox.innerHTML = '<div class="license-box invalid">❌ ผิดพลาด: ' + err.message + '</div>';
   }
 }
-// =====================================================
-// ⚙️ ตั้งค่ารหัสผ่าน
-// =====================================================
+
+function changeLicense() {
+  showPage('page-register');
+}
+
 function completeSetup() {
     const p1 = document.getElementById('setup-pass').value;
     const p2 = document.getElementById('setup-pass2').value;
@@ -567,7 +568,6 @@ function completeSetup() {
     saveData(STORAGE.ADMIN_PASS, p1);
     showPage('page-choose');
 }
-
 // =====================================================
 // 🚪 ออกจากระบบ
 // =====================================================
