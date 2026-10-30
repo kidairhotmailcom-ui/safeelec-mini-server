@@ -518,7 +518,7 @@ async function submitRegistration() {
 // =====================================================
 // 🔑 ตรวจสอบรหัสใบอนุญาต
 // =====================================================
-function verifyLicense() {
+async function verifyLicense() {
     const key = document.getElementById('license-key').value.trim();
     const status = document.getElementById('license-status');
     if (!key) {
@@ -540,6 +540,7 @@ if (data) {
 } else {
   status.textContent = '❌ รหัสไม่ถูกต้อง';
   status.className = 'license-box invalid';
+}
 }
 function changeLicense() {
     localStorage.removeItem(STORAGE.LICENSE);
