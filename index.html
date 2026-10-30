@@ -512,13 +512,20 @@ async function verifyLicense() {
   const keyInput = document.getElementById('license-key').value.trim();
   const msgBox = document.getElementById('license-status');
 
-  if (!msgBox) return;
+  // ป้องกันกรณีหากล่องข้อความไม่เจอ
+  if (!msgBox) {
+    alert('❌ ไม่พบช่องแสดงผล กรุณารีเฟรชหน้า');
+    return;
+  }
+
   if (!keyInput) {
     msgBox.innerHTML = '<div class="license-box invalid">⚠️ กรุณากรอกรหัสใบอนุญาต</div>';
     return;
   }
 
   try {
+    msgBox.innerHTML = '<div class="license-box">⏳ กำลังตรวจสอบรหัส...</div>';
+
     const { data, error } = await dormSupabaseClient
       .from('licenses')
       .select('*')
@@ -539,8 +546,8 @@ async function verifyLicense() {
       msgBox.innerHTML = '<div class="license-box invalid">❌ รหัสไม่ถูกต้อง หรือเคยใช้งานแล้ว</div>';
     }
   } catch (err) {
-    console.error(err);
-    if (msgBox) msgBox.innerHTML = '<div class="license-box invalid">❌ ผิดพลาดในการตรวจสอบรหัส</div>';
+    console.error('ตรวจสอบผิดพลาด:', err);
+    msgBox.innerHTML = '<div class="license-box invalid">❌ ผิดพลาด: ' + err.message + '</div>';
   }
 }
 // =====================================================
