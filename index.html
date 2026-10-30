@@ -518,7 +518,7 @@ async function submitRegistration() {
 // =====================================================
 // 🔑 ตรวจสอบรหัสใบอนุญาต
 // =====================================================
-function verifyLicense() {
+async function verifyLicense() {
     const key = document.getElementById('license-key').value.trim();
     const status = document.getElementById('license-status');
     if (!key) {
@@ -526,11 +526,17 @@ function verifyLicense() {
         status.className = 'license-box invalid';
         return;
     }
-    if (key === 'DEMO2026') {
+    const { data, error } = await dormSupabaseClient
+        .from('licenses')
+        .select('id')
+        .eq('license_key', key)
+        .single();
+
+    if (data) {
         status.textContent = '✅ รหัสถูกต้อง!';
         status.className = 'license-box valid';
         saveData(STORAGE.LICENSE, { key, verifiedAt: new Date().toISOString() });
-        setTimeout(() => showPage('page-setup'), 1000);
+        setTimeout(() => showPage('page-choose'), 1000);
         return;
     }
     status.textContent = '❌ รหัสไม่ถูกต้อง';
