@@ -509,48 +509,51 @@ async function submitRegistration() {
 // 🔑 ตรวจสอบรหัสใบอนุญาต
 // =====================================================
 async function verifyLicense() {
+  alert("👉 เริ่มตรวจสอบ");
   const keyInput = document.getElementById('license-key').value.trim();
   const msgBox = document.getElementById('license-status');
 
   if (!msgBox) {
-    alert('❌ ไม่พบช่องแสดงผล กรุณารีเฟรชหน้า');
+    alert('❌ ไม่พบช่องแสดงผล');
     return;
   }
-
   if (!keyInput) {
     msgBox.innerHTML = '<div class="license-box invalid">⚠️ กรุณากรอกรหัสใบอนุญาต</div>';
     return;
   }
 
   try {
-    msgBox.innerHTML = '<div class="license-box">⏳ กำลังตรวจสอบรหัส...</div>';
-
+    msgBox.innerHTML = '<div class="license-box">⏳ กำลังขอข้อมูลจากเซิร์ฟเวอร์...</div>';
     const { data, error } = await dormSupabaseClient
       .from('licenses')
       .select('*')
       .eq('license_key', keyInput)
       .eq('used', false);
 
-    if (error) throw error;
+    if (error) {
+      msgBox.innerHTML = '<div class="license-box invalid">❌ ผิดพลาดเชื่อมต่อ: ' + error.message + '</div>';
+      return;
+    }
 
     if (data && data.length > 0) {
+      msgBox.innerHTML = '<div class="license-box valid">✅ พบรหัสถูกต้อง กำลังบันทึก...</div>';
       await dormSupabaseClient
         .from('licenses')
         .update({ used: true })
         .eq('license_key', keyInput);
 
-      msgBox.innerHTML = '<div class="license-box valid">✅ รหัสถูกต้อง กำลังเข้าสู่ระบบ...</div>';
-      // ✅ เปลี่ยนจาก page‑dashboard เป็น page‑owner
-      setTimeout(() => showPage('page-owner'), 800);
+      msgBox.innerHTML = '<div class="license-box valid">✅ เสร็จแล้ว กำลังเปลี่ยนหน้า...</div>';
+      setTimeout(() => {
+        showPage('page-owner');
+      }, 800);
     } else {
-      msgBox.innerHTML = '<div class="license-box invalid">❌ รหัสไม่ถูกต้อง หรือเคยใช้งานแล้ว</div>';
+      msgBox.innerHTML = '<div class="license-box invalid">❌ รหัสไม่ถูกต้อง หรือเคยใช้แล้ว</div>';
     }
   } catch (err) {
-    console.error('ตรวจสอบผิดพลาด:', err);
-    msgBox.innerHTML = '<div class="license-box invalid">❌ ผิดพลาด: ' + err.message + '</div>';
+    console.error('ผิดพลาด:', err);
+    msgBox.innerHTML = '<div class="license-box invalid">❌ มีปัญหา: ' + err.message + '</div>';
   }
 }
-
 function changeLicense() {
   showPage('page-register');
 }
