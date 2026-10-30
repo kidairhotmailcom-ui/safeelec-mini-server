@@ -1167,8 +1167,9 @@ function rejectPayment(billNo) {
 function renderSummary() {
   const rooms = loadData(STORAGE.ROOMS, []);
   const bills = loadData(STORAGE.BILLS, []);
-  const tbody = document.getElementById('summary‑table');
+  const tbody = document.getElementById('summary-table');
   let sumRent = 0, sumElec = 0, sumWater = 0, sumAll = 0;
+  let sumPaid = 0, sumDue = 0;
 
   tbody.innerHTML = rooms.map(room => {
     const roomBills = bills.filter(b => b.room === room.id);
@@ -1190,16 +1191,15 @@ function renderSummary() {
       <tr>
         <td>${room.id}</td>
         <td>${room.tenant || '-'}</td>
-        <td class="text‑right">${rent.toLocaleString()}</td>
-        <td class="text‑right">${elec.toLocaleString()}</td>
-        <td class="text‑right">${water.toLocaleString()}</td>
-        <td class="text‑right">${total.toLocaleString()}</td>
-        <td class="text‑right">${due.toLocaleString()}</td>
+        <td class="text-right">${rent.toLocaleString()}</td>
+        <td class="text-right">${elec.toLocaleString()}</td>
+        <td class="text-right">${water.toLocaleString()}</td>
+        <td class="text-right">${total.toLocaleString()}</td>
+        <td class="text-right">${due.toLocaleString()}</td>
       </tr>
     `;
   }).join('');
-}
-  
+
   document.getElementById('sum-rent').textContent = sumRent.toLocaleString() + ' ฿';
   document.getElementById('sum-elec').textContent = sumElec.toLocaleString() + ' ฿';
   document.getElementById('sum-water').textContent = sumWater.toLocaleString() + ' ฿';
@@ -1207,7 +1207,6 @@ function renderSummary() {
   document.getElementById('sum-paid').textContent = sumPaid.toLocaleString() + ' ฿';
   document.getElementById('sum-due').textContent = sumDue.toLocaleString() + ' ฿';
 }
-
 function exportSummaryCSV() {
   const rooms = loadData(STORAGE.ROOMS, []);
   const bills = loadData(STORAGE.BILLS, []);
