@@ -430,10 +430,10 @@ const SUPABASE_URL = "https://bhihjcstmamwoinmbfiy.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoaWhqY3N0bWFtd29pbmJmZml5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0ODUwMzYsImV4cCI6MjEwODA2MTAzNn0.XZP2d6dJ_Z1QNN5baMYmTH87UEkHEeT8fwecMCO8gAY";
 let supabase = null;
 
+let dormSupabaseClient = null;
 window.addEventListener('DOMContentLoaded', function() {
   if (window.supabase && typeof window.supabase.createClient === "function") {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    window.dormSupabaseClient = supabase;
+    dormSupabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   }
 });
 
@@ -483,7 +483,7 @@ async function submitRegistration() {
     }
 
     // เช็คว่าเชื่อมต่อ Supabase สำเร็จไหม
-    if (!supabase) {
+    if (!dormSupabaseClient) {
         msg.innerHTML = '<div class="license-box invalid" style="display:block">❌ ไม่พบ Supabase<br>ตรวจสอบ script ใน &lt;head&gt;</div>';
         return;
     }
@@ -492,7 +492,7 @@ async function submitRegistration() {
 
     try {
         // ส่งข้อมูลไปยัง Supabase
-        const { error } = await supabase
+        const { error } = await dormSupabaseClient
             .from('registrations')
             .insert([
                 { 
