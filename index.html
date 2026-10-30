@@ -519,7 +519,22 @@ async function submitRegistration() {
 // 🔑 ตรวจสอบรหัสใบอนุญาต
 // =====================================================
 function verifyLicense() {
-  showPage('page‑enter‑license');
+    const key = document.getElementById('license-key').value.trim();
+    const status = document.getElementById('license-status');
+    if (!key) {
+        status.textContent = '⚠️ กรุณาป้อนรหัส';
+        status.className = 'license-box invalid';
+        return;
+    }
+    if (key === 'DEMO2026') {
+        status.textContent = '✅ รหัสถูกต้อง!';
+        status.className = 'license-box valid';
+        saveData(STORAGE.LICENSE, { key, verifiedAt: new Date().toISOString() });
+        setTimeout(() => showPage('page-setup'), 1000);
+        return;
+    }
+    status.textContent = '❌ รหัสไม่ถูกต้อง';
+    status.className = 'license-box invalid';
 }
 function changeLicense() {
     localStorage.removeItem(STORAGE.LICENSE);
