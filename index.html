@@ -509,6 +509,7 @@ async function submitRegistration() {
 // 🔑 ตรวจสอบรหัสใบอนุญาต
 // =====================================================
 async function verifyLicense() {
+  if (!dormSupabaseClient) {
   alert("👉 เริ่มตรวจสอบ");
   const keyInput = document.getElementById('license-key').value.trim();
   const msgBox = document.getElementById('license-status');
