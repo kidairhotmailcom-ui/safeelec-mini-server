@@ -540,7 +540,8 @@ async function verifyLicense() {
         .eq('license_key', keyInput);
 
       msgBox.innerHTML = '<div class="license-box valid">✅ รหัสถูกต้อง กำลังเข้าสู่ระบบ...</div>';
-      setTimeout(() => showPage('page-dashboard'), 800);
+      // ✅ เปลี่ยนจาก page‑dashboard เป็น page‑owner
+      setTimeout(() => showPage('page-owner'), 800);
     } else {
       msgBox.innerHTML = '<div class="license-box invalid">❌ รหัสไม่ถูกต้อง หรือเคยใช้งานแล้ว</div>';
     }
