@@ -710,25 +710,32 @@ function updateDashboard() {
 
 function saveRoom() {
   const id = document.getElementById('room-id').value.trim();
-  const price = parseInt(document.getElementById('room-price').value) || 0;
-  const tenant = document.getElementById('room-tenant').value.trim();
+  const room = document.getElementById('room-name').value || '';
+  const tenant = document.getElementById('room-tenant').value;
+  const price = document.getElementById('room-price').value;
   const status = document.getElementById('room-status').value;
-  
-  if (!id) { alert('⚠️ กรุณากรอกหมายเลขห้อง'); return; }
-  
-  const rooms = loadData(STORAGE.ROOMS, []);
+
+  if (!id) {
+    alert('กรุณาระบุหมายเลขห้อง');
+    return;
+  }
+
+  const rooms = loadData('STORAGE_ROOMS', []);
   const idx = rooms.findIndex(r => r.id === id);
   const roomData = { id, price, tenant, status };
-  
+
   if (idx >= 0) rooms[idx] = roomData;
-  else rooms.push(  
-roomData;
-  
-  saveData(STORAGE.ROOMS, rooms);
-  alert('✅ บันทึกข้อมูลห้องสำเร็จ');
+  else rooms.push(roomData);
+
+  saveData('STORAGE_ROOMS', rooms);
+  alert('บันทึกข้อมูลห้องสำเร็จ');
+
   document.getElementById('room-id').value = '';
-  document.getElementById('room-price').value = '';
+  document.getElementById('room-name').value = '';
   document.getElementById('room-tenant').value = '';
+  document.getElementById('room-price').value = '';
+  document.getElementById('room-status').value = '';
+
   renderRoomList();
   updateDashboard();
 }
