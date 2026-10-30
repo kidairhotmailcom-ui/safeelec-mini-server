@@ -509,34 +509,41 @@ async function submitRegistration() {
 // 🔑 ตรวจสอบรหัสใบอนุญาต
 // =====================================================
 async function verifyLicense() {
-    const key = document.getElementById('license-key').value.trim();
-    const status = document.getElementById('license-status');
-    if (!key) {
-        status.textContent = '⚠️ กรุณาป้อนรหัส';
-        status.className = 'license-box invalid';
-        return;
-    }
+  const keyInput = document.getElementById('license-key').value.trim();
+  const msgBox = document.getElementById('license-msg');
+
+  if (!keyInput) {
+    msgBox.innerHTML = '<div class="license-box invalid">⚠️ กรุณากรอกรหัสใบอนุญาต</div>';
+    return;
+  }
+
+  try {
+    // ค้นหารหัสในฐานข้อมูล
     const { data, error } = await dormSupabaseClient
+      .from('licenses')
+      .select('*')
+      .eq('license_key', keyInput)
+      .eq('used', false);
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      // อัปเดตสถานะเป็นใช้งานแล้ว
+      await dormSupabaseClient
         .from('licenses')
-        .select('id')
-        .eq('license_key', key)
-        .single();
+        .update({ used: true })
+        .eq('license_key', keyInput);
 
-    if (data) {
-        status.textContent = '✅ รหัสถูกต้อง!';
-        status.className = 'license-box valid';
-        saveData(STORAGE.LICENSE, { key, verifiedAt: new Date().toISOString() });
-        setTimeout(() => showPage('page-choose'), 1000);
-        return;
+      msgBox.innerHTML = '<div class="license-box valid">✅ รหัสถูกต้อง กำลังเข้าสู่ระบบ...</div>';
+      setTimeout(() => showPage('page-dashboard'), 800);
+    } else {
+      msgBox.innerHTML = '<div class="license-box invalid">❌ รหัสไม่ถูกต้อง หรือเคยใช้งานแล้ว</div>';
     }
-    status.textContent = '❌ รหัสไม่ถูกต้อง';
-    status.className = 'license-box invalid';
+  } catch (err) {
+    console.error(err);
+    msgBox.innerHTML = '<div class="license-box invalid">❌ ผิดพลาดในการตรวจสอบรหัส</div>';
+  }
 }
-function changeLicense() {
-    localStorage.removeItem(STORAGE.LICENSE);
-    showPage('page-enter-license');
-}
-
 // =====================================================
 // ⚙️ ตั้งค่ารหัสผ่าน
 // =====================================================
