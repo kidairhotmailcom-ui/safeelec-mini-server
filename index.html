@@ -536,7 +536,7 @@ async function verifyLicense() {
         status.textContent = '✅ รหัสถูกต้อง!';
         status.className = 'license-box valid';
         saveData(STORAGE.LICENSE, { key, verifiedAt: new Date().toISOString() });
-        setTimeout(() => showPage('page‑setup'), 1000);
+        setTimeout(() => showPage('page‑register'), 1000);
     } else {
         status.textContent = '❌ รหัสไม่ถูกต้อง';
         status.className = 'license-box invalid';
