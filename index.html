@@ -469,17 +469,7 @@ function showPage(pageId) {
 // 📝 ลงทะเบียน
 // =====================================================
 async function submitRegistration() {
-    const name = document.getElementById('reg-name').value.trim();
-    const address = document.getElementById('reg-address').value.trim();
-    const phone = document.getElementById('reg-phone').value.trim();
-    const email = document.getElementById('reg-email').value.trim();
     const msg = document.getElementById('reg-message');
-
-    // ตรวจสอบข้อมูลก่อนส่ง
-    if (!name || !address || !phone) {
-        msg.innerHTML = '<div class="license-box invalid" style="display:block">⚠️ กรอกชื่อ ที่อยู่ และเบอร์โทรให้ครบ</div>';
-        return;
-    }
 
     // เช็คว่าเชื่อมต่อ Supabase สำเร็จไหม
     if (!dormSupabaseClient) {
@@ -487,30 +477,31 @@ async function submitRegistration() {
         return;
     }
 
-    msg.innerHTML = '<div class="license-box" style="display:block;background:#e0f2fe;color:#0c4a6e;">⏳ กำลังบันทึก...</div>';
+    msg.innerHTML = '<div class="license-box" style="display:block;background:#e0f2fe;color:#0c4a6e;">⏳ กำลังสร้างรหัส...</div>';
 
     try {
-        // ส่งข้อมูลไปยัง Supabase
+        // ฟังก์ชันสุ่มรหัสใบอนุญาต
+        function generateLicenseKey() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let part1 = '', part2 = '';
+            for(let i=0; i<4; i++) part1 += chars[Math.floor(Math.random()*chars.length)];
+            for(let i=0; i<4; i++) part2 += chars[Math.floor(Math.random()*chars.length)];
+            return `DORM‑${part1}‑${part2}`;
+        }
+        const newLicenseKey = generateLicenseKey();
+
+        // บันทึกรหัสลงตาราง licenses
         const { error } = await dormSupabaseClient
-            .from('registrations')
-            .insert([
-                { 
-                    name: name,
-                    address: address,
-                    phone: phone,
-                    email: email || ''
-                }
-            ]);
+            .from('licenses')
+            .insert([{ license_key: newLicenseKey, used: false }]);
 
         if (error) throw error;
 
-        // สำเร็จ → บันทึกในเครื่องด้วย + แจ้งเตือน
-        saveData(STORAGE.REG, { name, address, phone, email, date: new Date().toISOString() });
-        msg.innerHTML = '<div class="license-box valid" style="display:block">✅ บันทึกข้อมูลสำเร็จ!</div>';
-        setTimeout(() => showPage('page-enter-license'), 1200);
+        msg.innerHTML = '<div class="license-box valid" style="display:block">✅ สร้างรหัสสำเร็จ!</div>';
+        alert(`✅ รหัสใบอนุญาตของคุณคือ:\n${newLicenseKey}\nกรุณาคัดลอกรหัสนี้ไว้ใช้ต่อ`);
+        setTimeout(() => showPage('page-enter-license'), 300);
 
     } catch (err) {
-        // ❌ ถ้าผิดพลาด แจ้งเหตุผล
         console.error('Error:', err);
         msg.innerHTML = `<div class="license-box invalid" style="display:block">❌ ผิดพลาด: ${err.message}<br>💡 อย่าลืมรัน SQL ใน Supabase → SQL Editor นะครับ</div>`;
     }
