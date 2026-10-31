@@ -512,7 +512,8 @@ async function submitRegistration() {
 
   showMsg('loading', '⏳ กำลังขอใบอนุญาต...');
   try {
-    const { data, error } = await supabase.rpc('register_owner', {
+    // เปลี่ยนชื่อจาก supabase → dormSupabaseClient
+    const { data, error } = await dormSupabaseClient.rpc('register_owner', {
       p_name: name,
       p_address: address,
       p_pass_key: pass
@@ -531,6 +532,40 @@ async function submitRegistration() {
   }
 }
 
+async function checkOwnerLogin() {
+  const loginMsg = document.getElementById('login-message');
+  if (!loginMsg) return;
+
+  function showLoginMsg(type, text) {
+    loginMsg.innerHTML = `<div class="${type}">${text}</div>`;
+  }
+
+  const licenseNo = (document.getElementById('login-license')?.value || '').trim().toUpperCase();
+  const pass = document.getElementById('login-pass')?.value || '';
+
+  if (!licenseNo) { showLoginMsg('error', '⚠️ กรอกใบอนุญาต'); return; }
+  if (!pass) { showLoginMsg('error', '⚠️ กรอกรหัสผ่าน'); return; }
+
+  showLoginMsg('loading', '⏳ กำลังตรวจสอบ...');
+  try {
+    // เปลี่ยนชื่อให้ตรงกันด้วย
+    const { data, error } = await dormSupabaseClient.rpc('_check_owner_license', {
+      p_license: licenseNo,
+      p_pass: pass
+    });
+    if (error) throw error;
+    if (data === true) {
+      showLoginMsg('success', '✅ เข้าสู่ระบบสำเร็จ');
+      setTimeout(() => {
+        window.location.href = '#owner-dashboard';
+      }, 2000);
+    } else {
+      showLoginMsg('error', '❌ ใบอนุญาตหรือรหัสผ่านไม่ถูกต้อง');
+    }
+  } catch (err) {
+    showLoginMsg('error', `❌ ผิดพลาด: ${err.message}`);
+  }
+}
 async function checkOwnerLogin() {
   const loginMsg = document.getElementById('login-message');
   if (!loginMsg) return;
