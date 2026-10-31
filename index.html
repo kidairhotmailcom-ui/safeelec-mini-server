@@ -517,6 +517,7 @@ async function verifyLicense() {
     return;
   }
   const keyInput = document.getElementById('license-key').value.trim();
+  const cleanKey = keyInput.replace(/[^A-Z0-9‑]/g, '');
   const msgBox = document.getElementById('license-status');
 
   if (!msgBox) {
