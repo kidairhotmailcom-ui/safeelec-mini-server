@@ -379,15 +379,15 @@
 // =====================================================
 // ⚙️ การตั้งค่าระบบ
 // =====================================================
+`// =====================================================
+// ⚙️ การตั้งค่าระบบ
+// =====================================================
 const SUPABASE_URL = "https://bhihjcstmamwoinmbfiy.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoaWhqY3N0bWFtd29pbm1iZml5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0ODUwMzYsImV4cCI6MjEwODA2MTAzNn0.XZP2d6dJ_Z1QNN5baMYmTH87UEkHEeT8fwecMCO8gAY";
-
 let dormSupabaseClient = null;
-// สร้าง client ทันที (สคริปต์ Supabase โหลดใน <head> แล้ว) เพื่อให้พร้อมก่อนโค้ดเริ่มระบบทำงาน
 if (window.supabase && typeof window.supabase.createClient === "function") {
   dormSupabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 }
-
 const STORAGE = {
     REG: 'dorm_reg',
     LICENSE: 'dorm_license',
@@ -417,9 +417,8 @@ function showPage(pageId) {
     const p = document.getElementById(pageId);
     if (p) p.classList.add('active');
 }
-
 // =====================================================
-// ☁️ ชั้นข้อมูล Supabase (ตารางตาม supabase_setup.sql, แยกข้อมูลด้วย RLS)
+// ☁️ ชั้นข้อมูล Supabase
 // =====================================================
 let UID = null, PROFILE = {}, SYNCQ = Promise.resolve();
 let TENANT = null, TENANT_BILLS = [];
@@ -441,11 +440,10 @@ TBL[STORAGE.BILLS] = { t: 'bills', k: ['bill_no'],
   to: o => ({ bill_no: o.billNo, room_id: o.room, month: o.month, rent: num(o.rent), elec_total: num(o.elecTotal), water_total: num(o.waterTotal), total: num(o.total),
     paid: !!o.paid, pending: !!o.pending,
     paid_at: o.paid ? (o._paidISO || (o._paidISO = new Date().toISOString())) : null }) };
-
 function nkey(c, d) { return c.k.map(k => d[k]).join('|'); }
 function takeSnapshot(key) {
   const c = TBL[key]; SNAP[key] = new Map();
-  (CACHE[key] || []).forEach(o => { const d = c.to(o); SNAP[key].set(nkey(c, d), { j: JSON.stringify(d), d }); });
+  (CACHE[key] || []).forEach(o => { const d = c.to(o), nk = nkey(c, d); SNAP[key].set(nk, { j: JSON.stringify(d), d }); });
 }
 async function syncTable(key) {
   const c = TBL[key], db = dormSupabaseClient, snap = SNAP[key] || new Map();
@@ -490,29 +488,23 @@ async function loadProfile() {
   localStorage.setItem(STORAGE.LICENSE, JSON.stringify({ key: PROFILE.license_key || '' }));
   const el = document.getElementById('setting-dorm-code'); if (el) el.textContent = PROFILE.dorm_code || '-';
 }
-
 // =====================================================
-// 🔐 สมัคร / เข้าสู่ระบบเจ้าของ (ไม่ใช้อีเมล)
+// 🔐 สมัคร / เข้าสู่ระบบเจ้าของ
 // =====================================================
 async function submitRegistration() {
   const msgBox = document.getElementById('reg-message');
   if (!msgBox) return;
-
   function showMsg(type, text) {
     msgBox.innerHTML = `<div class="${type}">${text}</div>`;
   }
-
   const name = (document.getElementById('reg-name')?.value || '').trim();
   const address = (document.getElementById('reg-address')?.value || '').trim();
   const pass = document.getElementById('reg-pass')?.value || '';
-
   if (!name) { showMsg('error', '⚠️ กรอกชื่อเจ้าของหอพัก'); return; }
   if (!address) { showMsg('error', '⚠️ กรอกที่อยู่'); return; }
   if (pass.length < 6) { showMsg('error', '⚠️ รหัสผ่านต้องมีอย่างน้อย 6 ตัว'); return; }
-
   showMsg('loading', '⏳ กำลังขอใบอนุญาต...');
   try {
-    // เปลี่ยนชื่อจาก supabase → dormSupabaseClient
     const { data, error } = await dormSupabaseClient.rpc('register_owner', {
       p_name: name,
       p_address: address,
@@ -525,78 +517,10 @@ async function submitRegistration() {
     }
     showMsg('success', `✅ ลงทะเบียนสำเร็จ!<br>📜 ใบอนุญาต: <b>${data}</b><br>⚠️ จดรหัสนี้ไว้ใช้เข้าสู่ระบบ`);
     setTimeout(() => {
-      window.location.href = '#login';
+      showPage('page-owner-login');
     }, 3000);
   } catch (err) {
     showMsg('error', `❌ ผิดพลาด: ${err.message}`);
-  }
-}
-
-async function checkOwnerLogin() {
-  const loginMsg = document.getElementById('login-message');
-  if (!loginMsg) return;
-
-  function showLoginMsg(type, text) {
-    loginMsg.innerHTML = `<div class="${type}">${text}</div>`;
-  }
-
-  const licenseNo = (document.getElementById('login-license')?.value || '').trim().toUpperCase();
-  const pass = document.getElementById('login-pass')?.value || '';
-
-  if (!licenseNo) { showLoginMsg('error', '⚠️ กรอกใบอนุญาต'); return; }
-  if (!pass) { showLoginMsg('error', '⚠️ กรอกรหัสผ่าน'); return; }
-
-  showLoginMsg('loading', '⏳ กำลังตรวจสอบ...');
-  try {
-    // เปลี่ยนชื่อให้ตรงกันด้วย
-    const { data, error } = await dormSupabaseClient.rpc('_check_owner_license', {
-      p_license: licenseNo,
-      p_pass: pass
-    });
-    if (error) throw error;
-    if (data === true) {
-      showLoginMsg('success', '✅ เข้าสู่ระบบสำเร็จ');
-      setTimeout(() => {
-        window.location.href = '#owner-dashboard';
-      }, 2000);
-    } else {
-      showLoginMsg('error', '❌ ใบอนุญาตหรือรหัสผ่านไม่ถูกต้อง');
-    }
-  } catch (err) {
-    showLoginMsg('error', `❌ ผิดพลาด: ${err.message}`);
-  }
-}
-async function checkOwnerLogin() {
-  const loginMsg = document.getElementById('login-message');
-  if (!loginMsg) return;
-
-  function showLoginMsg(type, text) {
-    loginMsg.innerHTML = `<div class="${type}">${text}</div>`;
-  }
-
-  const licenseNo = (document.getElementById('login-license')?.value || '').trim().toUpperCase();
-  const pass = document.getElementById('login-pass')?.value || '';
-
-  if (!licenseNo) { showLoginMsg('error', '⚠️ กรอกใบอนุญาต'); return; }
-  if (!pass) { showLoginMsg('error', '⚠️ กรอกรหัสผ่าน'); return; }
-
-  showLoginMsg('loading', '⏳ กำลังตรวจสอบ...');
-  try {
-    const { data, error } = await supabase.rpc('_check_owner_license', {
-      p_license: licenseNo,
-      p_pass: pass
-    });
-    if (error) throw error;
-    if (data === true) {
-      showLoginMsg('success', '✅ เข้าสู่ระบบสำเร็จ');
-      setTimeout(() => {
-        window.location.href = '#owner-dashboard';
-      }, 2000);
-    } else {
-      showLoginMsg('error', '❌ ใบอนุญาตหรือรหัสผ่านไม่ถูกต้อง');
-    }
-  } catch (err) {
-    showLoginMsg('error', `❌ ผิดพลาด: ${err.message}`);
   }
 }
 
@@ -628,13 +552,16 @@ async function ownerLogout() {
   Object.keys(TBL).forEach(k => { CACHE[k] = []; SNAP[k] = new Map(); });
   showPage('page‑choose');
 }
+
 function tenantLogout() {
   TENANT = null; TENANT_BILLS = [];
   showPage('page-choose');
 }
+
 function setTenantBills(d) {
   TENANT_BILLS = (d.bills || []).map(b => ({ billNo: b.bill_no, month: b.month, rent: b.rent, elecTotal: b.elec_total, waterTotal: b.water_total, total: b.total, paid: b.paid, pending: b.pending }));
 }
+
 async function doTenantLogin() {
   const dorm = document.getElementById('tenant-dorm').value.trim();
   const room = document.getElementById('tenant-room').value.trim();
@@ -648,18 +575,18 @@ async function doTenantLogin() {
   showPage('page-tenant');
   initTenantPage(room);
 }
+
 async function notifyPaid(billNo) {
   if (!confirm('ยืนยันว่าโอนเงินแล้ว?')) return;
   const args = { p_dorm_code: TENANT.dorm, p_room_id: TENANT.room, p_password: TENANT.pass };
   const { data: ok, error } = await dormSupabaseClient.rpc('tenant_notify_paid', { ...args, p_bill_no: billNo });
-  if (error) { alert('❌ แจ้งโอนไม่สำเร็จ: ' + error.message + '\\n(ถ้าขึ้นว่าไม่พบฟังก์ชัน ให้รัน supabase_notify_paid.sql ก่อน)'); return; }
+  if (error) { alert('❌ แจ้งโอนไม่สำเร็จ: ' + error.message); return; }
   if (!ok) { alert('❌ แจ้งโอนไม่สำเร็จ (บิลนี้อาจชำระแล้ว)'); return; }
   const { data } = await dormSupabaseClient.rpc('tenant_get_bills', args);
   if (data) setTenantBills(data);
   alert('✅ แจ้งโอนเรียบร้อย! รอเจ้าของตรวจสอบ');
   renderTenantBills(TENANT.room);
 }
-
 // =====================================================
 // 👤 หน้าผู้เช่า
 // =====================================================
@@ -668,7 +595,6 @@ function initTenantPage(room) {
   if (el) el.textContent = room;
   renderTenantBills(room);
 }
-
 function renderTenantBills(room) {
   const bills = TENANT_BILLS;
   const container = document.getElementById('tenant-bills');
@@ -701,7 +627,6 @@ function renderTenantBills(room) {
     `;
   }).join('');
 }
-
 // =====================================================
 // 📊 เมนูแท็บเจ้าของระบบ
 // =====================================================
@@ -723,7 +648,6 @@ function switchOwnerTab(tabName) {
   if (tabName === 'settings') loadSettingsInfo();
   if (['dashboard','bills','payments'].indexOf(tabName) !== -1) SYNCQ.then(loadAll).then(() => { renderBillList(); renderPaymentList(); updateDashboard(); });
 }
-
 // =====================================================
 // 📋 ฟังก์ชันจัดการข้อมูล
 // =====================================================
@@ -739,7 +663,6 @@ function updateDashboard() {
   if (document.getElementById('stat-income')) document.getElementById('stat-income').textContent = '฿' + totalIncome.toLocaleString();
   if (document.getElementById('stat-unpaid')) document.getElementById('stat-unpaid').textContent = unpaid;
 }
-
 function saveRoom() {
   const id = document.getElementById('room-id').value.trim();
   const tenant = document.getElementById('room-tenant').value;
@@ -763,7 +686,6 @@ function saveRoom() {
   renderRoomList();
   updateDashboard();
 }
-
 function renderRoomList() {
   const rooms = loadData(STORAGE.ROOMS, []);
   const container = document.getElementById('room-list');
@@ -785,7 +707,7 @@ function renderRoomList() {
         </tr>
       </thead>
       <tbody>
-        ${rooms.map(r => `
+        ${rooms.map
           <tr>
             <td>${r.id}</td>
             <td>฿${(Number(r.price) || 0).toLocaleString()}</td>
