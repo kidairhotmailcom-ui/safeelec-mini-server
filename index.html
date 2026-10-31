@@ -473,7 +473,8 @@ function showPage(pageId) {
 // =====================================================
 // 📝 ลงทะเบียน
 // =====================================================
-
+document.addEventListener('DOMContentLoaded', function () {
+  
 async function submitRegistration() {
     const dormName = document.getElementById('reg‑dorm‑name')?.value.trim() || '';
     const name = document.getElementById('reg‑name')?.value.trim() || '';
