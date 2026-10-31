@@ -534,7 +534,7 @@ async function verifyLicense() {
     const { data, error } = await dormSupabaseClient
       .from('licenses')
       .select('*')
-      .eq('license_key', keyInput);
+      .eq('license_key', cleanKey);
 
     if (error) {
       msgBox.innerHTML = '<div class="license-box invalid">❌ ผิดพลาดเชื่อมต่อ: ' + error.message + '</div>';
@@ -549,20 +549,20 @@ async function verifyLicense() {
         await dormSupabaseClient
           .from('licenses')
           .update({ used: true })
-          .eq('license_key', keyInput);
+          .eq('license_key', cleanKey);
       }
 
       saveData(STORAGE.LICENSE, { key: keyInput });
       // ดึงข้อมูลเจ้าของเพื่อตัดสินใจไปหน้าไหน
       const { data: ownerData, error: ownerErr } = await dormSupabaseClient
-  .from('dorm_owners')
-  .select('*')
-  .eq('license_key', keyInput);
+        .from('dorm_owners')
+        .select('*')
+        .eq('license_key', cleanKey);
 
-if (ownerErr) {
-  msgBox.innerHTML = '<div class="license-box invalid">❌ ผิดพลาดโหลดข้อมูลบัญชี</div>';
-  return;
-}
+      if (ownerErr) {
+        msgBox.innerHTML = '<div class="license-box invalid">❌ ผิดพลาดโหลดข้อมูลบัญชี</div>';
+        return;
+      }
 
       if (ownerData && ownerData.length > 0 && ownerData[0].password) {
         showPage('page-choose'); // มีรหัสผ่านแล้ว → ไปหน้าหลัก
