@@ -555,10 +555,9 @@ async function verifyLicense() {
 function changeLicense() {
   showPage('page-register');
 }
-
-function completeSetup() {
-    const p1 = document.getElementById('setup-pass').value;
-    const p2 = document.getElementById('setup-pass2').value;
+async function completeSetup() {
+    const p1 = document.getElementById('setup-pass').value.trim();
+    const p2 = document.getElementById('setup-pass2').value.trim();
     if (p1.length < 6) {
         alert('⚠️ รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
         return;
@@ -567,11 +566,34 @@ function completeSetup() {
         alert('⚠️ รหัสผ่านไม่ตรงกัน');
         return;
     }
-    saveData(STORAGE.ADMIN_PASS, p1);
-    showPage('page-choose');
+
+    const savedLic = loadSavedLicenseKey();
+    if (!savedLic) {
+        alert('❌ ไม่พบรหัสใบอนุญาต');
+        return;
+    }
+    const cleanKey = savedLic.key.replace(/[^A‑Z0‑9‑]/g, '');
+
+    try {
+        const { error } = await dormSupabaseClient
+          .from('dorm_owners')
+          .insert([{ license_key: cleanKey, password: p1 }]);
+
+        if (error) {
+            alert('❌ ไม่สามารถบันทึกรหัสผ่านได้ (ตรวจสิทธิ์ Supabase)');
+            console.error(error);
+            return;
+        }
+        alert('✅ ตั้งรหัสผ่านสำเร็จ');
+        showPage('page-owner-login');
+    } catch (err) {
+        alert('❌ ผิดพลาดระบบ');
+        console.error(err);
+    }
 }
- async function saveNewPassword() {
-  const passInput = document.getElementById('pass-setup').value.trim();
+
+async function saveNewPassword() {
+  const passInput = document.getElementById('setup-pass').value.trim();
   const savedLic = loadSavedLicenseKey();
   if (!passInput || !savedLic) return;
 
@@ -588,12 +610,13 @@ function completeSetup() {
       return;
     }
     alert('✅ ตั้งรหัสผ่านสำเร็จ');
-    showPage('page-login');
+    showPage('page-owner-login');
   } catch (err) {
     alert('❌ ผิดพลาดระบบ');
     console.error(err);
   }
 }
+
 // =====================================================
 // 🚪 ออกจากระบบ
 // =====================================================
