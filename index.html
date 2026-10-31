@@ -511,10 +511,8 @@ async function submitRegistration() {
 // 🔑 ตรวจสอบรหัสใบอนุญาต
 // =====================================================
 async function verifyLicense() {
-  alert("👉 เริ่มตรวจสอบ");
-  if (!dormSupabaseClient) {
-    return;
-  }
+  if (!dormSupabaseClient) return;
+
   const keyInput = document.getElementById('license-key').value.trim();
   const cleanKey = keyInput.replace(/[^A‑Z0‑9‑]/g, '');
   const msgBox = document.getElementById('license-status');
@@ -522,25 +520,36 @@ async function verifyLicense() {
   if (!msgBox || !keyInput) return;
 
   try {
-    msgBox.innerHTML = '<div class="license-box">⏳ กำลังตรวจสอบ...</div>';
-    const { data, error } = await dormSupabaseClient
+    msgBox.innerHTML = '<div class="license-box">⏳ กำลังตรวจสอบรหัส...</div>';
+
+    // เช็คว่ามีรหัสใบอนุญาตนี้ในระบบหรือไม่
+    const { data: licData, error: licErr } = await dormSupabaseClient
       .from('licenses')
       .select('used')
       .eq('license_key', cleanKey);
 
-    if (error || !data || data.length === 0) {
-      msgBox.innerHTML = '<div class="license-box invalid">❌ ไม่พบรหัส</div>';
+    if (licErr || !licData || licData.length === 0) {
+      msgBox.innerHTML = '<div class="license-box invalid">❌ ไม่พบรหัสใบอนุญาตนี้</div>';
       return;
     }
 
-    const isUsed = data[0].used;
-    if (!isUsed) {
-      await dormSupabaseClient.from('licenses').update({used:true}).eq('license_key', cleanKey);
-    }
+    const isUsed = licData[0].used;
     saveData(STORAGE.LICENSE, { key: keyInput });
-    showPage('page-choose'); // สั่งไปหน้าหลักเลย
+
+    if (!isUsed) {
+      // รหัสใหม่ → อัปเดตสถานะแล้วไปหน้าตั้งรหัสผ่าน
+      await dormSupabaseClient
+        .from('licenses')
+        .update({ used: true })
+        .eq('license_key', cleanKey);
+      showPage('page-setup');
+    } else {
+      // รหัสเคยใช้แล้ว → ไปหน้าเข้าสู่ระบบ
+      showPage('page-login');
+    }
   } catch (err) {
-    msgBox.innerHTML = '<div class="license-box invalid">❌ ผิดพลาด</div>';
+    msgBox.innerHTML = '<div class="license-box invalid">❌ ผิดพลาดเชื่อมต่อฐานข้อมูล</div>';
+    console.error(err);
   }
 }
 function changeLicense() {
