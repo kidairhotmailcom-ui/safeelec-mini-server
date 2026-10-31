@@ -417,82 +417,7 @@ function showPage(pageId) {
     const p = document.getElementById(pageId);
     if (p) p.classList.add('active');
 }
-// === ฟังก์ชันลงทะเบียนเจ้าของหอ ===
-async function submitRegistration() {
-  const name = document.getElementById('reg-name').value.trim();
-  const address = document.getElementById('reg-address').value.trim();
-  const userCode = document.getElementById('reg-user').value.trim();
-  const pass = document.getElementById('reg-pass').value.trim();
-  const msgBox = document.getElementById('reg-message');
 
-  if (!name) {
-    msgBox.innerHTML = '<div style="color:red">⚠️ กรอกชื่อเจ้าของหอพัก</div>';
-    return;
-  }
-  if (pass.length < 6) {
-    msgBox.innerHTML = '<div style="color:red">⚠️ รหัสผ่านต้องมีอย่างน้อย 6 ตัว</div>';
-    return;
-  }
-
-  msgBox.innerHTML = '<div>⏳ กำลังบันทึกข้อมูล...</div>';
-  const { data, error } = await dormSupabaseClient.rpc('register_owner', {
-    p_license: userCode,
-    p_dorm_code: userCode,
-    p_pass_key: pass
-  });
-
-  if (error) {
-    msgBox.innerHTML = `<div style="color:red">❌ ผิดพลาด: ${error.message}</div>`;
-    return;
-  }
-
-  msgBox.innerHTML = '<div style="color:green">✅ ลงทะเบียนสำเร็จ! กำลังไปหน้าเข้าสู่ระบบ...</div>';
-  setTimeout(() => showPage('page-owner-login'), 1200);
-}
-
-// === ฟังก์ชันเข้าสู่ระบบเจ้าของ ===
-async function loginOwner() {
-  const lic = document.getElementById('login-license').value.trim();
-  const pass = document.getElementById('login-pass').value.trim();
-  const msgBox = document.getElementById('login-message');
-
-  msgBox.innerHTML = '<div>⏳ กำลังตรวจสอบ...</div>';
-  const { data, error } = await dormSupabaseClient.rpc('_check_owner_license', {
-    p_license: lic,
-    p_pass: pass
-  });
-
-  if (error || !data) {
-    msgBox.innerHTML = '<div style="color:red">❌ รหัสใบอนุญาตหรือรหัสผ่านผิด</div>';
-    return;
-  }
-
-  msgBox.innerHTML = '<div style="color:green">✅ เข้าสู่ระบบเจ้าของสำเร็จ</div>';
-  setTimeout(() => showPage('page-owner-dashboard'), 1000);
-}
-
-// === ฟังก์ชันเข้าสู่ระบบผู้เช่า ===
-async function loginTenant() {
-  const dorm = document.getElementById('ten-dorm').value.trim();
-  const room = document.getElementById('ten-room').value.trim();
-  const pass = document.getElementById('ten-pass').value.trim();
-  const msgBox = document.getElementById('ten-message');
-
-  msgBox.innerHTML = '<div>⏳ กำลังตรวจสอบ...</div>';
-  const { data, error } = await dormSupabaseClient.rpc('_check_tenant_access', {
-    p_dorm: dorm,
-    p_room: room,
-    p_pass: pass
-  });
-
-  if (error || !data) {
-    msgBox.innerHTML = '<div style="color:red">❌ ข้อมูลห้องหรือรหัสผ่านผิด</div>';
-    return;
-  }
-
-  msgBox.innerHTML = '<div style="color:green">✅ เข้าสู่ระบบผู้เช่าสำเร็จ</div>';
-  setTimeout(() => showPage('page-tenant-bill'), 1000);
-}
 // =====================================================
 // ☁️ ชั้นข้อมูล Supabase (ตารางตาม supabase_setup.sql, แยกข้อมูลด้วย RLS)
 // =====================================================
@@ -567,32 +492,37 @@ async function loadProfile() {
 }
 
 // =====================================================
-// 🔐 สมัคร / เข้าสู่ระบบเจ้าของ (Supabase Auth)
+// 🔐 สมัคร / เข้าสู่ระบบเจ้าของ (ไม่ใช้อีเมล)
 // =====================================================
-// ไม่เก็บอีเมลจริง: แปลงชื่อผู้ใช้เป็นอีเมลภายในเพื่อให้ Supabase Auth ใช้งานได้
-function userToEmail(u) { return String(u || '').trim().toLowerCase() + '@dormuser.app'; }
 async function submitRegistration() {
   const msg = document.getElementById('reg-message');
   const box = (cls, t) => { msg.innerHTML = '<div class="license-box ' + cls + '" style="display:block">' + t + '</div>'; };
-  if (!dormSupabaseClient) { box('invalid', '❌ ไม่พบ Supabase ตรวจสอบ script ใน &lt;head&gt;'); return; }
+  if (!dormSupabaseClient) { box('invalid', '❌ ไม่พบ Supabase ตรวจสอบ script ใน <head>'); return; }
   const v = id => document.getElementById(id).value.trim();
   const name = v('reg-name'), address = v('reg-address'), user = v('reg-user').toLowerCase(), pass = document.getElementById('reg-pass').value;
   if (!name) { box('invalid', '⚠️ กรอกชื่อหอพัก'); return; }
-  if (!/^[a-z0-9._-]{3,30}$/.test(user)) { box('invalid', '⚠️ ชื่อผู้ใช้ใช้ได้เฉพาะ a-z ตัวเลข . _ - ยาว 3-30 ตัว'); return; }
-  const email = userToEmail(user);
+  if (!/^[a-z0-9._-]{3,30}$/.test(user)) { box('invalid', '⚠️ รหัสใบอนุญาตใช้ได้เฉพาะ a‑z ตัวเลข . _ ‑ ยาว 3‑30 ตัว'); return; }
   if (pass.length < 6) { box('invalid', '⚠️ รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'); return; }
-  box('', '⏳ กำลังสมัคร...');
-  const { data, error } = await dormSupabaseClient.auth.signUp({ email, password: pass, options: { data: { name, address } } });
+  box('', '⏳ กำลังบันทึกข้อมูล...');
+  const { data, error } = await dormSupabaseClient.rpc('register_owner', {
+    p_license: user,
+    p_dorm_code: user,
+    p_pass_key: pass
+  });
   if (error) { box('invalid', '❌ สมัครไม่สำเร็จ: ' + error.message); return; }
-  if (data && data.session) { await enterOwner(); }
-  else { box('valid', '✅ สมัครสำเร็จ กรุณายืนยันอีเมล แล้วกลับมาเข้าสู่ระบบ'); }
+  box('valid', '✅ ลงทะเบียนสำเร็จ! กำลังไปหน้าเข้าสู่ระบบ...');
+  setTimeout(() => showPage('page‑owner‑login'), 1200);
 }
+
 async function adminDoLogin() {
   if (!dormSupabaseClient) { alert('❌ เชื่อมต่อ Supabase ไม่ได้'); return; }
-  const email = userToEmail(document.getElementById('admin-login-user').value);
-  const password = document.getElementById('admin-login-pass').value;
-  const { error } = await dormSupabaseClient.auth.signInWithPassword({ email, password });
-  if (error) { alert('❌ เข้าสู่ระบบไม่สำเร็จ: ' + error.message); return; }
+  const user = document.getElementById('admin‑login‑user').value.trim().toLowerCase();
+  const password = document.getElementById('admin‑login‑pass').value;
+  const { data, error } = await dormSupabaseClient.rpc('_check_owner_license', {
+    p_license: user,
+    p_pass: password
+  });
+  if (error || !data) { alert('❌ เข้าสู่ระบบไม่สำเร็จ: รหัสใบอนุญาตหรือรหัสผ่านผิด'); return; }
   await enterOwner();
 }
 async function enterOwner() {
