@@ -704,20 +704,20 @@ function renderRoomList() {
         </tr>
       </thead>
       <tbody>
-        ${rooms.map
-          <tr>
-            <td>${r.id}</td>
-            <td>฿${(Number(r.price) || 0).toLocaleString()}</td>
-            <td>${r.tenant || '-'}</td>
-            <td>${r.status === 'มีผู้เช่า' 
-              ? '<span class="badge badge-success">มีผู้เช่า</span>' 
-              : '<span class="badge badge-info">ว่าง</span>'}</td>
-            <td>
-              <button class="btn-sm" onclick="editRoom('${r.id}')">แก้ไข</button>
-              <button class="btn-sm btn-danger" onclick="deleteRoom('${r.id}')">ลบ</button>
-            </td>
-          </tr>
-        `).join('')}
+        ${rooms.map(r => `
+  <tr>
+    <td>${r.id}</td>
+    <td>฿${(Number(r.price) || 0).toLocaleString()}</td>
+    <td>${r.tenant || '-'}</td>
+    <td>${r.status === 'มีผู้เช่า'
+      ? '<span class="badge badge-success">มีผู้เช่า</span>'
+      : '<span class="badge badge-info">ว่าง</span>'}</td>
+    <td>
+      <button class="btn-sm" onclick="editRoom('${r.id}')">แก้ไข</button>
+      <button class="btn-sm btn-danger" onclick="deleteRoom('${r.id}')">ลบ</button>
+    </td>
+  </tr>
+`).join('')}
       </tbody>
     </table>
   `;
