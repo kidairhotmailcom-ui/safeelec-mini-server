@@ -511,7 +511,7 @@ async function submitRegistration() {
 // 🔑 ตรวจสอบรหัสใบอนุญาต
 // =====================================================
 async function verifyLicense() {
-  alert("👉 เริ่มตรวจสอบ"); // ย้ายมาอยู่ต้นฟังก์ชัน
+  alert("👉 เริ่มตรวจสอบ");
   if (!dormSupabaseClient) {
     msgBox.innerHTML = '<div class="license-box invalid">⏳ กำลังเชื่อมต่อฐานข้อมูล กรุณารอสักครู่แล้วลองอีกครั้ง</div>';
     return;
@@ -530,11 +530,11 @@ async function verifyLicense() {
 
   try {
     msgBox.innerHTML = '<div class="license-box">⏳ กำลังขอข้อมูลจากเซิร์ฟเวอร์...</div>';
+    // ลบ .eq('used', false) ออกตรงนี้
     const { data, error } = await dormSupabaseClient
       .from('licenses')
       .select('*')
-      .eq('license_key', keyInput)
-      .eq('used', false);
+      .eq('license_key', keyInput);
 
     if (error) {
       msgBox.innerHTML = '<div class="license-box invalid">❌ ผิดพลาดเชื่อมต่อ: ' + error.message + '</div>';
@@ -542,17 +542,23 @@ async function verifyLicense() {
     }
 
     if (data && data.length > 0) {
+      const licenseRow = data[0];
       msgBox.innerHTML = '<div class="license-box valid">✅ พบรหัสถูกต้อง กำลังบันทึก...</div>';
-      await dormSupabaseClient
-        .from('licenses')
-        .update({ used: true })
-        .eq('license_key', keyInput);
+      
+      // ถ้ายังไม่เคยใช้ ให้เปลี่ยนสถานะเป็นใช้แล้ว
+      if (!licenseRow.used) {
+        await dormSupabaseClient
+          .from('licenses')
+          .update({ used: true })
+          .eq('license_key', keyInput);
+      }
+      // ถ้าเคยใช้แล้ว ข้ามขั้นตอนอัปเดต ไปบันทึกและรีเฟรชได้เลย
 
       msgBox.innerHTML = '<div class="license-box valid">✅ เสร็จแล้ว กำลังเปลี่ยนหน้า...</div>';
       saveData(STORAGE.LICENSE, { key: keyInput });
-window.location.reload();
+      window.location.reload();
     } else {
-      msgBox.innerHTML = '<div class="license-box invalid">❌ รหัสไม่ถูกต้อง หรือเคยใช้แล้ว</div>';
+      msgBox.innerHTML = '<div class="license-box invalid">❌ ไม่พบรหัสนี้ในระบบ</div>';
     }
   } catch (err) {
     console.error('ผิดพลาด:', err);
