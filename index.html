@@ -545,7 +545,7 @@ async function verifyLicense() {
       showPage('page-setup');
     } else {
       // รหัสเคยใช้แล้ว → ไปหน้าเข้าสู่ระบบ
-      showPage('page-login');
+      showPage('page-owner-login');
     }
   } catch (err) {
     msgBox.innerHTML = '<div class="license-box invalid">❌ ผิดพลาดเชื่อมต่อฐานข้อมูล</div>';
