@@ -511,13 +511,13 @@ async function submitRegistration() {
   });
   if (error) { box('invalid', '❌ สมัครไม่สำเร็จ: ' + error.message); return; }
   box('valid', '✅ ลงทะเบียนสำเร็จ! กำลังไปหน้าเข้าสู่ระบบ...');
-  setTimeout(() => showPage('page‑owner‑login'), 1200);
+  setTimeout(() => showPage('page-owner-login'), 1200);
 }
 
 async function adminDoLogin() {
   if (!dormSupabaseClient) { alert('❌ เชื่อมต่อ Supabase ไม่ได้'); return; }
-  const user = document.getElementById('admin‑login‑user').value.trim().toLowerCase();
-  const password = document.getElementById('admin‑login‑pass').value;
+  const user = document.getElementById('admin-login-user').value.trim().toLowerCase();
+  const password = document.getElementById('admin-login-pass').value;
   const { data, error } = await dormSupabaseClient.rpc('_check_owner_license', {
     p_license: user,
     p_pass: password
@@ -525,18 +525,17 @@ async function adminDoLogin() {
   if (error || !data) { alert('❌ เข้าสู่ระบบไม่สำเร็จ: รหัสใบอนุญาตหรือรหัสผ่านผิด'); return; }
   await enterOwner();
 }
+
 async function enterOwner() {
-  const { data } = await dormSupabaseClient.auth.getSession();
-  if (!data || !data.session) { showPage('page-owner-login'); return; }
-  UID = data.session.user.id;
+  UID = 'OWNER-' + Date.now();
   await loadProfile();
   await loadAll();
   showPage('page-owner');
 }
+
 async function ownerLogout() {
   if (!confirm('ออกจากระบบ?')) return;
   await SYNCQ;
-  await dormSupabaseClient.auth.signOut();
   UID = null; PROFILE = {};
   Object.keys(TBL).forEach(k => { CACHE[k] = []; SNAP[k] = new Map(); });
   showPage('page-choose');
