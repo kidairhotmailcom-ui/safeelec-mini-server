@@ -1375,28 +1375,19 @@ function loadSettingsInfo() {
 // =====================================================
 document.addEventListener('DOMContentLoaded', function() {
   const lic = loadData(STORAGE.LICENSE, null);
-  
-  if (!lic || !lic.key) {
-    showPage('page-register');
-    return;
-  }
-  
   const reg = loadData(STORAGE.REG, null);
-  const adminPass = loadData(STORAGE.ADMIN_PASS, '');
-  
-  if (!reg) {
-    showPage('page-register');
-    return;
-  }
-  
-  if (!adminPass) {
-    showPage('page-setup');
-    return;
-  }
-  
-  showPage('page-choose');
-});
+  const role = loadData(STORAGE.ROLE, null);
 
+  if (!lic) {
+    showPage('page-register');      // หน้ากรอกรหัสใบอนุญาต
+  } else if (!reg) {
+    showPage('page-setup');         // หน้าลงทะเบียนข้อมูลเจ้าของ
+  } else if (!role) {
+    showPage('page-role');          // หน้าเลือกบทบาท เจ้าของ / ผู้เช่า
+  } else {
+    showPage('page-choose');        // หน้าแดชบอร์ดหลัก
+  }
+});
 // เมื่อเข้าหน้าเจ้าของระบบ ให้โหลดข้อมูลต่างๆ
 const originalShowPage = showPage;
 showPage = function(pageId) {
