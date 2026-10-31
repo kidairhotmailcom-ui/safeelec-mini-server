@@ -497,40 +497,51 @@ async function loadProfile() {
 async function submitRegistration() {
   const msg = document.getElementById('reg-message');
   const box = (cls, t) => { msg.innerHTML = '<div class="license-box ' + cls + '" style="display:block">' + t + '</div>'; };
-  if (!dormSupabaseClient) { box('invalid', '❌ ไม่พบ Supabase ตรวจสอบ script ใน <head>'); return; }
+  if (!dormSupabaseClient) { box('invalid', '❌ ไม่พบการเชื่อมต่อฐานข้อมูล'); return; }
   const v = id => document.getElementById(id).value.trim();
-  const name = v('reg-name'), address = v('reg-address'), user = v('reg-user').toLowerCase(), pass = document.getElementById('reg-pass').value;
+  const name = v('reg-name');
+  const address = v('reg-address');
+  const pass = document.getElementById('reg-pass').value;
+
   if (!name) { box('invalid', '⚠️ กรอกชื่อหอพัก'); return; }
-  if (!/^[a-z0-9._-]{3,30}$/.test(user)) { box('invalid', '⚠️ รหัสใบอนุญาตใช้ได้เฉพาะ a‑z ตัวเลข . _ ‑ ยาว 3‑30 ตัว'); return; }
+  if (!address) { box('invalid', '⚠️ กรอกที่อยู่'); return; }
   if (pass.length < 6) { box('invalid', '⚠️ รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'); return; }
-  box('', '⏳ กำลังบันทึกข้อมูล...');
+
+  box('', '⏳ กำลังขอใบอนุญาตจาก Supabase...');
   const { data, error } = await dormSupabaseClient.rpc('register_owner', {
-    p_license: user,
-    p_dorm_code: user,
+    p_name: name,
+    p_address: address,
     p_pass_key: pass
   });
-  if (error) { box('invalid', '❌ สมัครไม่สำเร็จ: ' + error.message); return; }
-  box('valid', '✅ ลงทะเบียนสำเร็จ! กำลังไปหน้าเข้าสู่ระบบ...');
-  setTimeout(() => showPage('page-owner-login'), 1200);
+
+  if (error || !data || data === 'ERROR_DUP') {
+    box('invalid', '❌ ไม่สามารถออกใบอนุญาตได้ กรุณาลองใหม่');
+    return;
+  }
+
+  box('valid', '✅ ลงทะเบียนสำเร็จ!<br>📜 ใบอนุญาตของคุณคือ: <b>' + data + '</b><br>⚠️ จดรหัสนี้ไว้ใช้เข้าสู่ระบบ!<br>กำลังไปหน้าเข้าสู่ระบบ...');
+  setTimeout(() => showPage('page‑owner‑login'), 3000);
 }
 
 async function adminDoLogin() {
-  if (!dormSupabaseClient) { alert('❌ เชื่อมต่อ Supabase ไม่ได้'); return; }
-  const user = document.getElementById('admin-login-user').value.trim().toLowerCase();
-  const password = document.getElementById('admin-login-pass').value;
+  if (!dormSupabaseClient) { alert('❌ ไม่พบการเชื่อมต่อฐานข้อมูล'); return; }
+  const user = document.getElementById('admin‑login‑user').value.trim().toUpperCase();
+  const password = document.getElementById('admin‑login‑pass').value;
   const { data, error } = await dormSupabaseClient.rpc('_check_owner_license', {
     p_license: user,
     p_pass: password
   });
-  if (error || !data) { alert('❌ เข้าสู่ระบบไม่สำเร็จ: รหัสใบอนุญาตหรือรหัสผ่านผิด'); return; }
-  await enterOwner();
+  if (error || !data) { alert('❌ ใบอนุญาตหรือรหัสผ่านผิด'); return; }
+  UID = 'OWNER‑' + Date.now();
+  await loadProfile();
+  await loadAll();
+  showPage('page‑owner');
 }
 
 async function enterOwner() {
-  UID = 'OWNER-' + Date.now();
   await loadProfile();
   await loadAll();
-  showPage('page-owner');
+  showPage('page‑owner');
 }
 
 async function ownerLogout() {
@@ -538,7 +549,7 @@ async function ownerLogout() {
   await SYNCQ;
   UID = null; PROFILE = {};
   Object.keys(TBL).forEach(k => { CACHE[k] = []; SNAP[k] = new Map(); });
-  showPage('page-choose');
+  showPage('page‑choose');
 }
 function tenantLogout() {
   TENANT = null; TENANT_BILLS = [];
