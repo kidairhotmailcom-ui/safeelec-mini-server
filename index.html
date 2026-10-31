@@ -1373,19 +1373,35 @@ function loadSettingsInfo() {
 // =====================================================
 // 🚀 เริ่มทำงานเมื่อโหลดหน้าเสร็จ
 // =====================================================
-document.addEventListener('DOMContentLoaded', function() {
-  const lic = loadData(STORAGE.LICENSE, null);
-  const reg = loadData(STORAGE.REG, null);
-  const role = loadData(STORAGE.ROLE, null);
+document.addEventListener('DOMContentLoaded', async function() {
+  // โหลดรหัสที่เคยบันทึกไว้ในเครื่อง (เพื่อนำไปเช็คกับเซิร์ฟเวอร์)
+  const localLic = loadData(STORAGE.LICENSE, null);
 
-  if (!lic) {
-    showPage('page-register');      // หน้ากรอกรหัสใบอนุญาต
-  } else if (!reg) {
-    showPage('page-setup');         // หน้าลงทะเบียนข้อมูลเจ้าของ
-  } else if (!role) {
-    showPage('page-role');          // หน้าเลือกบทบาท เจ้าของ / ผู้เช่า
+  if (!dormSupabaseClient) {
+    showPage('page-register');
+    return;
+  }
+
+  if (!localLic || !localLic.key) {
+    // ไม่มีรหัสในเครื่อง → ไปลงทะเบียน
+    showPage('page-register');
+    return;
+  }
+
+  // ✅ เช็คสถานะใบอนุญาตจากเซิร์ฟเวอร์ Supabase (ข้ามเครื่องได้)
+  const { data, error } = await dormSupabaseClient
+    .from('licenses')
+    .select('used, created_at')
+    .eq('license_key', localLic.key);
+
+  if (error || !data || data.length === 0 || !data[0].used) {
+    // รหัสไม่ถูกต้อง / ยังไม่ยืนยัน → ลบข้อมูลเก่า ไปลงทะเบียนใหม่
+    localStorage.removeItem(STORAGE.LICENSE);
+    localStorage.removeItem(STORAGE.REG);
+    showPage('page-register');
   } else {
-    showPage('page-choose');        // หน้าแดชบอร์ดหลัก
+    // มีใบอนุญาตที่ใช้งานได้ในเซิร์ฟเวอร์ → ไปหน้าเลือกบทบาท
+    showPage('page-choose');
   }
 });
 // เมื่อเข้าหน้าเจ้าของระบบ ให้โหลดข้อมูลต่างๆ
