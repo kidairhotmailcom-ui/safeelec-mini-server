@@ -495,32 +495,74 @@ async function loadProfile() {
 // 🔐 สมัคร / เข้าสู่ระบบเจ้าของ (ไม่ใช้อีเมล)
 // =====================================================
 async function submitRegistration() {
-  const msg = document.getElementById('reg-message');
-  const box = (cls, t) => { msg.innerHTML = '<div class="license-box ' + cls + '" style="display:block">' + t + '</div>'; };
-  if (!dormSupabaseClient) { box('invalid', '❌ ไม่พบการเชื่อมต่อฐานข้อมูล'); return; }
-  const v = id => document.getElementById(id).value.trim();
-  const name = v('reg-name');
-  const address = v('reg-address');
-  const pass = document.getElementById('reg-pass').value;
+  const msgBox = document.getElementById('reg-message');
+  if (!msgBox) return;
 
-  if (!name) { box('invalid', '⚠️ กรอกชื่อหอพัก'); return; }
-  if (!address) { box('invalid', '⚠️ กรอกที่อยู่'); return; }
-  if (pass.length < 6) { box('invalid', '⚠️ รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'); return; }
-
-  box('', '⏳ กำลังขอใบอนุญาตจาก Supabase...');
-  const { data, error } = await dormSupabaseClient.rpc('register_owner', {
-    p_name: name,
-    p_address: address,
-    p_pass_key: pass
-  });
-
-  if (error || !data || data === 'ERROR_DUP') {
-    box('invalid', '❌ ไม่สามารถออกใบอนุญาตได้ กรุณาลองใหม่');
-    return;
+  function showMsg(type, text) {
+    msgBox.innerHTML = `<div class="${type}">${text}</div>`;
   }
 
-  box('valid', '✅ ลงทะเบียนสำเร็จ!<br>📜 ใบอนุญาตของคุณคือ: <b>' + data + '</b><br>⚠️ จดรหัสนี้ไว้ใช้เข้าสู่ระบบ!<br>กำลังไปหน้าเข้าสู่ระบบ...');
-  setTimeout(() => showPage('page‑owner‑login'), 3000);
+  const name = (document.getElementById('reg-name')?.value || '').trim();
+  const address = (document.getElementById('reg-address')?.value || '').trim();
+  const pass = document.getElementById('reg-pass')?.value || '';
+
+  if (!name) { showMsg('error', '⚠️ กรอกชื่อเจ้าของหอพัก'); return; }
+  if (!address) { showMsg('error', '⚠️ กรอกที่อยู่'); return; }
+  if (pass.length < 6) { showMsg('error', '⚠️ รหัสผ่านต้องมีอย่างน้อย 6 ตัว'); return; }
+
+  showMsg('loading', '⏳ กำลังขอใบอนุญาต...');
+  try {
+    const { data, error } = await supabase.rpc('register_owner', {
+      p_name: name,
+      p_address: address,
+      p_pass_key: pass
+    });
+    if (error) throw error;
+    if (!data || data === 'ERROR_DUP') {
+      showMsg('error', '❌ ไม่สามารถออกใบอนุญาตได้');
+      return;
+    }
+    showMsg('success', `✅ ลงทะเบียนสำเร็จ!<br>📜 ใบอนุญาต: <b>${data}</b><br>⚠️ จดรหัสนี้ไว้ใช้เข้าสู่ระบบ`);
+    setTimeout(() => {
+      window.location.href = '#login';
+    }, 3000);
+  } catch (err) {
+    showMsg('error', `❌ ผิดพลาด: ${err.message}`);
+  }
+}
+
+async function checkOwnerLogin() {
+  const loginMsg = document.getElementById('login-message');
+  if (!loginMsg) return;
+
+  function showLoginMsg(type, text) {
+    loginMsg.innerHTML = `<div class="${type}">${text}</div>`;
+  }
+
+  const licenseNo = (document.getElementById('login-license')?.value || '').trim().toUpperCase();
+  const pass = document.getElementById('login-pass')?.value || '';
+
+  if (!licenseNo) { showLoginMsg('error', '⚠️ กรอกใบอนุญาต'); return; }
+  if (!pass) { showLoginMsg('error', '⚠️ กรอกรหัสผ่าน'); return; }
+
+  showLoginMsg('loading', '⏳ กำลังตรวจสอบ...');
+  try {
+    const { data, error } = await supabase.rpc('_check_owner_license', {
+      p_license: licenseNo,
+      p_pass: pass
+    });
+    if (error) throw error;
+    if (data === true) {
+      showLoginMsg('success', '✅ เข้าสู่ระบบสำเร็จ');
+      setTimeout(() => {
+        window.location.href = '#owner-dashboard';
+      }, 2000);
+    } else {
+      showLoginMsg('error', '❌ ใบอนุญาตหรือรหัสผ่านไม่ถูกต้อง');
+    }
+  } catch (err) {
+    showLoginMsg('error', `❌ ผิดพลาด: ${err.message}`);
+  }
 }
 
 async function adminDoLogin() {
