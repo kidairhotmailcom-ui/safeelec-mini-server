@@ -547,9 +547,10 @@ async function verifyLicense() {
         .eq('license_key', keyInput);
 
       msgBox.innerHTML = '<div class="license-box valid">✅ เสร็จแล้ว กำลังเปลี่ยนหน้า...</div>';
-      setTimeout(() => {
-        showPage('page-owner');
-      }, 800);
+      saveData(STORAGE.LICENSE, { key: keyInput });
+setTimeout(() => {
+  showPage('page-choose');
+}, 800);
     } else {
       msgBox.innerHTML = '<div class="license-box invalid">❌ รหัสไม่ถูกต้อง หรือเคยใช้แล้ว</div>';
     }
