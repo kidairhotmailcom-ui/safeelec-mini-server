@@ -553,10 +553,15 @@ async function verifyLicense() {
 
       saveData(STORAGE.LICENSE, { key: keyInput });
       // ดึงข้อมูลเจ้าของเพื่อตัดสินใจไปหน้าไหน
-      const { data: ownerData } = await dormSupabaseClient
-        .from('dorm_owners')
-        .select('*')
-        .eq('license_key', keyInput);
+      const { data: ownerData, error: ownerErr } = await dormSupabaseClient
+  .from('dorm_owners')
+  .select('*')
+  .eq('license_key', keyInput);
+
+if (ownerErr) {
+  msgBox.innerHTML = '<div class="license-box invalid">❌ ผิดพลาดโหลดข้อมูลบัญชี</div>';
+  return;
+}
 
       if (ownerData && ownerData.length > 0 && ownerData[0].password) {
         showPage('page-choose'); // มีรหัสผ่านแล้ว → ไปหน้าหลัก
