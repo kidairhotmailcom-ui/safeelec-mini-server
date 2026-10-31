@@ -513,68 +513,34 @@ async function submitRegistration() {
 async function verifyLicense() {
   alert("👉 เริ่มตรวจสอบ");
   if (!dormSupabaseClient) {
-    msgBox.innerHTML = '<div class="license-box invalid">⏳ กำลังเชื่อมต่อฐานข้อมูล กรุณารอสักครู่แล้วลองอีกครั้ง</div>';
     return;
   }
   const keyInput = document.getElementById('license-key').value.trim();
-  const cleanKey = keyInput.replace(/[^A-Z0-9‑]/g, '');
+  const cleanKey = keyInput.replace(/[^A‑Z0‑9‑]/g, '');
   const msgBox = document.getElementById('license-status');
 
-  if (!msgBox) {
-    alert('❌ ไม่พบช่องแสดงผล');
-    return;
-  }
-  if (!keyInput) {
-    msgBox.innerHTML = '<div class="license-box invalid">⚠️ กรุณากรอกรหัสใบอนุญาต</div>';
-    return;
-  }
+  if (!msgBox || !keyInput) return;
 
   try {
-    msgBox.innerHTML = '<div class="license-box">⏳ กำลังขอข้อมูลจากเซิร์ฟเวอร์...</div>';
+    msgBox.innerHTML = '<div class="license-box">⏳ กำลังตรวจสอบ...</div>';
     const { data, error } = await dormSupabaseClient
       .from('licenses')
-      .select('*')
+      .select('used')
       .eq('license_key', cleanKey);
 
-    if (error) {
-      msgBox.innerHTML = '<div class="license-box invalid">❌ ผิดพลาดเชื่อมต่อ: ' + error.message + '</div>';
+    if (error || !data || data.length === 0) {
+      msgBox.innerHTML = '<div class="license-box invalid">❌ ไม่พบรหัส</div>';
       return;
     }
 
-    if (data && data.length > 0) {
-      const licenseRow = data[0];
-      msgBox.innerHTML = '<div class="license-box valid">✅ พบรหัสถูกต้อง กำลังบันทึก...</div>';
-      
-      if (!licenseRow.used) {
-        await dormSupabaseClient
-          .from('licenses')
-          .update({ used: true })
-          .eq('license_key', cleanKey);
-      }
-
-      saveData(STORAGE.LICENSE, { key: keyInput });
-      // ดึงข้อมูลเจ้าของเพื่อตัดสินใจไปหน้าไหน
-      const { data: ownerData, error: ownerErr } = await dormSupabaseClient
-        .from('dorm_owners')
-        .select('*')
-        .eq('license_key', cleanKey);
-
-      if (ownerErr) {
-        msgBox.innerHTML = '<div class="license-box invalid">❌ ผิดพลาดโหลดข้อมูลบัญชี</div>';
-        return;
-      }
-
-      if (ownerData && ownerData.length > 0 && ownerData[0].password) {
-        showPage('page-choose'); // มีรหัสผ่านแล้ว → ไปหน้าหลัก
-      } else {
-        showPage('page-setup'); // ยังไม่มีรหัสผ่าน → ไปตั้งรหัส
-      }
-    } else {
-      msgBox.innerHTML = '<div class="license-box invalid">❌ ไม่พบรหัสนี้ในระบบ</div>';
+    const isUsed = data[0].used;
+    if (!isUsed) {
+      await dormSupabaseClient.from('licenses').update({used:true}).eq('license_key', cleanKey);
     }
+    saveData(STORAGE.LICENSE, { key: keyInput });
+    showPage('page-choose'); // สั่งไปหน้าหลักเลย
   } catch (err) {
-    console.error('ผิดพลาด:', err);
-    msgBox.innerHTML = '<div class="license-box invalid">❌ มีปัญหา: ' + err.message + '</div>';
+    msgBox.innerHTML = '<div class="license-box invalid">❌ ผิดพลาด</div>';
   }
 }
 function changeLicense() {
