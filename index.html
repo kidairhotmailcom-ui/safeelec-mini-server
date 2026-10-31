@@ -1400,10 +1400,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     localStorage.removeItem(STORAGE.LICENSE);
     localStorage.removeItem(STORAGE.REG);
     showPage('page-register');
+   } else {
+  // มีใบอนุญาตแล้ว เช็คว่าเคยตั้งรหัสผ่านหรือยัง
+  const adminPass = loadData(STORAGE.ADMIN_PASS, null);
+  if (!adminPass) {
+    showPage('page-setup'); // ยังไม่ตั้งรหัส → ไปหน้าตั้งรหัสผ่านก่อน
   } else {
-    // มีใบอนุญาตที่ใช้งานได้ในเซิร์ฟเวอร์ → ไปหน้าเลือกบทบาท
-    showPage('page-choose');
+    showPage('page-choose'); // ตั้งรหัสแล้ว → ไปหน้าเลือกบทบาท
   }
+}
 });
 // เมื่อเข้าหน้าเจ้าของระบบ ให้โหลดข้อมูลต่างๆ
 const originalShowPage = showPage;
