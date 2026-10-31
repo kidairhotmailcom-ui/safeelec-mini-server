@@ -570,6 +570,30 @@ function completeSetup() {
     saveData(STORAGE.ADMIN_PASS, p1);
     showPage('page-choose');
 }
+ async function saveNewPassword() {
+  const passInput = document.getElementById('pass-setup').value.trim();
+  const savedLic = loadSavedLicenseKey();
+  if (!passInput || !savedLic) return;
+
+  const cleanKey = savedLic.key.replace(/[^A‑Z0‑9‑]/g, '');
+
+  try {
+    const { error } = await dormSupabaseClient
+      .from('dorm_owners')
+      .insert([{ license_key: cleanKey, password: passInput }]);
+
+    if (error) {
+      alert('❌ ไม่สามารถบันทึกรหัสผ่านได้ (ตรวจสิทธิ์ Supabase)');
+      console.error(error);
+      return;
+    }
+    alert('✅ ตั้งรหัสผ่านสำเร็จ');
+    showPage('page-login');
+  } catch (err) {
+    alert('❌ ผิดพลาดระบบ');
+    console.error(err);
+  }
+}
 // =====================================================
 // 🚪 ออกจากระบบ
 // =====================================================
