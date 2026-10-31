@@ -686,9 +686,6 @@ async function createBill() {
   await loadOwnerAllData();
 }
 
-// =====================================================
-// 📌 สลับหน้า‑แท็บ + ผูกฟังก์ชันให้เรียกจาก HTML
-// =====================================================
 function showPage(pageId) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   const el = document.getElementById(pageId);
@@ -703,43 +700,42 @@ function switchOwnerTab(tabName) {
   });
   const tabEl = document.getElementById("tab‑" + tabName);
   if (tabEl) tabEl.classList.remove("hidden");
+
+  if (tabName === "dashboard") updateDashboard();
+  if (tabName === "rooms") renderRoomList();
+  if (tabName === "electric") renderElectricList();
+  if (tabName === "water") renderWaterList();
+  if (tabName === "bills") renderBillList();
+  if (tabName === "payments") renderPaymentList();
+  if (tabName === "summary") renderSummary();
+  if (tabName === "settings") loadSettingsInfo();
+  if (["dashboard","bills","payments"].indexOf(tabName) !== -1) {
+    SYNCQ.then(loadAll).then(() => { renderBillList(); renderPaymentList(); updateDashboard(); });
+  }
 }
 
-  window.submitRegistration = submitRegistration;
-  window.adminDoLogin = adminDoLogin;
-  window.ownerLogout = ownerLogout;
-  window.saveRoom = saveRoom;
-  window.deleteRoom = deleteRoom;
-  window.saveElectric = saveElectric;
-  window.saveWater = saveWater;
-  window.createBill = createBill;
-  window.showPage = showPage;
-  window.switchOwnerTab = switchOwnerTab;
-  
-  if (tabName === 'dashboard') updateDashboard();
-  if (tabName === 'rooms') renderRoomList();
-  if (tabName === 'electric') renderElectricList();
-  if (tabName === 'water') renderWaterList();
-  if (tabName === 'bills') renderBillList();
-  if (tabName === 'payments') renderPaymentList();
-  if (tabName === 'summary') renderSummary();
-  if (tabName === 'settings') loadSettingsInfo();
-  if (['dashboard','bills','payments'].indexOf(tabName) !== -1) SYNCQ.then(loadAll).then(() => { renderBillList(); renderPaymentList(); updateDashboard(); });
-}
-// =====================================================
-// 📋 ฟังก์ชันจัดการข้อมูล
-// =====================================================
+window.submitRegistration = submitRegistration;
+window.adminDoLogin = adminDoLogin;
+window.ownerLogout = ownerLogout;
+window.saveRoom = saveRoom;
+window.deleteRoom = deleteRoom;
+window.saveElectric = saveElectric;
+window.saveWater = saveWater;
+window.createBill = createBill;
+window.showPage = showPage;
+window.switchOwnerTab = switchOwnerTab;
+
+// แดชบอร์ด (ปรับให้ดึงจากตัวแปรข้อมูลเจ้าของ ไม่ใช่พื้นที่จัดเก็บในเครื่อง)
 function updateDashboard() {
-  const rooms = loadData(STORAGE.ROOMS, []);
-  const bills = loadData(STORAGE.BILLS, []);
-  const occupied = rooms.filter(r => r.status === 'มีผู้เช่า').length;
-  const unpaid = bills.filter(b => !b.paid).length;
-  const totalIncome = bills.filter(b => b.paid).reduce((sum, b) => sum + (b.total || 0), 0);
-  
-  if (document.getElementById('stat-rooms')) document.getElementById('stat-rooms').textContent = rooms.length;
-  if (document.getElementById('stat-occupied')) document.getElementById('stat-occupied').textContent = occupied;
-  if (document.getElementById('stat-income')) document.getElementById('stat-income').textContent = '฿' + totalIncome.toLocaleString();
-  if (document.getElementById('stat-unpaid')) document.getElementById('stat-unpaid').textContent = unpaid;
+  const totalRoom = roomList.length;
+  const usedRoom = roomList.filter(r => r.status === "มีผู้เช่า").length;
+  const unpaid = billList.filter(b => !b.paid).length;
+  const totalIncome = billList.filter(b => b.paid).reduce((sum, b) => sum + (b.total || 0), 0);
+
+  if (document.getElementById("stat-rooms")) document.getElementById("stat-rooms").textContent = totalRoom;
+  if (document.getElementById("stat-occupied")) document.getElementById("stat-occupied").textContent = usedRoom;
+  if (document.getElementById("stat-income")) document.getElementById("stat-income").textContent = "฿" + totalIncome.toLocaleString();
+  if (document.getElementById("stat-unpaid")) document.getElementById("stat-unpaid").textContent = unpaid;
 }
 function saveRoom() {
   const id = document.getElementById('room-id').value.trim();
