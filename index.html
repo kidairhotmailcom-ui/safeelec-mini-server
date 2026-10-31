@@ -456,7 +456,11 @@ function loadData(key, def = []) {
     const d = localStorage.getItem(key);
     return d ? JSON.parse(d) : def;
 }
-
+function loadSavedLicenseKey() {
+  const str = localStorage.getItem(STORAGE.LICENSE);
+  if (!str) return null;
+  return JSON.parse(str);
+}
 // =====================================================
 // 📄 เปลี่ยนหน้า
 // =====================================================
