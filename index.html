@@ -1132,7 +1132,9 @@ function renderBillList() {
     🗑️ ลบบิล
   </button>
 </div>
-
+`;
+  }).join('');
+}
 function markPaid(billNo) {
   const bills = loadData(STORAGE.BILLS, []);
   const idx = bills.findIndex(b => b.billNo === billNo);
