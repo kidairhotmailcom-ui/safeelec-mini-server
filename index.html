@@ -528,13 +528,6 @@ async function loadAll() {
   }
 }
 async function loadProfile() {
-  const { data } = await dormSupabaseClient.from('profiles').select('*').eq('user_id', UID).maybeSingle();
-  PROFILE = data || {};
-  localStorage.setItem(STORAGE.REG, JSON.stringify({ name: PROFILE.name || '', date: PROFILE.created_at }));
-  localStorage.setItem(STORAGE.LICENSE, JSON.stringify({ key: PROFILE.license_key || '' }));
-  const el = document.getElementById('setting-dorm-code'); if (el) el.textContent = PROFILE.dorm_code || '-';
-}
-async function loadProfile() {
   const { data } = await dormSupabaseClient
     .from('profiles')
     .select('*')
