@@ -433,7 +433,7 @@ TBL[STORAGE.ROOMS] = { t: 'dorm_rooms', k: ['room_id'],
 ['ELECTRIC', 'WATER'].forEach(n => {
   TBL[STORAGE[n]] = { t: n === 'ELECTRIC' ? 'electricity' : 'water', k: ['room_id', 'month'],
     from: r => ({ id: r.room_id + '-' + r.month, room: r.room_id, month: r.month, prev: num(r.prev), curr: num(r.curr), unit: num(r.unit), rate: num(r.rate), total: num(r.total), date: r.created_at }),
-    to: o => ({ ...(n === 'WATER' ? { room: String(o.room || o.room_id || '').trim() } : {}), room_id: String(o.room || o.room_id || '').trim(), month: o.month, prev: num(o.prev), curr: num(o.curr), unit: num(o.unit), rate: num(o.rate), total: num(o.total) })
+   to: o => ({ ...(n === 'WATER' ? { room: String(o.room || o.room_id || '').trim() } : {}), room_id: String(o.room || o.room_id || '').trim(), month: o.month, prev: num(o.prev), curr: num(o.curr), unit: num(o.unit), rate: num(o.rate), total: num(o.total) })
 });
 TBL[STORAGE.BILLS] = { t: 'bills', k: ['bill_no'],
   from: r => ({ billNo: r.bill_no, room: r.room_id, month: r.month, rent: num(r.rent), elecTotal: num(r.elec_total), waterTotal: num(r.water_total), total: num(r.total),
