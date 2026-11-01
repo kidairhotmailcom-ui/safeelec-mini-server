@@ -483,10 +483,29 @@ async function syncTable(key) {
 }
 async function loadAll() {
   const db = dormSupabaseClient;
+
+  if (!UID) {
+    console.error('ไม่พบ UID เจ้าของ');
+    return;
+  }
+
   for (const key of Object.keys(TBL)) {
     const c = TBL[key];
-    const { data, error } = await db.from(c.t).select('*').order('created_at', { ascending: key !== STORAGE.BILLS });
-    if (error) { alert('❌ โหลดข้อมูลไม่สำเร็จ: ' + error.message); continue; }
+
+    const { data, error } = await db
+      .from(c.t)
+      .select('*')
+      .eq('user_id', UID)
+      .order('created_at', {
+        ascending: key !== STORAGE.BILLS
+      });
+
+    if (error) {
+      console.error('โหลดข้อมูลไม่สำเร็จ:', c.t, error);
+      alert('❌ โหลดข้อมูลไม่สำเร็จ: ' + error.message);
+      continue;
+    }
+
     CACHE[key] = (data || []).map(c.from);
     takeSnapshot(key);
   }
