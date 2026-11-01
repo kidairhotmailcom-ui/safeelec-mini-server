@@ -552,7 +552,16 @@ function tenantLogout() {
   showPage('page-choose');
 }
 function setTenantBills(d) {
-  TENANT_BILLS = (d.bills || []).map(b => ({ billNo: b.bill_no, month: b.month, rent: b.rent, elecTotal: b.elec_total, waterTotal: b.water_total, total: b.total, paid: b.paid, pending: b.pending }));
+  TENANT_BILLS = (d?.bills || []).map(b => ({
+    billNo: b.bill_no || '',
+    month: b.month || '',
+    rent: Number(b.rent || 0),
+    elecTotal: Number(b.elec_total || 0),
+    waterTotal: Number(b.water_total || 0),
+    total: Number(b.total || 0),
+    paid: b.paid === true,
+    pending: b.pending === true
+  }));
 }
 async function doTenantLogin() {
   const dorm = document.getElementById('tenant-dorm').value.trim();
