@@ -534,7 +534,45 @@ async function loadProfile() {
   localStorage.setItem(STORAGE.LICENSE, JSON.stringify({ key: PROFILE.license_key || '' }));
   const el = document.getElementById('setting-dorm-code'); if (el) el.textContent = PROFILE.dorm_code || '-';
 }
+async function loadProfile() {
+  const { data } = await dormSupabaseClient
+    .from('profiles')
+    .select('*')
+    .eq('user_id', UID)
+    .maybeSingle();
 
+  PROFILE = data || {};
+
+  localStorage.setItem(STORAGE.REG, JSON.stringify({
+    name: PROFILE.name || '',
+    date: PROFILE.created_at
+  }));
+
+  localStorage.setItem(STORAGE.LICENSE, JSON.stringify({
+    key: PROFILE.license_key || ''
+  }));
+
+  const el = document.getElementById('setting-dorm-code');
+  if (el) el.textContent = PROFILE.dorm_code || '-';
+
+  loadBankSettings(); // เพิ่มบรรทัดนี้
+}
+
+// วางฟังก์ชันใหม่ต่อจากตรงนี้
+function loadBankSettings() {
+  const bank = PROFILE || {};
+
+  const fields = {
+    'bank-name': bank.bank_name || '',
+    'bank-account-name': bank.bank_account_name || '',
+    'bank-account-number': bank.bank_account_number || ''
+  };
+
+  Object.entries(fields).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  });
+}
 // =====================================================
 // 🔐 สมัคร / เข้าสู่ระบบเจ้าของ (Supabase Auth)
 // =====================================================
