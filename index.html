@@ -329,7 +329,24 @@
         <p><strong>วันที่ลงทะเบียน:</strong> <span id="setting-reg-date">-</span></p>
         <p><strong>ชื่อเจ้าของหอพัก:</strong> <span id="setting-customer-name">-</span></p>
       </div>
-      
+      <div class="card">
+  <h2>🏦 บัญชีธนาคารรับชำระค่าเช่า</h2>
+
+  <label>ธนาคาร</label>
+  <input type="text" id="bank-name" placeholder="เช่น ธนาคารกสิกรไทย">
+
+  <label>ชื่อเจ้าของบัญชี</label>
+  <input type="text" id="bank-account-name" placeholder="ชื่อ-นามสกุล">
+
+  <label>เลขที่บัญชี</label>
+  <input type="text" id="bank-account-number"
+         inputmode="numeric" placeholder="กรอกเลขบัญชี">
+
+  <button onclick="saveBankSettings()" class="btn-success">
+    💾 บันทึกบัญชีธนาคาร
+  </button>
+  <p id="bank-save-message"></p>
+</div> 
       <div class="card">
         <h2>🔐 จัดการรหัสผ่าน</h2>
         <button onclick="changeOwnerPass()" class="btn-info">🔑 เปลี่ยนรหัสผ่านเจ้าของระบบ</button>
