@@ -460,6 +460,11 @@ async function syncTable(key) {
   const del = [...snap.entries()].filter(([nk]) => !seen.has(nk)).map(([, v]) => v.d);
   try {
     if (up.length) {
+      console.log('ตรวจข้อมูลก่อนบันทึก:', {
+        table: c.t,
+        payload: up,
+        room: up.map(x => x.room)
+      });
       const { error } = await db.from(c.t).upsert(up, { onConflict: ['user_id'].concat(c.k).join(',') });
       if (error) throw error;
     }
