@@ -469,7 +469,7 @@ async function syncTable(key) {
       if (error) throw error;
     }
     for (const d of del) {
-      let q = db.from(c.t).delete();
+      let q = db.from(c.t).delete().eq('user_id', UID);
       c.k.forEach(k => { q = q.eq(k, d[k]); });
       const { error } = await q;
       if (error) throw error;
