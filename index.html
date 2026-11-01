@@ -625,6 +625,30 @@ function initTenantPage(room) {
   renderTenantBills(room);
 }
 
+function setTenantBills(data) {
+  // แปลงข้อมูลบิลจาก Supabase ให้ตรงกับชื่อฟิลด์ที่หน้าเว็บใช้
+  TENANT_BILLS = Array.isArray(data?.bills)
+    ? data.bills.map(bill => ({
+        ...bill,
+        billNo: bill.bill_no || bill.billNo || '',
+        room: bill.room_id || bill.room || '',
+        elecTotal: Number(bill.elec_total ?? bill.elecTotal ?? 0),
+        waterTotal: Number(bill.water_total ?? bill.waterTotal ?? 0),
+        rent: Number(bill.rent || 0),
+        total: Number(bill.total || 0),
+        paid: !!bill.paid,
+        pending: !!bill.pending
+      }))
+    : [];
+
+  // เก็บข้อมูลบัญชีธนาคารของหอพัก
+  if (TENANT) {
+    TENANT.bank_name = data?.bank_name || '';
+    TENANT.bank_account_name = data?.bank_account_name || '';
+    TENANT.bank_account_number = data?.bank_account_number || '';
+  }
+}
+
 function renderTenantBills(room) {
   const bills = TENANT_BILLS;
   const container = document.getElementById('tenant-bills');
