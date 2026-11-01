@@ -1112,19 +1112,26 @@ function renderBillList() {
         <p>ค่าน้ำ: ฿${bill.waterTotal.toLocaleString()}</p>
         <p><strong>รวมทั้งสิ้น: ฿${bill.total.toLocaleString()}</strong></p>
         ${bill.pending ? `<p>🔔 ผู้เช่าแจ้งโอนแล้ว</p>` : ''}
-        <div class="btn-row" style="margin-top:8px;">
-          ${!bill.paid && bill.pending 
-            ? `<button class="btn-success btn-sm" onclick="confirmPayment('${bill.billNo}')">✅ ยืนยันชำระ</button>` 
-            : ''}
-          ${!bill.paid 
-            ? `<button class="btn-sm" onclick="markPaid('${bill.billNo}')">✓ ทำเครื่องหมายชำระ</button>` 
-            : ''}
-          <button class="btn-sm btn-danger" onclick="deleteBill('${bill.billNo}')">🗑️ ลบบิล</button>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
+        
+<div class="btn-row" style="margin-top:8px;">
+  ${!bill.paid && bill.pending
+    ? `<button class="btn-success btn-sm" onclick="confirmPayment('${bill.billNo}')">✅ ยืนยันชำระ</button>`
+    : ''}
+
+  ${!bill.paid
+    ? `<button class="btn-sm" onclick="markPaid('${bill.billNo}')">✓ ทำเครื่องหมายชำระ</button>`
+    : ''}
+
+  <button class="btn-info btn-sm"
+    onclick="printBill('${esc(bill.billNo)}')">
+    🖨️ พิมพ์บิล
+  </button>
+
+  <button class="btn-sm btn-danger"
+    onclick="deleteBill('${bill.billNo}')">
+    🗑️ ลบบิล
+  </button>
+</div>
 
 function markPaid(billNo) {
   const bills = loadData(STORAGE.BILLS, []);
