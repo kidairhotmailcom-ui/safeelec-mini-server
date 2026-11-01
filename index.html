@@ -652,30 +652,45 @@ function setTenantBills(data) {
 function renderTenantBills(room) {
   const bills = TENANT_BILLS;
   const container = document.getElementById('tenant-bills');
-  
+
+  if (!container) return;
+
+  // ข้อมูลบัญชีธนาคารของหอพัก
+  const bankInfo = `
+    <div class="bill-card" style="margin-bottom:16px;">
+      <h4>🏦 บัญชีธนาคารสำหรับชำระค่าเช่า</h4>
+      <p>ธนาคาร: ${esc(TENANT?.bank_name || '-')}</p>
+      <p>ชื่อบัญชี: ${esc(TENANT?.bank_account_name || '-')}</p>
+      <p>เลขบัญชี: ${esc(TENANT?.bank_account_number || '-')}</p>
+    </div>
+  `;
+
   if (bills.length === 0) {
-    container.innerHTML = '<p style="color:#64748b;text-align:center;padding:20px;">ยังไม่มีข้อมูลบิล</p>';
+    container.innerHTML = bankInfo +
+      '<p style="color:#64748b;text-align:center;padding:20px;">ยังไม่มีข้อมูลบิล</p>';
     return;
   }
-  
-  container.innerHTML = bills.map(bill => {
-    const statusText = bill.paid ? 
-      '<span class="badge badge-success">✅ ชำระแล้ว</span>' : 
-      bill.pending ?
-      '<span class="badge badge-warning">⏳ รอตรวจสอบ</span>' :
-      '<span class="badge badge-info">📝 ค้างชำระ</span>';
-    
+
+  container.innerHTML = bankInfo + bills.map(bill => {
+    const statusText = bill.paid
+      ? '<span class="badge badge-success">✅ ชำระแล้ว</span>'
+      : bill.pending
+      ? '<span class="badge badge-warning">⏳ รอตรวจสอบ</span>'
+      : '<span class="badge badge-info">📝 ค้างชำระ</span>';
+
     return `
       <div class="bill-card">
-        <h4>📅 ${bill.month || '-'}</h4>
-        <p>เลขที่บิล: ${bill.billNo || '-'}</p>
-        <p>ค่าเช่า: ฿${(bill.rent || 0).toLocaleString()}</p>
-        <p>ค่าไฟ: ฿${(bill.elecTotal || 0).toLocaleString()}</p>
-        <p>ค่าน้ำ: ฿${(bill.waterTotal || 0).toLocaleString()}</p>
-        <p><strong>รวม: ฿${(bill.total || 0).toLocaleString()}</strong></p>
+        <h4>📅 ${esc(bill.month || '-')}</h4>
+        <p>เลขที่บิล: ${esc(bill.billNo || '-')}</p>
+        <p>ค่าเช่า: ฿${bill.rent.toLocaleString()}</p>
+        <p>ค่าไฟ: ฿${bill.elecTotal.toLocaleString()}</p>
+        <p>ค่าน้ำ: ฿${bill.waterTotal.toLocaleString()}</p>
+        <p><strong>รวม: ฿${bill.total.toLocaleString()}</strong></p>
         <p>สถานะ: ${statusText}</p>
         ${!bill.paid && !bill.pending ? `
-          <button onclick="notifyPaid('${bill.billNo}')" class="btn-success btn-sm">💸 แจ้งโอนแล้ว</button>
+          <button onclick="notifyPaid('${esc(bill.billNo)}')" class="btn-success btn-sm">
+            💸 แจ้งโอนแล้ว
+          </button>
         ` : ''}
       </div>
     `;
