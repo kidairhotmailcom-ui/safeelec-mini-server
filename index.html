@@ -1175,6 +1175,68 @@ function renderBillList() {
 `;
   }).join('');
 }
+window.printBill = function(billNo) {
+  const bills = loadData(STORAGE.BILLS, []);
+  const bill = bills.find(b => String(b.billNo) === String(billNo));
+
+  if (!bill) {
+    alert('ไม่พบข้อมูลบิล');
+    return;
+  }
+
+  const bank = PROFILE || {};
+  const money = value => Number(value || 0).toLocaleString('th-TH', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+
+  const w = window.open('', '_blank');
+
+  if (!w) {
+    alert('กรุณาอนุญาตป๊อปอัปเพื่อพิมพ์บิล');
+    return;
+  }
+
+  w.document.write(`
+    <!DOCTYPE html>
+    <html lang="th">
+    <head>
+      <meta charset="UTF-8">
+      <title>ใบแจ้งหนี้ ${esc(bill.billNo)}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 30px; color: #222; }
+        .paper { max-width: 700px; margin: auto; }
+        h2 { text-align: center; }
+        .total { font-size: 20px; font-weight: bold; }
+        .bank { border: 1px solid #aaa; padding: 12px; margin-top: 25px; }
+      </style>
+    </head>
+    <body>
+      <div class="paper">
+        <h2>ใบแจ้งหนี้ค่าเช่าห้องพัก</h2>
+        <p>เลขที่บิล: ${esc(bill.billNo)}</p>
+        <p>ห้อง: ${esc(bill.room)}</p>
+        <p>ประจำเดือน: ${esc(bill.month)}</p>
+        <hr>
+        <p>ค่าเช่า: ${money(bill.rent)} บาท</p>
+        <p>ค่าไฟ: ${money(bill.elecTotal)} บาท</p>
+        <p>ค่าน้ำ: ${money(bill.waterTotal)} บาท</p>
+        <p class="total">ยอดรวม: ${money(bill.total)} บาท</p>
+        <div class="bank">
+          <h3>บัญชีสำหรับชำระเงิน</h3>
+          <p>ธนาคาร: ${esc(bank.bank_name || '-')}</p>
+          <p>ชื่อบัญชี: ${esc(bank.bank_account_name || '-')}</p>
+          <p>เลขบัญชี: ${esc(bank.bank_account_number || '-')}</p>
+        </div>
+        <p>สถานะ: ${bill.paid ? 'ชำระแล้ว' : 'รอชำระ'}</p>
+        <button onclick="window.print()">พิมพ์บิล</button>
+      </div>
+    </body>
+    </html>
+  `);
+
+  w.document.close();
+};   
 function markPaid(billNo) {
   const bills = loadData(STORAGE.BILLS, []);
   const idx = bills.findIndex(b => b.billNo === billNo);
