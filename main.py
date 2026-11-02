@@ -712,8 +712,8 @@ def check_login():
         return
 
     # ESP32 ขอคำสั่งโดยใช้ Device Token
-    if request.path == "/api/command" and request.method == "GET":
-        return
+    if request.path == "/api/device/command" and request.method == "GET":
+    return
 
     # เส้นทางที่ไม่ต้อง Login
     if request.path in [
