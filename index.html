@@ -1163,7 +1163,7 @@ function renderBillList() {
     : ''}
 
   <button class="btn-info btn-sm"
-    onclick="printBill('${esc(bill.billNo)}')">
+    onclick="window.printBill('${esc(bill.billNo)}')"
     🖨️ พิมพ์บิล
   </button>
 
