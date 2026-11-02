@@ -1163,9 +1163,9 @@ function renderBillList() {
     : ''}
 
   <button class="btn-info btn-sm"
-    onclick="window.printBill('${esc(bill.billNo)}')"
-    🖨️ พิมพ์บิล
-  </button>
+  onclick="window.printBill('${esc(bill.billNo)}')">
+  🖨️ พิมพ์บิล
+</button>
 
   <button class="btn-sm btn-danger"
     onclick="deleteBill('${bill.billNo}')">
