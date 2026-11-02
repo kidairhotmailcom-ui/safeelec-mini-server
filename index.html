@@ -803,6 +803,14 @@ function switchOwnerTab(tabName) {
   });
   document.getElementById('tab-' + tabName).classList.remove('hidden');
   
+  const rooms = loadData(STORAGE.ROOMS, []);
+  renderBillRoomOptions(rooms);
+
+  if (tabName === 'dashboard') updateDashboard();
+  if (tabName === 'rooms') renderRoomList();
+  if (tabName === 'electric') renderElectricList();
+  if (tabName === 'water') renderWaterList();
+  if (tabName === 'bills') renderBillList();
   if (tabName === 'dashboard') updateDashboard();
   if (tabName === 'rooms') renderRoomList();
   if (tabName === 'electric') renderElectricList();
