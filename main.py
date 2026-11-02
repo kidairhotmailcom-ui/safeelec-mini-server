@@ -9,6 +9,47 @@ import xlsxwriter
 import io
 import os
 import json  
+import hmac
+import time
+from functools import wraps
+
+# ==============================
+# SAFE-ELEC DEVICE AUTHENTICATION
+# ==============================
+
+DEVICE_TOKENS = json.loads(
+    os.environ.get("DEVICE_TOKENS_JSON", "{}")
+)
+
+def device_api_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+
+        data = request.get_json(silent=True) or {}
+
+        device_id = (
+            request.args.get("device_id")
+            or data.get("device_id")
+        )
+
+        token = request.headers.get("X-Device-Token", "")
+        expected = DEVICE_TOKENS.get(device_id)
+
+        if not device_id or not expected:
+            return jsonify({
+                "ok": False,
+                "error": "UNKNOWN_DEVICE"
+            }), 401
+
+        if not hmac.compare_digest(token, expected):
+            return jsonify({
+                "ok": False,
+                "error": "INVALID_DEVICE_TOKEN"
+            }), 401
+
+        return fn(*args, **kwargs)
+
+    return wrapper
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "SAFE-ELEC-2026-SECRET-KEY-CHANGE-ME-PLEASE")
