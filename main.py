@@ -1221,6 +1221,36 @@ def get_command():
         "z5": s.get("z5", True),
         "z6": s.get("z6", True)
     })
+  # --- API ส่งคำสั่งให้ ESP32 ด้วย Device Token ---
+@app.route("/api/device/command", methods=["GET"])
+@device_api_required
+def get_device_command():
+
+    import hashlib
+
+    dev_id = request.args.get("device_id", "")
+    s = relay_state.get(dev_id)
+
+    if s is None:
+        return jsonify({
+            "ok": False,
+            "error": "DEVICE_NOT_FOUND"
+        }), 404
+
+    hash_str = json.dumps(s, sort_keys=True)
+    cmd_hash = hashlib.md5(hash_str.encode()).hexdigest()[:8]
+
+    return jsonify({
+        "ok": True,
+        "device_id": dev_id,
+        "cmd_hash": cmd_hash,
+        "z1": s.get("z1", True),
+        "z2": s.get("z2", True),
+        "z3": s.get("z3", True),
+        "z4": s.get("z4", True),
+        "z5": s.get("z5", True),
+        "z6": s.get("z6", True)
+    })  
 @app.route("/admin/test-email")
 def test_email():
     if "username" not in session:
