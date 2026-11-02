@@ -747,7 +747,9 @@ def get_data():
             })
     return jsonify({"error": "Not found"}), 404
 
-
+@app.route("/api/data", methods=["POST"])
+@device_api_required
+def receive():
     data = request.get_json(force=True) or {}
     now = datetime.now()
     normalized = {}
