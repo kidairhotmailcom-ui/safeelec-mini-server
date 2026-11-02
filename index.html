@@ -550,7 +550,6 @@ async function loadProfile() {
 
   loadBankSettings(); // เพิ่มบรรทัดนี้
 }
-
 // วางฟังก์ชันใหม่ต่อจากตรงนี้
 function loadBankSettings() {
   const bank = PROFILE || {};
@@ -566,6 +565,54 @@ function loadBankSettings() {
     if (el) el.value = value;
   });
 }
+ 
+async function saveBankSettings() {
+  if (!UID || !dormSupabaseClient) {
+    alert('กรุณาเข้าสู่ระบบเจ้าของก่อน');
+    return;
+  }
+
+  const bank_name = document.getElementById('bank-name')?.value.trim() || '';
+  const bank_account_name = document.getElementById('bank-account-name')?.value.trim() || '';
+  const bank_account_number = document.getElementById('bank-account-number')?.value.trim() || '';
+
+  if (!bank_name || !bank_account_name || !bank_account_number) {
+    alert('กรุณากรอกข้อมูลบัญชีธนาคารให้ครบ');
+    return;
+  }
+
+  const { data, error } = await dormSupabaseClient
+    .from('profiles')
+    .update({
+      bank_name,
+      bank_account_name,
+      bank_account_number
+    })
+    .eq('user_id', UID)
+    .select()
+    .maybeSingle();
+
+  if (error) {
+    console.error('บันทึกบัญชีธนาคารไม่สำเร็จ:', error);
+    alert('บันทึกไม่สำเร็จ: ' + error.message);
+    return;
+  }
+
+  if (!data) {
+    alert('ไม่พบข้อมูลเจ้าของใน profiles จึงยังบันทึกไม่ได้');
+    return;
+  }
+
+  PROFILE = { ...PROFILE, ...data };
+
+  const message = document.getElementById('bank-save-message');
+  if (message) {
+    message.textContent = 'บันทึกบัญชีธนาคารเรียบร้อยแล้ว';
+  }
+
+  alert('บันทึกบัญชีธนาคารเรียบร้อยแล้ว');
+}
+ 
 // =====================================================
 // 🔐 สมัคร / เข้าสู่ระบบเจ้าของ (Supabase Auth)
 // =====================================================
