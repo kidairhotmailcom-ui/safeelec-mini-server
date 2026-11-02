@@ -706,7 +706,15 @@ def check_all(dev):
 
 @app.before_request
 def check_login():
-    if request.path in ["/", "/login", "/do_login", "/logout", "/api/data", "/api/devices", "/api/report-excel"]:
+   # อนุญาตให้ ESP32 ส่งข้อมูล POST โดยใช้ Device Token
+if request.path == "/api/data" and request.method == "POST":
+    return
+
+if request.path in [
+    "/", "/login", "/do_login", "/logout",
+    "/api/devices", "/api/report-excel"
+]:
+    return
         return
     if "username" not in session:
         return redirect("/login")
