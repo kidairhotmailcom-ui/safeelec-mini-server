@@ -898,7 +898,40 @@ function renderRoomList() {
     </table>
   `;
 }
+  
+function renderBillRoomOptions(rooms) {
+  const select = document.getElementById('bill-room');
+  if (!select) return;
 
+  const currentValue = select.value;
+
+  if (!rooms || rooms.length === 0) {
+    select.innerHTML = '<option value="">ยังไม่มีห้องที่สร้างไว้</option>';
+    return;
+  }
+
+  const sortedRooms = [...rooms].sort((a, b) =>
+    String(a.id).localeCompare(String(b.id), 'th', {
+      numeric: true
+    })
+  );
+
+  select.innerHTML =
+    '<option value="">-- เลือกห้องพัก --</option>' +
+    sortedRooms.map(room => {
+      const id = String(room.id);
+      const label = room.status === 'มีผู้เช่า'
+        ? `${id} (มีผู้เช่า)`
+        : `${id} (ว่าง)`;
+
+      return `<option value="${esc(id)}">${esc(label)}</option>`;
+    }).join('');
+
+  if (sortedRooms.some(room => String(room.id) === currentValue)) {
+    select.value = currentValue;
+  }
+}
+  
 function editRoom(id) {
   const rooms = loadData(STORAGE.ROOMS, []);
   const r = rooms.find(x => x.id === id);
