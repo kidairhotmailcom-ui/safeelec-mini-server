@@ -1203,7 +1203,6 @@ def set_command():
 
 # --- API ส่งคำสั่งให้ ESP ---
 @app.route("/api/command", methods=["GET"])
-@device_api_required
 def get_command():
     import hashlib, json
     dev_id = request.args.get("device_id", "SAFE-001")
