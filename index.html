@@ -860,6 +860,7 @@ function saveRoom() {
 
 function renderRoomList() {
   const rooms = loadData(STORAGE.ROOMS, []);
+  renderBillRoomOptions(rooms);
   const container = document.getElementById('room-list');
   
   if (rooms.length === 0) {
