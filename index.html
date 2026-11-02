@@ -899,37 +899,42 @@ function renderRoomList() {
   `;
 }
   
+
 function renderBillRoomOptions(rooms) {
-  const select = document.getElementById('bill-room');
-  if (!select) return;
+  const ids = ['bill-room', 'elec-room', 'water-room'];
 
-  const currentValue = select.value;
+  ids.forEach(id => {
+    const select = document.getElementById(id);
+    if (!select) return;
 
-  if (!rooms || rooms.length === 0) {
-    select.innerHTML = '<option value="">ยังไม่มีห้องที่สร้างไว้</option>';
-    return;
-  }
+    const currentValue = select.value;
 
-  const sortedRooms = [...rooms].sort((a, b) =>
-    String(a.id).localeCompare(String(b.id), 'th', {
-      numeric: true
-    })
-  );
+    if (!rooms || rooms.length === 0) {
+      select.innerHTML = '<option value="">ยังไม่มีห้องที่สร้างไว้</option>';
+      return;
+    }
 
-  select.innerHTML =
-    '<option value="">-- เลือกห้องพัก --</option>' +
-    sortedRooms.map(room => {
-      const id = String(room.id);
-      const label = room.status === 'มีผู้เช่า'
-        ? `${id} (มีผู้เช่า)`
-        : `${id} (ว่าง)`;
+    const sortedRooms = [...rooms].sort((a, b) =>
+      String(a.id).localeCompare(String(b.id), 'th', {
+        numeric: true
+      })
+    );
 
-      return `<option value="${esc(id)}">${esc(label)}</option>`;
-    }).join('');
+    select.innerHTML =
+      '<option value="">-- เลือกห้องพัก --</option>' +
+      sortedRooms.map(room => {
+        const id = String(room.id);
+        const label = room.status === 'มีผู้เช่า'
+          ? `${id} (มีผู้เช่า)`
+          : `${id} (ว่าง)`;
 
-  if (sortedRooms.some(room => String(room.id) === currentValue)) {
-    select.value = currentValue;
-  }
+        return `<option value="${esc(id)}">${esc(label)}</option>`;
+      }).join('');
+
+    if (sortedRooms.some(room => String(room.id) === currentValue)) {
+      select.value = currentValue;
+    }
+  });
 }
   
 function editRoom(id) {
