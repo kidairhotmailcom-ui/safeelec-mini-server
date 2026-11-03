@@ -704,6 +704,7 @@ def check_all(dev):
     trigger_alert(dev)
     return dev
 
+
 @app.before_request
 def check_login():
 
@@ -713,7 +714,7 @@ def check_login():
 
     # ESP32 ขอคำสั่งโดยใช้ Device Token
     if request.path == "/api/device/command" and request.method == "GET":
-    return
+        return
 
     # เส้นทางที่ไม่ต้อง Login
     if request.path in [
@@ -725,6 +726,7 @@ def check_login():
     # หน้าอื่นต้อง Login
     if "username" not in session:
         return redirect("/login")
+
 
 @app.before_request
 def update_online():
