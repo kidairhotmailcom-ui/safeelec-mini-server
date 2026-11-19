@@ -42,6 +42,8 @@ def _iot_enabled():
 def _iot_project_id():
     if not _iot_enabled():
         return None
+    if time.time() - _iot_project_cache["checked_at"] < 30:
+        return _iot_project_cache["id"]
     if _iot_project_cache["id"] and time.time() - _iot_project_cache["checked_at"] < 300:
         return _iot_project_cache["id"]
     try:
@@ -57,6 +59,7 @@ def _iot_project_id():
         _iot_project_cache.update({"id": project_id, "checked_at": time.time()})
         return project_id
     except Exception as exc:
+        _iot_project_cache.update({"id": None, "checked_at": time.time()})
         print(f"[IOT_CORE] project lookup failed: {type(exc).__name__}")
         return None
 
@@ -850,6 +853,17 @@ def update_online():
         check_all(d)
 
 # ===== หน้าแรก =====
+@app.route("/health", methods=["GET"])
+def health():
+    project_id = _iot_project_id() if _iot_enabled() else None
+    return jsonify({
+        "ok": True,
+        "service": "SAFE-ELEC",
+        "iot_core_configured": _iot_enabled(),
+        "iot_project_connected": bool(project_id),
+        "registered_devices_loaded": len(devices),
+    }), 200
+
 @app.route("/")
 def home():
     if "username" in session:
