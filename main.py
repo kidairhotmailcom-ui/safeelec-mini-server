@@ -212,63 +212,23 @@ TEMPLATE = {
     "energy_history": [],
     }
 
+import copy
+
+# สร้างรายการอุปกรณ์โดยเริ่มต้นเป็น OFFLINE จนกว่าจะได้รับข้อมูลจริงจาก ESP32
+# deepcopy ป้องกัน sensors ของอุปกรณ์หลายตัวใช้ object ร่วมกัน
 devices = []
 for dev_id, site, cust, prov, stype in DEVICE_LIST:
-    d = TEMPLATE.copy()
+    d = copy.deepcopy(TEMPLATE)
     d["device_id"] = dev_id
     d["site_name"] = site
     d["customer_id"] = cust
     d["province"] = prov
     d["site_type"] = stype
-    d["last_updated"] = datetime.now().strftime("%H:%M:%S")
-    d["last_seen"] = datetime.now()
-    d["is_online"] = True
-    
-    # ค่าเซ็นเซอร์
-    d["current_temp"] = 32.5
-    d["humidity"] = 63
-    
-    # แรงดัน 3 เฟส
-    d["v_l1_l2"] = 381.5
-    d["v_l2_l3"] = 380.8
-    d["v_l3_l1"] = 382.0
-    
-    # กระแส 3 เฟส
-    d["a_l1"] = 5.2
-    d["a_l2"] = 5.0
-    d["a_l3"] = 5.1
-    
-    # โซนย่อย
-    d["z1_v"] = 220.5
-    d["z1_a"] = 1.2
-    d["z2_v"] = 220.8
-    d["z2_a"] = 0.9
-    d["z3_v"] = 221.0
-    d["z3_a"] = 1.5
-    
-    # กราวด์
-    d["gnd_resistance_ohm"] = 4.8
-    d["gnd_voltage_v"] = 0.7
-    
-    # สถานะเซ็นเซอร์ต่างๆ
-    d["sensors"]["sens_current"]["value"] = "ปกติ"
-    d["sensors"]["sens_current"]["ok"] = True
-    d["sensors"]["sens_temp"]["value"] = "ปกติ"
-    d["sensors"]["sens_temp"]["ok"] = True
-    d["sensors"]["sens_volt"]["value"] = "ปกติ"
-    d["sensors"]["sens_volt"]["ok"] = True
-    d["sensors"]["sens_heat"]["value"] = "ปกติ"
-    d["sensors"]["sens_heat"]["ok"] = True
-    d["sensors"]["sens_ground"]["value"] = "ปกติ"
-    d["sensors"]["sens_ground"]["ok"] = True
-    
-    d["sensors"]["esp"]["value"] = "เชื่อมต่อปกติ"
-    d["sensors"]["esp"]["ok"] = True
-    d["sensors"]["comm"]["value"] = "ปกติ"
-    d["sensors"]["comm"]["ok"] = True
-    d["sensors"]["psu"]["value"] = "ปกติ"
-    d["sensors"]["psu"]["ok"] = True
-    
+    d["last_updated"] = "-"
+    d["last_seen"] = None
+    d["is_online"] = False
+    d["sensors"]["esp"].update({"value": "ไม่เชื่อมต่อ", "ok": None})
+    d["sensors"]["comm"].update({"value": "ไม่เชื่อมต่อ", "ok": None})
     devices.append(d)
 
 def send_line_alert(message):
@@ -712,7 +672,12 @@ def check_login():
     if request.path == "/api/data" and request.method == "POST":
         return
 
-    # ESP32 ขอคำสั่งโดยใช้ Device Token
+    # ESP32 ดึงการตั้งค่าและสถานะคำสั่งแบบอ่านอย่างเดียว
+    # firmware ปัจจุบันยังไม่ได้แนบ X-Device-Token ใน GET ทั้งสอง endpoint
+    if request.path in ["/api/config", "/api/command"] and request.method == "GET":
+        return
+
+    # ESP32 ขอคำสั่งผ่าน endpoint แบบ token-protected รุ่นใหม่
     if request.path == "/api/device/command" and request.method == "GET":
         return
 
@@ -745,6 +710,20 @@ def home():
     if "username" in session:
         return redirect("/dashboard")
     return redirect("/login")
+
+@app.route("/api/config", methods=["GET"])
+def get_device_config():
+    dev_id = request.args.get("device_id", "").strip()
+    d = next((dev for dev in devices if dev["device_id"] == dev_id), None)
+    if not d:
+        return jsonify({"ok": False, "error": "DEVICE_NOT_FOUND"}), 404
+    # รูปแบบตรงกับ syncConfigFromCloud() ใน firmware ปัจจุบัน
+    return jsonify({
+        "device_id": dev_id,
+        "device_name": d.get("site_name", dev_id),
+        "customer_type": d.get("site_type", ""),
+        "timers": []
+    })
 
 @app.route("/api/data", methods=["GET"])
 def get_data():
@@ -1207,11 +1186,13 @@ def set_command():
 @app.route("/api/command", methods=["GET"])
 def get_command():
     import hashlib, json
-    dev_id = request.args.get("device_id", "SAFE-001")
-    s = relay_state.get(dev_id, {
-        "z1": True, "z2": True, "z3": True,
-        "z4": True, "z5": True, "z6": True
-    })
+    dev_id = request.args.get("device_id", "").strip()
+    known_device = any(d["device_id"] == dev_id for d in devices)
+    if not known_device:
+        return jsonify({"ok": False, "error": "DEVICE_NOT_FOUND"}), 404
+    s = relay_state.get(dev_id)
+    if s is None:
+        return jsonify({"ok": False, "error": "COMMAND_STATE_NOT_FOUND"}), 404
     hash_str = json.dumps(s, sort_keys=True)
     cmd_hash = hashlib.md5(hash_str.encode()).hexdigest()[:8]
     return jsonify({
