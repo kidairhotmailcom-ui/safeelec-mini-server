@@ -97,33 +97,60 @@ def _iot_token_valid(device_key, token):
     return hmac.compare_digest(digest, token_hash)
 
 def sync_iot_device_registry():
+    """
+    Load the complete active device registry in bounded PostgREST pages.
+    Keep the existing in-memory registry untouched unless every page succeeds.
+    """
     global _iot_registry_last_sync
     if not _iot_enabled() or time.time() - _iot_registry_last_sync < 30:
         return
+
     project_id = _iot_project_id()
     if not project_id:
         return
+
+    page_size = 500
+    offset = 0
+    registry_rows = []
+
     try:
-        res = requests.get(
-            f"{SUPABASE_URL}/rest/v1/iot_core_devices",
-            headers=_iot_headers(),
-            params={
-                "project_id": f"eq.{project_id}",
-                "status": "not.in.(disabled,revoked)",
-                "select": "device_key,display_name,role,status,metadata,last_seen_at",
-                "order": "registered_at.asc",
-            },
-            timeout=8,
-        )
-        res.raise_for_status()
-        rows = res.json()
-        for row in rows:
-            key = row["device_key"]
+        while True:
+            res = requests.get(
+                f"{SUPABASE_URL}/rest/v1/iot_core_devices",
+                headers={
+                    **_iot_headers(),
+                    "Range-Unit": "items",
+                    "Range": f"{offset}-{offset + page_size - 1}",
+                },
+                params={
+                    "project_id": f"eq.{project_id}",
+                    "status": "not.in.(disabled,revoked)",
+                    "select": "device_key,display_name,role,status,metadata,last_seen_at",
+                    "order": "registered_at.asc",
+                },
+                timeout=8,
+            )
+            res.raise_for_status()
+            page_rows = res.json()
+            if not isinstance(page_rows, list):
+                raise ValueError("Invalid device registry page")
+            registry_rows.extend(page_rows)
+            if len(page_rows) < page_size:
+                break
+            offset += page_size
+
+        # Apply only after all pages were fetched successfully. A partial
+        # network/API failure must never leave a half-refreshed registry.
+        for row in registry_rows:
+            key = row.get("device_key")
+            if not key:
+                continue
             dev = next((item for item in devices if item.get("device_id") == key), None)
             if dev is None:
                 dev = copy.deepcopy(TEMPLATE)
                 dev["device_id"] = key
                 devices.append(dev)
+
             meta = row.get("metadata") or {}
             dev["site_name"] = meta.get("site_name") or row.get("display_name") or key
             dev["site_type"] = meta.get("site_type") or "office"
@@ -131,8 +158,9 @@ def sync_iot_device_registry():
             dev["role"] = (row.get("role") or "standalone").upper()
             dev["is_master"] = dev["role"] == "MASTER"
             dev["registered_status"] = row.get("status")
+
         _iot_registry_last_sync = time.time()
-        print(f"[IOT_CORE] registry synced: {len(rows)} device(s)")
+        print(f"[IOT_CORE] registry synced: {len(registry_rows)} device(s)")
     except Exception as exc:
         print(f"[IOT_CORE] registry sync failed: {type(exc).__name__}")
 
