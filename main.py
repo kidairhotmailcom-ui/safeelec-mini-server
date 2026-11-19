@@ -12,6 +12,8 @@ import json
 import hmac
 import hashlib
 import time
+import secrets
+import math
 from functools import wraps
 
 # ==============================
@@ -97,33 +99,60 @@ def _iot_token_valid(device_key, token):
     return hmac.compare_digest(digest, token_hash)
 
 def sync_iot_device_registry():
+    """
+    Load the complete active device registry in bounded PostgREST pages.
+    Keep the existing in-memory registry untouched unless every page succeeds.
+    """
     global _iot_registry_last_sync
     if not _iot_enabled() or time.time() - _iot_registry_last_sync < 30:
         return
+
     project_id = _iot_project_id()
     if not project_id:
         return
+
+    page_size = 500
+    offset = 0
+    registry_rows = []
+
     try:
-        res = requests.get(
-            f"{SUPABASE_URL}/rest/v1/iot_core_devices",
-            headers=_iot_headers(),
-            params={
-                "project_id": f"eq.{project_id}",
-                "status": "not.in.(disabled,revoked)",
-                "select": "device_key,display_name,role,status,metadata,last_seen_at",
-                "order": "registered_at.asc",
-            },
-            timeout=8,
-        )
-        res.raise_for_status()
-        rows = res.json()
-        for row in rows:
-            key = row["device_key"]
+        while True:
+            res = requests.get(
+                f"{SUPABASE_URL}/rest/v1/iot_core_devices",
+                headers={
+                    **_iot_headers(),
+                    "Range-Unit": "items",
+                    "Range": f"{offset}-{offset + page_size - 1}",
+                },
+                params={
+                    "project_id": f"eq.{project_id}",
+                    "status": "not.in.(disabled,revoked)",
+                    "select": "device_key,display_name,role,status,metadata,last_seen_at",
+                    "order": "registered_at.asc",
+                },
+                timeout=8,
+            )
+            res.raise_for_status()
+            page_rows = res.json()
+            if not isinstance(page_rows, list):
+                raise ValueError("Invalid device registry page")
+            registry_rows.extend(page_rows)
+            if len(page_rows) < page_size:
+                break
+            offset += page_size
+
+        # Apply only after all pages were fetched successfully. A partial
+        # network/API failure must never leave a half-refreshed registry.
+        for row in registry_rows:
+            key = row.get("device_key")
+            if not key:
+                continue
             dev = next((item for item in devices if item.get("device_id") == key), None)
             if dev is None:
                 dev = copy.deepcopy(TEMPLATE)
                 dev["device_id"] = key
                 devices.append(dev)
+
             meta = row.get("metadata") or {}
             dev["site_name"] = meta.get("site_name") or row.get("display_name") or key
             dev["site_type"] = meta.get("site_type") or "office"
@@ -131,12 +160,13 @@ def sync_iot_device_registry():
             dev["role"] = (row.get("role") or "standalone").upper()
             dev["is_master"] = dev["role"] == "MASTER"
             dev["registered_status"] = row.get("status")
+
         _iot_registry_last_sync = time.time()
-        print(f"[IOT_CORE] registry synced: {len(rows)} device(s)")
+        print(f"[IOT_CORE] registry synced: {len(registry_rows)} device(s)")
     except Exception as exc:
         print(f"[IOT_CORE] registry sync failed: {type(exc).__name__}")
 
-def persist_iot_telemetry(device_key, payload, observed_at):
+def persist_iot_telemetry(device_key, payload, observed_at, schema_version=1):
     if not _iot_enabled():
         return None
     record = _iot_device_record(device_key)
@@ -153,6 +183,7 @@ def persist_iot_telemetry(device_key, payload, observed_at):
                 "project_id": project_id,
                 "device_id": record["id"],
                 "observed_at": timestamp,
+                "schema_version": schema_version,
                 "payload": payload,
                 "quality": {"transport": "https", "auth": "device_token"},
             },
@@ -304,21 +335,21 @@ TEMPLATE = {
     "is_online": False, "status_summary": "offline",
     "last_alert_sent": None,
     "role": "UNKNOWN", "is_master": False,
-    "backup_active": False, "partner_online": True, "partner_id": "",
+    "backup_active": False, "partner_online": False, "partner_id": "",
     "current_temp": 0.0, "humidity": 0.0, "power_status": "MAIN AC",
     "wiring_fault": False, "critical_shutdown": False,
-    "relay_state": True, "safety_lock": False,
-    "v_l1_l2": 380.0, "v_l2_l3": 380.0, "v_l3_l1": 380.0,
+    "relay_state": False, "safety_lock": False,
+    "v_l1_l2": 0.0, "v_l2_l3": 0.0, "v_l3_l1": 0.0,
     "a_l1": 0.0, "a_l2": 0.0, "a_l3": 0.0, "a_n": 0.0,
-    "power_kw": 0.0, "balance_3ph_ok": True,
-    "z1_v": 220.0, "z1_a": 0.0, "z1_w": 0.0,
-    "z2_v": 220.0, "z2_a": 0.0, "z2_w": 0.0,
-    "z3_v": 220.0, "z3_a": 0.0, "z3_w": 0.0,
-    "z4_v": 220.0, "z4_a": 0.0, "z4_w": 0.0,   # ✅ เพิ่ม
-    "z5_v": 220.0, "z5_a": 0.0, "z5_w": 0.0,   # ✅ เพิ่ม
-    "z6_v": 220.0, "z6_a": 0.0, "z6_w": 0.0,  
-    "z_total_a": 0.0, "z_balance_ok": True,
-    "gnd_resistance_ohm": 0.0, "gnd_voltage_v": 0.0, "gnd_system_ok": True,
+    "power_kw": 0.0, "balance_3ph_ok": None,
+    "z1_v": 0.0, "z1_a": 0.0, "z1_w": 0.0,
+    "z2_v": 0.0, "z2_a": 0.0, "z2_w": 0.0,
+    "z3_v": 0.0, "z3_a": 0.0, "z3_w": 0.0,
+    "z4_v": 0.0, "z4_a": 0.0, "z4_w": 0.0,   # ✅ เพิ่ม
+    "z5_v": 0.0, "z5_a": 0.0, "z5_w": 0.0,   # ✅ เพิ่ม
+    "z6_v": 0.0, "z6_a": 0.0, "z6_w": 0.0,  
+    "z_total_a": 0.0, "z_balance_ok": None,
+    "gnd_resistance_ohm": 0.0, "gnd_voltage_v": 0.0, "gnd_system_ok": None,
     "sensors": {
         "temp": {"name": "อุณหภูมิตู้", "value": 0.0, "ok": None},
         "humidity": {"name": "ความชื้น", "value": 0.0, "ok": None},
@@ -637,7 +668,7 @@ def check_ground(dev):
 
 def check_balance(i1, i2, i3):
     total = i1 + i2 + i3
-    if total <= 0: return True
+    if total <= 0: return None
     avg = total / 3
     for v in [i1, i2, i3]:
         if abs(v - avg) > CONFIG["STANDARD"]["BALANCE_MAX_A"]: return False
@@ -826,6 +857,15 @@ def check_login():
 
     # ESP32 ขอคำสั่งผ่าน endpoint แบบ token-protected รุ่นใหม่
     if request.path == "/api/device/command" and request.method == "GET":
+        return
+
+    # API v1 routes are exempt from browser-session login only because each
+    # route enforces its own device-token or provisioning-token authentication.
+    if request.path in [
+        "/api/v1/safe-elec/devices/register",
+        "/api/v1/safe-elec/devices/heartbeat",
+        "/api/v1/safe-elec/telemetry",
+    ]:
         return
 
     # เส้นทางที่ไม่ต้อง Login
@@ -1396,6 +1436,261 @@ def get_device_command():
         "z5": s.get("z5", True),
         "z6": s.get("z6", True)
     })  
+# ==================================================
+# SAFE-ELEC API V1 — additive device onboarding/data
+# ==================================================
+
+@app.route("/api/v1/safe-elec/devices/register", methods=["POST"])
+def v1_register_device():
+    # This secret is configured only in the Render server environment.
+    provisioning_secret = os.environ.get("SAFE_ELEC_PROVISIONING_TOKEN", "")
+    supplied_secret = request.headers.get("X-Provisioning-Token", "")
+    if not provisioning_secret:
+        return jsonify({"ok": False, "error": "PROVISIONING_NOT_CONFIGURED"}), 503
+    if not supplied_secret or not hmac.compare_digest(supplied_secret, provisioning_secret):
+        return jsonify({"ok": False, "error": "INVALID_PROVISIONING_TOKEN"}), 401
+    if not _iot_enabled():
+        return jsonify({"ok": False, "error": "IOT_CORE_NOT_CONFIGURED"}), 503
+
+    data = request.get_json(silent=True) or {}
+    device_key = str(data.get("device_id", "")).strip()
+    display_name = str(data.get("display_name", device_key)).strip()
+    device_type = str(data.get("device_type", "esp32")).strip().lower()
+    hardware_model = str(data.get("hardware_model", "")).strip() or None
+    role = str(data.get("role", "standalone")).strip().lower()
+    firmware_version = str(data.get("firmware_version", "")).strip() or None
+    capabilities = data.get("capabilities", {})
+    metadata = data.get("metadata", {})
+
+    if (not device_key or len(device_key) > 64
+            or not all(ch.isalnum() or ch in "-_." for ch in device_key)):
+        return jsonify({"ok": False, "error": "INVALID_DEVICE_ID"}), 400
+    if not display_name or len(display_name) > 120:
+        return jsonify({"ok": False, "error": "INVALID_DISPLAY_NAME"}), 400
+    if not device_type or len(device_type) > 40:
+        return jsonify({"ok": False, "error": "INVALID_DEVICE_TYPE"}), 400
+    if role not in ("master", "backup", "standalone"):
+        return jsonify({"ok": False, "error": "INVALID_DEVICE_ROLE"}), 400
+    if not isinstance(capabilities, dict) or not isinstance(metadata, dict):
+        return jsonify({"ok": False, "error": "CAPABILITIES_AND_METADATA_MUST_BE_OBJECTS"}), 400
+
+    project_id = _iot_project_id()
+    if not project_id:
+        return jsonify({"ok": False, "error": "IOT_PROJECT_NOT_FOUND"}), 503
+
+    try:
+        project_check = requests.get(
+            f"{SUPABASE_URL}/rest/v1/iot_core_projects",
+            headers=_iot_headers(),
+            params={"id": f"eq.{project_id}", "select": "id,status", "limit": "1"},
+            timeout=8,
+        )
+        project_check.raise_for_status()
+        project_rows = project_check.json()
+        if not project_rows or project_rows[0].get("status") != "active":
+            return jsonify({"ok": False, "error": "IOT_PROJECT_NOT_ACTIVE"}), 409
+
+        existing = requests.get(
+            f"{SUPABASE_URL}/rest/v1/iot_core_devices",
+            headers=_iot_headers(),
+            params={
+                "project_id": f"eq.{project_id}",
+                "device_key": f"eq.{device_key}",
+                "select": "id",
+                "limit": "1",
+            },
+            timeout=8,
+        )
+        existing.raise_for_status()
+        if existing.json():
+            return jsonify({"ok": False, "error": "DEVICE_ALREADY_REGISTERED"}), 409
+
+        device_token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(device_token.encode("utf-8")).hexdigest()
+        inserted = requests.post(
+            f"{SUPABASE_URL}/rest/v1/iot_core_devices",
+            headers={**_iot_headers(), "Prefer": "return=representation"},
+            json={
+                "project_id": project_id,
+                "device_key": device_key,
+                "display_name": display_name,
+                "device_type": device_type,
+                "hardware_model": hardware_model,
+                "role": role,
+                "status": "pending",
+                "firmware_version": firmware_version,
+                "token_hash": token_hash,
+                "capabilities": capabilities,
+                "metadata": metadata,
+            },
+            timeout=8,
+        )
+        if inserted.status_code == 409:
+            return jsonify({"ok": False, "error": "DEVICE_ALREADY_REGISTERED"}), 409
+        inserted.raise_for_status()
+        rows = inserted.json()
+        if not rows:
+            raise RuntimeError("Device insert returned no representation")
+
+        global _iot_registry_last_sync
+        _iot_registry_last_sync = 0
+        return jsonify({
+            "ok": True,
+            "device_id": device_key,
+            "status": "pending",
+            "device_token": device_token,
+            "message": "Store this token securely; it will not be shown again.",
+        }), 201
+    except Exception as exc:
+        print(f"[SAFE_ELEC_V1] device registration failed: {type(exc).__name__}")
+        return jsonify({"ok": False, "error": "DEVICE_REGISTRATION_FAILED"}), 503
+
+
+@app.route("/api/v1/safe-elec/devices/heartbeat", methods=["POST"])
+@device_api_required
+def v1_device_heartbeat():
+    data = request.get_json(silent=True) or {}
+    device_id = str(data.get("device_id", "")).strip()
+    record = _iot_device_record(device_id)
+    if not record or record.get("status") in ("disabled", "revoked"):
+        return jsonify({"ok": False, "error": "DEVICE_NOT_ACTIVE"}), 403
+
+    update = {"status": "online", "last_seen_at": datetime.now().astimezone().isoformat()}
+    firmware_version = data.get("firmware_version")
+    if isinstance(firmware_version, str) and len(firmware_version) <= 80:
+        update["firmware_version"] = firmware_version
+    capabilities = data.get("capabilities")
+    if isinstance(capabilities, dict):
+        update["capabilities"] = capabilities
+    metadata = data.get("metadata")
+    if isinstance(metadata, dict):
+        update["metadata"] = metadata
+
+    try:
+        saved = requests.patch(
+            f"{SUPABASE_URL}/rest/v1/iot_core_devices",
+            headers={**_iot_headers(), "Prefer": "return=minimal"},
+            params={"id": f"eq.{record['id']}", "project_id": f"eq.{record['project_id']}"},
+            json=update,
+            timeout=8,
+        )
+        saved.raise_for_status()
+        return jsonify({"ok": True, "device_id": device_id, "status": "online"}), 200
+    except Exception as exc:
+        print(f"[SAFE_ELEC_V1] heartbeat failed: {type(exc).__name__}")
+        return jsonify({"ok": False, "error": "HEARTBEAT_SAVE_FAILED"}), 503
+
+
+# Versioned telemetry contract. v1 remains backward-compatible; v2 adds
+# per-measurement provenance and explicit missing/fault states.
+TELEMETRY_V2_QUALITIES = {
+    "valid", "not_installed", "no_data", "sensor_fault",
+    "out_of_range", "uncalibrated", "estimated"
+}
+
+def validate_telemetry_v2(payload):
+    """Validate measurement metadata without assuming any sensor is installed."""
+    measurements = payload.get("measurements")
+    if not isinstance(measurements, dict) or not measurements:
+        return "MEASUREMENTS_OBJECT_REQUIRED"
+    if len(measurements) > 500:
+        return "TOO_MANY_MEASUREMENTS"
+
+    for metric, item in measurements.items():
+        if not isinstance(metric, str) or not metric or len(metric) > 100:
+            return "INVALID_MEASUREMENT_NAME"
+        if not isinstance(item, dict):
+            return "MEASUREMENT_MUST_BE_OBJECT"
+        quality = item.get("quality")
+        if quality not in TELEMETRY_V2_QUALITIES:
+            return "INVALID_MEASUREMENT_QUALITY"
+        unit = item.get("unit")
+        if not isinstance(unit, str) or not unit.strip() or len(unit) > 24:
+            return "MEASUREMENT_UNIT_REQUIRED"
+        value = item.get("value")
+        if quality == "valid":
+            if (isinstance(value, bool) or not isinstance(value, (int, float))
+                    or not math.isfinite(value)):
+                return "VALID_MEASUREMENT_REQUIRES_FINITE_NUMERIC_VALUE"
+        elif value is not None:
+            return "NON_VALID_MEASUREMENT_VALUE_MUST_BE_NULL"
+
+        accuracy = item.get("accuracy")
+        if accuracy is not None:
+            if (isinstance(accuracy, bool) or not isinstance(accuracy, (int, float))
+                    or not math.isfinite(accuracy) or accuracy < 0):
+                return "INVALID_MEASUREMENT_ACCURACY"
+        sensor_status = item.get("sensor_status")
+        if sensor_status is not None and sensor_status not in (
+            "installed", "not_installed", "fault", "unknown"
+        ):
+            return "INVALID_SENSOR_STATUS"
+        observed_at = item.get("observed_at")
+        if observed_at is not None:
+            if not isinstance(observed_at, str):
+                return "INVALID_MEASUREMENT_TIMESTAMP"
+            try:
+                datetime.fromisoformat(observed_at.replace("Z", "+00:00"))
+            except ValueError:
+                return "INVALID_MEASUREMENT_TIMESTAMP"
+        calibrated_at = item.get("calibrated_at")
+        if calibrated_at is not None:
+            if not isinstance(calibrated_at, str):
+                return "INVALID_CALIBRATION_TIMESTAMP"
+            try:
+                datetime.fromisoformat(calibrated_at.replace("Z", "+00:00"))
+            except ValueError:
+                return "INVALID_CALIBRATION_TIMESTAMP"
+        sensor = item.get("sensor")
+        if sensor is not None:
+            if not isinstance(sensor, dict):
+                return "SENSOR_METADATA_MUST_BE_OBJECT"
+            for text_key in ("id", "model", "manufacturer", "measurement_method"):
+                text_value = sensor.get(text_key)
+                if text_value is not None and (
+                    not isinstance(text_value, str) or len(text_value) > 120
+                ):
+                    return "INVALID_SENSOR_METADATA"
+    return None
+
+
+@app.route("/api/v1/safe-elec/telemetry", methods=["POST"])
+@device_api_required
+def v1_receive_telemetry():
+    if request.content_length is not None and request.content_length > 262144:
+        return jsonify({"ok": False, "error": "PAYLOAD_TOO_LARGE"}), 413
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"ok": False, "error": "JSON_OBJECT_REQUIRED"}), 400
+    device_id = str(data.get("device_id", "")).strip()
+    payload = data.get("payload")
+    schema_version = data.get("schema_version", 1)
+    if not isinstance(payload, dict):
+        return jsonify({"ok": False, "error": "PAYLOAD_MUST_BE_OBJECT"}), 400
+    if type(schema_version) is not int or schema_version < 1 or schema_version > 100:
+        return jsonify({"ok": False, "error": "INVALID_SCHEMA_VERSION"}), 400
+    if schema_version >= 2:
+        validation_error = validate_telemetry_v2(payload)
+        if validation_error:
+            return jsonify({"ok": False, "error": validation_error}), 400
+
+    observed_at_raw = data.get("observed_at")
+    try:
+        observed_at = datetime.fromisoformat(observed_at_raw.replace("Z", "+00:00")) if observed_at_raw else datetime.now().astimezone()
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "INVALID_OBSERVED_AT"}), 400
+
+    persisted = persist_iot_telemetry(device_id, payload, observed_at, schema_version=schema_version)
+    if persisted is not True:
+        return jsonify({"ok": False, "error": "TELEMETRY_PERSISTENCE_FAILED"}), 503
+    return jsonify({
+        "ok": True,
+        "device_id": device_id,
+        "schema_version": schema_version,
+        "received_at": datetime.now().astimezone().isoformat(),
+    }), 201
+
+
 @app.route("/admin/test-email")
 def test_email():
     if "username" not in session:
