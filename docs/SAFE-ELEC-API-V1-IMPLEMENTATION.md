@@ -1,6 +1,6 @@
 # SAFE-ELEC API v1 — Non-breaking implementation plan
 
-Status: design baseline only. This document does not change runtime behavior, database rows, firmware, or deployment.
+Status: partial implementation on an isolated branch. Three device-facing API v1 routes have been added to main.py. No database rows/schema, firmware, or deployment have been changed.
 
 ## 1. Confirmed current state
 
@@ -20,9 +20,9 @@ All new device endpoints require `X-Device-Token`. All new administrative provis
 
 | Method | Route | Purpose | Authentication |
 |---|---|---|---|
-| POST | `/api/v1/safe-elec/devices/register` | Provision a device; issue a token once | Provisioning token |
-| POST | `/api/v1/safe-elec/devices/heartbeat` | Update online/firmware/capability status | Device token |
-| POST | `/api/v1/safe-elec/telemetry` | Store versioned telemetry | Device token |
+| POST | `/api/v1/safe-elec/devices/register` | Provision a device; issue a token once | Provisioning token | **Implemented on branch** |
+| POST | `/api/v1/safe-elec/devices/heartbeat` | Update online/firmware/capability status | Device token | **Implemented on branch** |
+| POST | `/api/v1/safe-elec/telemetry` | Store versioned telemetry | Device token | **Implemented on branch** |
 | GET | `/api/v1/safe-elec/config` | Fetch device configuration | Device token |
 | GET | `/api/v1/safe-elec/devices` | List registered devices, paginated | Dashboard session |
 | GET | `/api/v1/safe-elec/readings` | Read paginated telemetry for one device | Dashboard session |
@@ -31,6 +31,16 @@ All new device endpoints require `X-Device-Token`. All new administrative provis
 | POST | `/api/v1/safe-elec/devices/commands/ack` | Acknowledge command result | Device token |
 
 Response conventions: JSON; `ok`; stable machine-readable `error`; `schema_version`; timestamps in ISO-8601 UTC. List endpoints use cursor or bounded page/limit (default 50, maximum 200). Never return token hashes.
+
+
+### Implemented route behavior (branch only)
+
+- Registration requires the Render-only `SAFE_ELEC_PROVISIONING_TOKEN` via `X-Provisioning-Token`; it validates the project is active, enforces the existing `(project_id, device_key)` unique constraint, stores only SHA-256 token hash, and returns the raw token once.
+- Heartbeat and telemetry use `X-Device-Token` through the existing token validator. Disabled/revoked devices are rejected.
+- Telemetry writes the provided `schema_version` to the matching database column, not into the payload object.
+- The existing DB already has the unique device key constraint and indexes for device/status and telemetry time queries. Do not add duplicate indexes without query-plan evidence.
+- RLS currently provides owner-scoped SELECT policies for projects/devices/telemetry/commands and owner-scoped command INSERT. Device and telemetry writes from these routes use the Render service-role key only; never expose it to a client.
+- No automated tests or Actions workflow runs were found for the latest branch commit. These routes have not yet been runtime-tested against a staging project.
 
 ## 3. Registry and scale requirements
 
@@ -69,4 +79,4 @@ The meter app must retain its own URL and its existing room, electricity, water,
 
 ## 7. Release gate
 
-This branch is not production-ready until the code changes, automated tests, database migration review, RLS review, and simulated-device test all pass. No production deployment is authorized by this document.
+This branch is not production-ready until Python syntax/import checks, route-level tests (including invalid/missing tokens), duplicate registration tests, a simulated third-device test, and staging persistence checks pass. No production deployment is authorized by this document.
