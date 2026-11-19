@@ -42,6 +42,60 @@ Response conventions: JSON; `ok`; stable machine-readable `error`; `schema_versi
 - RLS currently provides owner-scoped SELECT policies for projects/devices/telemetry/commands and owner-scoped command INSERT. Device and telemetry writes from these routes use the Render service-role key only; never expose it to a client.
 - No automated tests or Actions workflow runs were found for the latest branch commit. These routes have not yet been runtime-tested against a staging project.
 
+## 2A. Versioned telemetry measurement contract
+
+The device telemetry route accepts legacy schema v1 unchanged. Schema v2 requires a top-level `payload.measurements` object. Each metric is keyed by a stable machine name and contains:
+
+```json
+{
+  "schema_version": 2,
+  "device_id": "DEVICE-KEY",
+  "observed_at": "2026-11-19T07:00:00Z",
+  "payload": {
+    "measurements": {
+      "voltage_l1_n": {
+        "value": 230.4,
+        "unit": "V",
+        "quality": "valid",
+        "accuracy": 1.0,
+        "sensor_status": "installed",
+        "observed_at": "2026-11-19T07:00:00Z",
+        "calibrated_at": "2026-01-01T00:00:00Z",
+        "sensor": {
+          "model": "meter-model",
+          "measurement_method": "true_rms"
+        }
+      },
+      "earth_resistance": {
+        "value": null,
+        "unit": "ohm",
+        "quality": "not_installed",
+        "sensor_status": "not_installed"
+      }
+    },
+    "device": {
+      "firmware_version": "1.0.0",
+      "uptime_seconds": 86400,
+      "free_heap_bytes": 120000,
+      "wifi_rssi_dbm": -58
+    }
+  }
+}
+```
+
+Allowed quality states: `valid`, `not_installed`, `no_data`, `sensor_fault`, `out_of_range`, `uncalibrated`, and `estimated`. Only `valid` measurements may carry a numeric value; other states must use JSON null. Units are mandatory. Accuracy, sensor identity/model, measurement method, observation timestamp and calibration timestamp are optional metadata fields. The API validates structure and types; it does not certify sensor accuracy, calibration, electrical safety, or IEC conformity.
+
+Suggested metric families (send only what the installed hardware can actually measure):
+- AC electrical: phase-neutral and phase-phase voltage, phase/neutral current, active/reactive/apparent power, power factor, frequency, import/export energy and demand.
+- Power quality: dips, swells, interruptions, voltage/current unbalance, harmonics/THD, flicker and rapid voltage changes, only with suitable metering hardware and sampling.
+- Protection/safety: PE continuity, earth resistance, insulation resistance, leakage current, RCD/RCBO and breaker state, phase sequence/loss, SPD status and arc-fault indication, only with dedicated rated instruments/sensors.
+- Environment: panel/terminal temperature, humidity, smoke/gas, water ingress, enclosure door and vibration.
+- Device health: uptime, free heap, supply status, RSSI, restart count, firmware version, sensor health, heartbeat and failover state.
+
+Site nominal voltage and alarm thresholds must be configured for the installation and instrument. Do not treat 220/380 V or 230/400 V as universal thresholds. IEC-aligned monitoring requires suitable calibrated instruments and measurement methods; this API alone is not an IEC certification.
+
+The branch implementation rejects oversized v1/v2 requests and validates v2 measurement names, units, quality/value combinations, accuracy types, sensor metadata and timestamps before persistence. Existing v1 payloads and legacy `POST /api/data` are retained for migration compatibility. Dashboard mapping of v2 measurement payloads, firmware implementation, hardware-specific acquisition and runtime tests remain separate rollout work.
+
 ## 3. Registry and scale requirements
 
 - Database registry is authoritative; do not hardcode a maximum number of devices.
