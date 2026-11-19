@@ -335,21 +335,21 @@ TEMPLATE = {
     "is_online": False, "status_summary": "offline",
     "last_alert_sent": None,
     "role": "UNKNOWN", "is_master": False,
-    "backup_active": False, "partner_online": True, "partner_id": "",
+    "backup_active": False, "partner_online": False, "partner_id": "",
     "current_temp": 0.0, "humidity": 0.0, "power_status": "MAIN AC",
     "wiring_fault": False, "critical_shutdown": False,
-    "relay_state": True, "safety_lock": False,
-    "v_l1_l2": 380.0, "v_l2_l3": 380.0, "v_l3_l1": 380.0,
+    "relay_state": False, "safety_lock": False,
+    "v_l1_l2": 0.0, "v_l2_l3": 0.0, "v_l3_l1": 0.0,
     "a_l1": 0.0, "a_l2": 0.0, "a_l3": 0.0, "a_n": 0.0,
-    "power_kw": 0.0, "balance_3ph_ok": True,
-    "z1_v": 220.0, "z1_a": 0.0, "z1_w": 0.0,
-    "z2_v": 220.0, "z2_a": 0.0, "z2_w": 0.0,
-    "z3_v": 220.0, "z3_a": 0.0, "z3_w": 0.0,
-    "z4_v": 220.0, "z4_a": 0.0, "z4_w": 0.0,   # ✅ เพิ่ม
-    "z5_v": 220.0, "z5_a": 0.0, "z5_w": 0.0,   # ✅ เพิ่ม
-    "z6_v": 220.0, "z6_a": 0.0, "z6_w": 0.0,  
-    "z_total_a": 0.0, "z_balance_ok": True,
-    "gnd_resistance_ohm": 0.0, "gnd_voltage_v": 0.0, "gnd_system_ok": True,
+    "power_kw": 0.0, "balance_3ph_ok": None,
+    "z1_v": 0.0, "z1_a": 0.0, "z1_w": 0.0,
+    "z2_v": 0.0, "z2_a": 0.0, "z2_w": 0.0,
+    "z3_v": 0.0, "z3_a": 0.0, "z3_w": 0.0,
+    "z4_v": 0.0, "z4_a": 0.0, "z4_w": 0.0,   # ✅ เพิ่ม
+    "z5_v": 0.0, "z5_a": 0.0, "z5_w": 0.0,   # ✅ เพิ่ม
+    "z6_v": 0.0, "z6_a": 0.0, "z6_w": 0.0,  
+    "z_total_a": 0.0, "z_balance_ok": None,
+    "gnd_resistance_ohm": 0.0, "gnd_voltage_v": 0.0, "gnd_system_ok": None,
     "sensors": {
         "temp": {"name": "อุณหภูมิตู้", "value": 0.0, "ok": None},
         "humidity": {"name": "ความชื้น", "value": 0.0, "ok": None},
@@ -668,7 +668,7 @@ def check_ground(dev):
 
 def check_balance(i1, i2, i3):
     total = i1 + i2 + i3
-    if total <= 0: return True
+    if total <= 0: return None
     avg = total / 3
     for v in [i1, i2, i3]:
         if abs(v - avg) > CONFIG["STANDARD"]["BALANCE_MAX_A"]: return False
