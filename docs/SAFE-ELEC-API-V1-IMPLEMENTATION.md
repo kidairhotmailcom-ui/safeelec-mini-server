@@ -18,7 +18,7 @@ Status: partial implementation on an isolated branch. Three device-facing API v1
 
 All new device endpoints require `X-Device-Token`. All new administrative provisioning endpoints require a separate server-side `SAFE_ELEC_PROVISIONING_TOKEN`. Never place either secret in browser code or public repository files.
 
-| Method | Route | Purpose | Authentication |
+| Method | Route | Purpose | Authentication | Status |
 |---|---|---|---|
 | POST | `/api/v1/safe-elec/devices/register` | Provision a device; issue a token once | Provisioning token | **Implemented on branch** |
 | POST | `/api/v1/safe-elec/devices/heartbeat` | Update online/firmware/capability status | Device token | **Implemented on branch** |
