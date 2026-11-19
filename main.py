@@ -165,7 +165,7 @@ def sync_iot_device_registry():
     except Exception as exc:
         print(f"[IOT_CORE] registry sync failed: {type(exc).__name__}")
 
-def persist_iot_telemetry(device_key, payload, observed_at):
+def persist_iot_telemetry(device_key, payload, observed_at, schema_version=1):
     if not _iot_enabled():
         return None
     record = _iot_device_record(device_key)
@@ -182,6 +182,7 @@ def persist_iot_telemetry(device_key, payload, observed_at):
                 "project_id": project_id,
                 "device_id": record["id"],
                 "observed_at": timestamp,
+                "schema_version": schema_version,
                 "payload": payload,
                 "quality": {"transport": "https", "auth": "device_token"},
             },
@@ -1597,10 +1598,7 @@ def v1_receive_telemetry():
     except (TypeError, ValueError):
         return jsonify({"ok": False, "error": "INVALID_OBSERVED_AT"}), 400
 
-    persisted = persist_iot_telemetry(device_id, {
-        **payload,
-        "_schema_version": schema_version,
-    }, observed_at)
+    persisted = persist_iot_telemetry(device_id, payload, observed_at, schema_version=schema_version)
     if persisted is not True:
         return jsonify({"ok": False, "error": "TELEMETRY_PERSISTENCE_FAILED"}), 503
     return jsonify({
