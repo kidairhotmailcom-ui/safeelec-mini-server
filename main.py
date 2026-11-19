@@ -13,6 +13,7 @@ import hmac
 import hashlib
 import time
 import secrets
+import math
 from functools import wraps
 
 # ==============================
@@ -1608,14 +1609,16 @@ def validate_telemetry_v2(payload):
             return "MEASUREMENT_UNIT_REQUIRED"
         value = item.get("value")
         if quality == "valid":
-            if isinstance(value, bool) or not isinstance(value, (int, float)):
-                return "VALID_MEASUREMENT_REQUIRES_NUMERIC_VALUE"
+            if (isinstance(value, bool) or not isinstance(value, (int, float))
+                    or not math.isfinite(value)):
+                return "VALID_MEASUREMENT_REQUIRES_FINITE_NUMERIC_VALUE"
         elif value is not None:
             return "NON_VALID_MEASUREMENT_VALUE_MUST_BE_NULL"
 
         accuracy = item.get("accuracy")
         if accuracy is not None:
-            if isinstance(accuracy, bool) or not isinstance(accuracy, (int, float)) or accuracy < 0:
+            if (isinstance(accuracy, bool) or not isinstance(accuracy, (int, float))
+                    or not math.isfinite(accuracy) or accuracy < 0):
                 return "INVALID_MEASUREMENT_ACCURACY"
         sensor_status = item.get("sensor_status")
         if sensor_status is not None and sensor_status not in (
