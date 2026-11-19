@@ -21,6 +21,153 @@ DEVICE_TOKENS = json.loads(
     os.environ.get("DEVICE_TOKENS_JSON", "{}")
 )
 
+# Supabase IoT Core: service-role key is server-side only (never expose to firmware/browser).
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+IOT_PROJECT_KEY = os.environ.get("IOT_PROJECT_KEY", "safe-elec-v4-2")
+_iot_project_cache = {"id": None, "checked_at": 0}
+_iot_registry_last_sync = 0
+
+def _iot_headers():
+    return {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+    }
+
+def _iot_enabled():
+    return bool(SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)
+
+def _iot_project_id():
+    if not _iot_enabled():
+        return None
+    if _iot_project_cache["id"] and time.time() - _iot_project_cache["checked_at"] < 300:
+        return _iot_project_cache["id"]
+    try:
+        res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/iot_core_projects",
+            headers=_iot_headers(),
+            params={"project_key": f"eq.{IOT_PROJECT_KEY}", "select": "id", "limit": "1"},
+            timeout=8,
+        )
+        res.raise_for_status()
+        rows = res.json()
+        project_id = rows[0]["id"] if rows else None
+        _iot_project_cache.update({"id": project_id, "checked_at": time.time()})
+        return project_id
+    except Exception as exc:
+        print(f"[IOT_CORE] project lookup failed: {type(exc).__name__}")
+        return None
+
+def _iot_device_record(device_key):
+    project_id = _iot_project_id()
+    if not project_id:
+        return None
+    try:
+        res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/iot_core_devices",
+            headers=_iot_headers(),
+            params={
+                "project_id": f"eq.{project_id}",
+                "device_key": f"eq.{device_key}",
+                "select": "id,project_id,device_key,display_name,role,status,token_hash,metadata,capabilities",
+                "limit": "1",
+            },
+            timeout=8,
+        )
+        res.raise_for_status()
+        rows = res.json()
+        return rows[0] if rows else None
+    except Exception as exc:
+        print(f"[IOT_CORE] device lookup failed: {type(exc).__name__}")
+        return None
+
+def _iot_token_valid(device_key, token):
+    record = _iot_device_record(device_key)
+    if not record or record.get("status") in ("disabled", "revoked"):
+        return False
+    token_hash = record.get("token_hash")
+    if not token_hash:
+        return False
+    digest = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    return hmac.compare_digest(digest, token_hash)
+
+def sync_iot_device_registry():
+    global _iot_registry_last_sync
+    if not _iot_enabled() or time.time() - _iot_registry_last_sync < 30:
+        return
+    project_id = _iot_project_id()
+    if not project_id:
+        return
+    try:
+        res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/iot_core_devices",
+            headers=_iot_headers(),
+            params={
+                "project_id": f"eq.{project_id}",
+                "status": "not.in.(disabled,revoked)",
+                "select": "device_key,display_name,role,status,metadata,last_seen_at",
+                "order": "registered_at.asc",
+            },
+            timeout=8,
+        )
+        res.raise_for_status()
+        rows = res.json()
+        for row in rows:
+            key = row["device_key"]
+            dev = next((item for item in devices if item.get("device_id") == key), None)
+            if dev is None:
+                dev = copy.deepcopy(TEMPLATE)
+                dev["device_id"] = key
+                devices.append(dev)
+            meta = row.get("metadata") or {}
+            dev["site_name"] = meta.get("site_name") or row.get("display_name") or key
+            dev["site_type"] = meta.get("site_type") or "office"
+            dev["province"] = meta.get("province") or ""
+            dev["role"] = (row.get("role") or "standalone").upper()
+            dev["is_master"] = dev["role"] == "MASTER"
+            dev["registered_status"] = row.get("status")
+        _iot_registry_last_sync = time.time()
+        print(f"[IOT_CORE] registry synced: {len(rows)} device(s)")
+    except Exception as exc:
+        print(f"[IOT_CORE] registry sync failed: {type(exc).__name__}")
+
+def persist_iot_telemetry(device_key, payload, observed_at):
+    if not _iot_enabled():
+        return None
+    record = _iot_device_record(device_key)
+    if not record or record.get("status") in ("disabled", "revoked"):
+        print(f"[IOT_CORE] telemetry rejected: device not registered ({device_key})")
+        return False
+    project_id = record["project_id"]
+    timestamp = observed_at.astimezone().isoformat() if observed_at.tzinfo else observed_at.astimezone().isoformat()
+    try:
+        telemetry = requests.post(
+            f"{SUPABASE_URL}/rest/v1/iot_core_telemetry",
+            headers={**_iot_headers(), "Prefer": "return=minimal"},
+            json={
+                "project_id": project_id,
+                "device_id": record["id"],
+                "observed_at": timestamp,
+                "payload": payload,
+                "quality": {"transport": "https", "auth": "device_token"},
+            },
+            timeout=8,
+        )
+        telemetry.raise_for_status()
+        device_update = requests.patch(
+            f"{SUPABASE_URL}/rest/v1/iot_core_devices",
+            headers={**_iot_headers(), "Prefer": "return=minimal"},
+            params={"id": f"eq.{record['id']}"},
+            json={"status": "online", "last_seen_at": timestamp},
+            timeout=8,
+        )
+        device_update.raise_for_status()
+        return True
+    except Exception as exc:
+        print(f"[IOT_CORE] telemetry persistence failed: {type(exc).__name__}")
+        return False
+
 def device_api_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -35,17 +182,13 @@ def device_api_required(fn):
         token = request.headers.get("X-Device-Token", "")
         expected = DEVICE_TOKENS.get(device_id)
 
-        if not device_id or not expected:
-            return jsonify({
-                "ok": False,
-                "error": "UNKNOWN_DEVICE"
-            }), 401
+        if not device_id or not token:
+            return jsonify({"ok": False, "error": "UNKNOWN_DEVICE"}), 401
 
-        if not hmac.compare_digest(token, expected):
-            return jsonify({
-                "ok": False,
-                "error": "INVALID_DEVICE_TOKEN"
-            }), 401
+        env_token_valid = bool(expected and hmac.compare_digest(token, expected))
+        db_token_valid = False if env_token_valid else _iot_token_valid(device_id, token)
+        if not (env_token_valid or db_token_valid):
+            return jsonify({"ok": False, "error": "INVALID_DEVICE_TOKEN"}), 401
 
         return fn(*args, **kwargs)
 
@@ -696,6 +839,7 @@ def check_login():
 @app.before_request
 def update_online():
     now = datetime.now()
+    sync_iot_device_registry()
     for d in devices:
         if d["last_seen"]:
             sec = (now - d["last_seen"]).total_seconds()
@@ -766,6 +910,9 @@ def receive():
     d["last_seen"] = now
     d["is_online"] = True
     d = check_all(d)
+    persisted = persist_iot_telemetry(dev_id, normalized, now)
+    if persisted is False:
+        return jsonify({"ok": False, "error": "IOT_CORE_PERSISTENCE_FAILED"}), 503
     return jsonify({
         "ok": True,
         "device_id": dev_id,
