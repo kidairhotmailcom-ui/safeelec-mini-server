@@ -1580,17 +1580,96 @@ def v1_device_heartbeat():
         return jsonify({"ok": False, "error": "HEARTBEAT_SAVE_FAILED"}), 503
 
 
+# Versioned telemetry contract. v1 remains backward-compatible; v2 adds
+# per-measurement provenance and explicit missing/fault states.
+TELEMETRY_V2_QUALITIES = {
+    "valid", "not_installed", "no_data", "sensor_fault",
+    "out_of_range", "uncalibrated", "estimated"
+}
+
+def validate_telemetry_v2(payload):
+    """Validate measurement metadata without assuming any sensor is installed."""
+    measurements = payload.get("measurements")
+    if not isinstance(measurements, dict) or not measurements:
+        return "MEASUREMENTS_OBJECT_REQUIRED"
+    if len(measurements) > 500:
+        return "TOO_MANY_MEASUREMENTS"
+
+    for metric, item in measurements.items():
+        if not isinstance(metric, str) or not metric or len(metric) > 100:
+            return "INVALID_MEASUREMENT_NAME"
+        if not isinstance(item, dict):
+            return "MEASUREMENT_MUST_BE_OBJECT"
+        quality = item.get("quality")
+        if quality not in TELEMETRY_V2_QUALITIES:
+            return "INVALID_MEASUREMENT_QUALITY"
+        unit = item.get("unit")
+        if not isinstance(unit, str) or not unit.strip() or len(unit) > 24:
+            return "MEASUREMENT_UNIT_REQUIRED"
+        value = item.get("value")
+        if quality == "valid":
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                return "VALID_MEASUREMENT_REQUIRES_NUMERIC_VALUE"
+        elif value is not None:
+            return "NON_VALID_MEASUREMENT_VALUE_MUST_BE_NULL"
+
+        accuracy = item.get("accuracy")
+        if accuracy is not None:
+            if isinstance(accuracy, bool) or not isinstance(accuracy, (int, float)) or accuracy < 0:
+                return "INVALID_MEASUREMENT_ACCURACY"
+        sensor_status = item.get("sensor_status")
+        if sensor_status is not None and sensor_status not in (
+            "installed", "not_installed", "fault", "unknown"
+        ):
+            return "INVALID_SENSOR_STATUS"
+        observed_at = item.get("observed_at")
+        if observed_at is not None:
+            if not isinstance(observed_at, str):
+                return "INVALID_MEASUREMENT_TIMESTAMP"
+            try:
+                datetime.fromisoformat(observed_at.replace("Z", "+00:00"))
+            except ValueError:
+                return "INVALID_MEASUREMENT_TIMESTAMP"
+        calibrated_at = item.get("calibrated_at")
+        if calibrated_at is not None:
+            if not isinstance(calibrated_at, str):
+                return "INVALID_CALIBRATION_TIMESTAMP"
+            try:
+                datetime.fromisoformat(calibrated_at.replace("Z", "+00:00"))
+            except ValueError:
+                return "INVALID_CALIBRATION_TIMESTAMP"
+        sensor = item.get("sensor")
+        if sensor is not None:
+            if not isinstance(sensor, dict):
+                return "SENSOR_METADATA_MUST_BE_OBJECT"
+            for text_key in ("id", "model", "manufacturer", "measurement_method"):
+                text_value = sensor.get(text_key)
+                if text_value is not None and (
+                    not isinstance(text_value, str) or len(text_value) > 120
+                ):
+                    return "INVALID_SENSOR_METADATA"
+    return None
+
+
 @app.route("/api/v1/safe-elec/telemetry", methods=["POST"])
 @device_api_required
 def v1_receive_telemetry():
-    data = request.get_json(silent=True) or {}
+    if request.content_length is not None and request.content_length > 262144:
+        return jsonify({"ok": False, "error": "PAYLOAD_TOO_LARGE"}), 413
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"ok": False, "error": "JSON_OBJECT_REQUIRED"}), 400
     device_id = str(data.get("device_id", "")).strip()
     payload = data.get("payload")
     schema_version = data.get("schema_version", 1)
     if not isinstance(payload, dict):
         return jsonify({"ok": False, "error": "PAYLOAD_MUST_BE_OBJECT"}), 400
-    if not isinstance(schema_version, int) or schema_version < 1 or schema_version > 100:
+    if type(schema_version) is not int or schema_version < 1 or schema_version > 100:
         return jsonify({"ok": False, "error": "INVALID_SCHEMA_VERSION"}), 400
+    if schema_version >= 2:
+        validation_error = validate_telemetry_v2(payload)
+        if validation_error:
+            return jsonify({"ok": False, "error": validation_error}), 400
 
     observed_at_raw = data.get("observed_at")
     try:
