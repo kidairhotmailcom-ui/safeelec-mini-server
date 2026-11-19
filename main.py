@@ -10,6 +10,7 @@ import io
 import os
 import json  
 import hmac
+import hashlib
 import time
 from functools import wraps
 
