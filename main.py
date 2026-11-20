@@ -22,6 +22,10 @@ DEVICE_TOKENS = json.loads(
     os.environ.get("DEVICE_TOKENS_JSON", "{}")
 )
 
+# Dedicated read-only integration credential for PETCHNAKA JARVIS CORE.
+# Keep this separate from ESP32 DEVICE_TOKENS_JSON.
+JARVIS_INTEGRATION_TOKEN = os.environ.get("JARVIS_INTEGRATION_TOKEN", "").strip()
+
 # Supabase IoT Core: service-role key is server-side only (never expose to firmware/browser).
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
@@ -843,6 +847,10 @@ def check_login():
     if request.path == "/api/device/command" and request.method == "GET":
         return
 
+    # JARVIS has its own token-protected read-only integration endpoint.
+    if request.path == "/api/jarvis/v1/health" and request.method == "GET":
+        return
+
     # เส้นทางที่ไม่ต้อง Login
     if request.path in [
         "/", "/login", "/do_login", "/logout",
@@ -868,6 +876,65 @@ def update_online():
         check_all(d)
 
 # ===== หน้าแรก =====
+def jarvis_api_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not JARVIS_INTEGRATION_TOKEN:
+            return jsonify({"ok": False, "error": "JARVIS_INTEGRATION_NOT_CONFIGURED"}), 503
+        supplied = request.headers.get("X-Jarvis-Integration-Token", "")
+        if not supplied:
+            auth = request.headers.get("Authorization", "")
+            if auth.startswith("Bearer "):
+                supplied = auth[7:].strip()
+        if not supplied or not hmac.compare_digest(supplied, JARVIS_INTEGRATION_TOKEN):
+            return jsonify({"ok": False, "error": "UNAUTHORIZED"}), 401
+        return fn(*args, **kwargs)
+    return wrapper
+
+
+@app.route("/api/jarvis/v1/health", methods=["GET"])
+@jarvis_api_required
+def jarvis_integration_health():
+    project_id = _iot_project_id() if _iot_enabled() else None
+    device_rows = []
+    for dev in devices:
+        device_rows.append({
+            "device_id": dev.get("device_id"),
+            "role": dev.get("role"),
+            "is_online": bool(dev.get("is_online")),
+            "status": dev.get("status_summary"),
+            "alert_level": dev.get("alert_level"),
+            "last_seen": dev["last_seen"].astimezone().isoformat() if dev.get("last_seen") else None,
+            "last_updated": dev.get("last_updated"),
+            "backup_active": bool(dev.get("backup_active")),
+            "partner_online": bool(dev.get("partner_online")),
+            "fault_list": list(dev.get("fault_list") or []),
+            "current_temp": dev.get("current_temp"),
+            "humidity": dev.get("humidity"),
+            "v_l1_l2": dev.get("v_l1_l2"),
+            "v_l2_l3": dev.get("v_l2_l3"),
+            "v_l3_l1": dev.get("v_l3_l1"),
+            "a_l1": dev.get("a_l1"),
+            "a_l2": dev.get("a_l2"),
+            "a_l3": dev.get("a_l3"),
+            "power_kw": dev.get("power_kw"),
+            "relay_state": dev.get("relay_state"),
+            "safety_lock": dev.get("safety_lock"),
+            "firmware_version": dev.get("firmware_version"),
+        })
+    return jsonify({
+        "ok": True,
+        "service": "SAFE-ELEC",
+        "integration": "JARVIS CONNECTOR V1",
+        "read_only": True,
+        "server_time": datetime.now().astimezone().isoformat(),
+        "iot_core_configured": _iot_enabled(),
+        "iot_project_connected": bool(project_id),
+        "registered_devices_loaded": len(devices),
+        "devices": device_rows,
+    }), 200
+
+
 @app.route("/health", methods=["GET"])
 def health():
     project_id = _iot_project_id() if _iot_enabled() else None
