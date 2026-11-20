@@ -110,7 +110,7 @@ def sync_iot_device_registry():
             params={
                 "project_id": f"eq.{project_id}",
                 "status": "not.in.(disabled,revoked)",
-                "select": "device_key,display_name,role,status,metadata,last_seen_at",
+                "select": "device_key,display_name,role,status,metadata,last_seen_at,firmware_version,ip_address,connection_type",
                 "order": "registered_at.asc",
             },
             timeout=8,
@@ -131,6 +131,9 @@ def sync_iot_device_registry():
             dev["role"] = (row.get("role") or "standalone").upper()
             dev["is_master"] = dev["role"] == "MASTER"
             dev["registered_status"] = row.get("status")
+            dev["firmware_version"] = row.get("firmware_version") or dev.get("firmware_version") or ""
+            dev["ip_address"] = str(row.get("ip_address") or "")
+            dev["connection_type"] = row.get("connection_type") or ""
         _iot_registry_last_sync = time.time()
         print(f"[IOT_CORE] registry synced: {len(rows)} device(s)")
     except Exception as exc:
@@ -163,7 +166,17 @@ def persist_iot_telemetry(device_key, payload, observed_at):
             f"{SUPABASE_URL}/rest/v1/iot_core_devices",
             headers={**_iot_headers(), "Prefer": "return=minimal"},
             params={"id": f"eq.{record['id']}"},
-            json={"status": "online", "last_seen_at": timestamp},
+            device_patch = {"status": "online", "last_seen_at": timestamp}
+            firmware_version = payload.get("firmware_version")
+            ip_address = payload.get("ip_address") or payload.get("local_ip")
+            connection_type = payload.get("connection_type")
+            if firmware_version:
+                device_patch["firmware_version"] = str(firmware_version)[:80]
+            if ip_address:
+                device_patch["ip_address"] = str(ip_address)[:64]
+            if connection_type:
+                device_patch["connection_type"] = str(connection_type)[:40]
+            json=device_patch,
             timeout=8,
         )
         device_update.raise_for_status()
@@ -285,6 +298,7 @@ FIELD_MAP = {
     "psu_status": "power_status", "relay": "relay_state",
     "relay_state": "relay_state", "lock": "safety_lock",
     "safety_lock": "safety_lock",
+    "local_ip": "ip_address", "ip": "ip_address",
     "sens_current": "sens_current",
     "sens_temp": "sens_temp",
     "sens_volt": "sens_volt",
@@ -301,6 +315,7 @@ TEMPLATE = {
     "device_id": "", "site_name": "", "customer_id": "",
     "province": "", "site_type": "",
     "last_updated": "-", "last_seen": None,
+    "ip_address": "", "firmware_version": "", "connection_type": "",
     "is_online": False, "status_summary": "offline",
     "last_alert_sent": None,
     "role": "UNKNOWN", "is_master": False,
@@ -831,7 +846,7 @@ def check_login():
     # เส้นทางที่ไม่ต้อง Login
     if request.path in [
         "/", "/login", "/do_login", "/logout",
-        "/api/devices", "/api/report-excel"
+        "/api/devices", "/api/report-excel", "/health"
     ]:
         return
 
