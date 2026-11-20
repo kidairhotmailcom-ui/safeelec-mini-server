@@ -162,20 +162,20 @@ def persist_iot_telemetry(device_key, payload, observed_at):
             timeout=8,
         )
         telemetry.raise_for_status()
+        device_patch = {"status": "online", "last_seen_at": timestamp}
+        firmware_version = payload.get("firmware_version")
+        ip_address = payload.get("ip_address") or payload.get("local_ip")
+        connection_type = payload.get("connection_type")
+        if firmware_version:
+            device_patch["firmware_version"] = str(firmware_version)[:80]
+        if ip_address:
+            device_patch["ip_address"] = str(ip_address)[:64]
+        if connection_type:
+            device_patch["connection_type"] = str(connection_type)[:40]
         device_update = requests.patch(
             f"{SUPABASE_URL}/rest/v1/iot_core_devices",
             headers={**_iot_headers(), "Prefer": "return=minimal"},
             params={"id": f"eq.{record['id']}"},
-            device_patch = {"status": "online", "last_seen_at": timestamp}
-            firmware_version = payload.get("firmware_version")
-            ip_address = payload.get("ip_address") or payload.get("local_ip")
-            connection_type = payload.get("connection_type")
-            if firmware_version:
-                device_patch["firmware_version"] = str(firmware_version)[:80]
-            if ip_address:
-                device_patch["ip_address"] = str(ip_address)[:64]
-            if connection_type:
-                device_patch["connection_type"] = str(connection_type)[:40]
             json=device_patch,
             timeout=8,
         )
