@@ -375,7 +375,7 @@ TEMPLATE = {
         "gnd_volt": {"name": "กราวด์-แรงดันรั่ว", "value": 0.0, "unit": "V", "ok": None},
         "dualmode": {"name": "ระบบคู่ขนาน", "value": "รอข้อมูล", "ok": None},
         "sens_current": {"name": "เซ็นเซอร์กระแส", "value": "รอข้อมูล", "ok": None},
-        "sens_temp": {"name": "เซ็นเซอร์อุณหภูมิ", "value": "รอข้อมูล", "ok": None},
+        "sens_temp": {"name": "เซ็นเซอร์อุณหภูมิ", "value": "รอข้อมูล", "unit": "°C", "ok": None},
         "sens_volt": {"name": "เซ็นเซอร์แรงดัน", "value": "รอข้อมูล", "ok": None},
         "sens_heat": {"name": "เซ็นเซอร์ความร้อน", "value": "รอข้อมูล", "ok": None},
         "sens_ground": {"name": "เซ็นเซอร์กราวด์", "value": "รอข้อมูล", "ok": None},
@@ -760,13 +760,18 @@ def check_all(dev):
     
     for key, name in sensors_list:
         val = dev["sensors"][key]["value"]
-        if val == "ปกติ" or val is True:
+        # Keep real numeric telemetry visible; do not replace it with "รอข้อมูล".
+        if isinstance(val, (int, float)) and not isinstance(val, bool):
+            dev["sensors"][key]["ok"] = True
+        elif val == "ปกติ" or val is True:
             dev["sensors"][key]["ok"] = True
             dev["sensors"][key]["value"] = "ปกติ"
         elif val in ["เสีย", "ผิดปกติ", False]:
             dev["sensors"][key]["ok"] = False
             dev["sensors"][key]["value"] = "เสีย"
             faults.append(f"❌ {name} ทำงานผิดปกติ")
+        elif val not in (None, "", "รอข้อมูล"):
+            dev["sensors"][key]["ok"] = None
         else:
             dev["sensors"][key]["ok"] = None
             dev["sensors"][key]["value"] = "รอข้อมูล"
@@ -1018,6 +1023,25 @@ def receive():
     for k, v in normalized.items():
         if k in d and k not in ["sensors", "fault_list"]:
             d[k] = v
+    # Copy sensor telemetry into the exact structure consumed by the dashboard
+    # before check_all() evaluates sensor status.
+    for sensor_key in ("sens_current", "sens_temp", "sens_volt", "sens_heat", "sens_ground"):
+        if sensor_key not in normalized:
+            continue
+        sensor_value = normalized[sensor_key]
+        if isinstance(sensor_value, bool):
+            d["sensors"][sensor_key]["value"] = sensor_value
+        elif isinstance(sensor_value, (int, float)):
+            d["sensors"][sensor_key]["value"] = sensor_value
+        elif sensor_value is None or sensor_value == "":
+            d["sensors"][sensor_key]["value"] = "รอข้อมูล"
+        else:
+            # Firmware may encode numeric readings as JSON strings.
+            try:
+                numeric_value = float(str(sensor_value).strip())
+                d["sensors"][sensor_key]["value"] = numeric_value
+            except (TypeError, ValueError):
+                d["sensors"][sensor_key]["value"] = sensor_value
     d["last_updated"] = now.strftime("%H:%M:%S")
     d["last_seen"] = now
     d["is_online"] = True
@@ -1399,7 +1423,7 @@ function render(list){
               .filter(([k]) => k.startsWith('sens_'))
               .map(([k, s]) => `
                 <div class="item ${s.ok === true ? 'ok' : s.ok === false ? 'dang' : 'warn'}">
-                  ${getSensorIcon(s)} ${s.name}<br><b>${s.value}</b>
+                  ${getSensorIcon(s)} ${s.name}<br><b>${s.value}${s.unit ? " " + s.unit : ""}</b>
                 </div>`
               ).join('')}
           </div>
