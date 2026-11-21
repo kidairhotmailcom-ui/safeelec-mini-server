@@ -853,7 +853,14 @@ def check_login():
         return
 
     # Firmware device bridge endpoints authenticate through JARVIS CORE (integration + device token).
-    if request.path in ["/api/jarvis/v1/firmware/pending", "/api/jarvis/v1/firmware/claim", "/api/jarvis/v1/firmware/status"]:
+    if request.path in [
+        "/api/jarvis/v1/firmware/pending",
+        "/api/jarvis/v1/firmware/claim",
+        "/api/jarvis/v1/firmware/status",
+        "/api/jarvis/v1/firmware/relay/pending",
+        "/api/jarvis/v1/firmware/relay/claim",
+        "/api/jarvis/v1/firmware/relay/status",
+    ]:
         return
 
     # เส้นทางที่ไม่ต้อง Login
