@@ -1774,6 +1774,72 @@ def jarvis_firmware_download(update_id):
 
 
 
+
+@app.route("/api/jarvis/v1/firmware/backup/pending", methods=["GET"])
+@device_api_required
+def jarvis_firmware_backup_pending():
+    device_id = request.args.get("device_id", "").strip()
+    if device_id != "SAFE-001":
+        return jsonify({"ok": False, "error": "MASTER_BRIDGE_ONLY"}), 403
+    _, status, body = _jarvis_firmware_proxy(
+        "GET", "/api/jarvis/v1/safe-elec/firmware/bridge/backup/pending?device_id=SAFE-001",
+        device_token=request.headers.get("X-Device-Token", "")
+    )
+    return jsonify(body or {"ok": False, "error": "JARVIS_RESPONSE_UNAVAILABLE"}), status
+
+
+@app.route("/api/jarvis/v1/firmware/backup/claim", methods=["POST"])
+@device_api_required
+def jarvis_firmware_backup_claim():
+    data = request.get_json(silent=True) or {}
+    device_id = str(data.get("device_id", "")).strip()
+    if device_id != "SAFE-001":
+        return jsonify({"ok": False, "error": "MASTER_BRIDGE_ONLY"}), 403
+    _, status, body = _jarvis_firmware_proxy(
+        "POST", "/api/jarvis/v1/safe-elec/firmware/bridge/backup/claim",
+        {"device_id": device_id, "update_id": data.get("update_id")},
+        device_token=request.headers.get("X-Device-Token", "")
+    )
+    return jsonify(body or {"ok": False, "error": "JARVIS_RESPONSE_UNAVAILABLE"}), status
+
+
+@app.route("/api/jarvis/v1/firmware/backup/status", methods=["POST"])
+@device_api_required
+def jarvis_firmware_backup_status():
+    data = request.get_json(silent=True) or {}
+    device_id = str(data.get("device_id", "")).strip()
+    if device_id != "SAFE-001":
+        return jsonify({"ok": False, "error": "MASTER_BRIDGE_ONLY"}), 403
+    _, status, body = _jarvis_firmware_proxy(
+        "POST", "/api/jarvis/v1/safe-elec/firmware/bridge/backup/status",
+        {"device_id": device_id, "update_id": data.get("update_id"),
+         "status": data.get("status"), "message": data.get("message", "")},
+        device_token=request.headers.get("X-Device-Token", "")
+    )
+    return jsonify(body or {"ok": False, "error": "JARVIS_RESPONSE_UNAVAILABLE"}), status
+
+
+@app.route("/api/jarvis/v1/firmware/backup/download/<update_id>", methods=["GET"])
+@device_api_required
+def jarvis_firmware_backup_download(update_id):
+    device_id = request.args.get("device_id", "").strip()
+    if device_id != "SAFE-001" or not update_id:
+        return jsonify({"ok": False, "error": "MASTER_BRIDGE_ONLY"}), 403
+    upstream, status, body = _jarvis_firmware_proxy(
+        "GET", "/api/jarvis/v1/safe-elec/firmware/bridge/backup/download/" +
+        update_id + "?device_id=SAFE-001",
+        device_token=request.headers.get("X-Device-Token", ""), binary=True
+    )
+    if status != 200 or upstream is None:
+        return jsonify(body or {"ok": False, "error": "BACKUP_FIRMWARE_DOWNLOAD_FAILED"}), status
+    firmware = upstream.content
+    if not firmware or len(firmware) > 0x140000:
+        return jsonify({"ok": False, "error": "BACKUP_FIRMWARE_SIZE_INVALID"}), 502
+    return Response(firmware, status=200, mimetype="application/octet-stream",
+        headers={"Content-Length": str(len(firmware)), "Cache-Control": "no-store",
+                 "X-Content-Type-Options": "nosniff"})
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
