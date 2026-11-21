@@ -25,6 +25,7 @@ DEVICE_TOKENS = json.loads(
 # Dedicated read-only integration credential for PETCHNAKA JARVIS CORE.
 # Keep this separate from ESP32 DEVICE_TOKENS_JSON.
 JARVIS_INTEGRATION_TOKEN = os.environ.get("JARVIS_INTEGRATION_TOKEN", "").strip()
+JARVIS_CORE_API_URL = os.environ.get("JARVIS_CORE_API_URL", "https://petchnikka-jarvis-core.onrender.com").strip().rstrip("/")
 
 # Supabase IoT Core: service-role key is server-side only (never expose to firmware/browser).
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
@@ -138,6 +139,21 @@ def sync_iot_device_registry():
             dev["firmware_version"] = row.get("firmware_version") or dev.get("firmware_version") or ""
             dev["ip_address"] = str(row.get("ip_address") or "")
             dev["connection_type"] = row.get("connection_type") or ""
+
+            # Rehydrate the live heartbeat after a server restart from IoT Core.
+            # Without this, update_online() below sees last_seen=None and marks
+            # an actually-online ESP32 as offline on every dashboard/API request.
+            seen_value = row.get("last_seen_at")
+            if seen_value:
+                try:
+                    parsed_seen = datetime.fromisoformat(str(seen_value).replace("Z", "+00:00"))
+                    if parsed_seen.tzinfo:
+                        parsed_seen = parsed_seen.astimezone().replace(tzinfo=None)
+                    dev["last_seen"] = parsed_seen
+                    dev["last_updated"] = parsed_seen.strftime("%H:%M:%S")
+                    dev["is_online"] = (datetime.now() - parsed_seen).total_seconds() < CONFIG["STANDARD"]["OFFLINE_SEC"]
+                except (TypeError, ValueError):
+                    pass
         _iot_registry_last_sync = time.time()
         print(f"[IOT_CORE] registry synced: {len(rows)} device(s)")
     except Exception as exc:
@@ -851,6 +867,17 @@ def check_login():
     if request.path == "/api/jarvis/v1/health" and request.method == "GET":
         return
 
+    # Firmware device bridge endpoints authenticate through JARVIS CORE (integration + device token).
+    if request.path in [
+        "/api/jarvis/v1/firmware/pending",
+        "/api/jarvis/v1/firmware/claim",
+        "/api/jarvis/v1/firmware/status",
+        "/api/jarvis/v1/firmware/relay/pending",
+        "/api/jarvis/v1/firmware/relay/claim",
+        "/api/jarvis/v1/firmware/relay/status",
+    ]:
+        return
+
     # เส้นทางที่ไม่ต้อง Login
     if request.path in [
         "/", "/login", "/do_login", "/logout",
@@ -933,6 +960,141 @@ def jarvis_integration_health():
         "registered_devices_loaded": len(devices),
         "devices": device_rows,
     }), 200
+
+
+def _jarvis_firmware_proxy(method, device_id, action, payload=None):
+    if device_id not in {"SAFE-001", "SAFE-001-BAK"}:
+        return jsonify({"ok": False, "error": "INVALID_DEVICE_ID"}), 400
+    if not JARVIS_INTEGRATION_TOKEN or len(JARVIS_INTEGRATION_TOKEN) < 32:
+        return jsonify({"ok": False, "error": "JARVIS_INTEGRATION_NOT_CONFIGURED"}), 503
+    device_token = request.headers.get("X-Device-Token", "")
+    if not isinstance(device_token, str) or not 32 <= len(device_token) <= 256:
+        return jsonify({"ok": False, "error": "INVALID_DEVICE_CREDENTIAL"}), 401
+
+    url = (
+        JARVIS_CORE_API_URL
+        + "/api/jarvis/v1/safe-elec/firmware/device/"
+        + device_id
+        + "/"
+        + action
+    )
+    headers = {
+        "Authorization": "Bearer " + JARVIS_INTEGRATION_TOKEN,
+        "X-Device-Token": device_token,
+        "Accept": "application/json",
+    }
+    try:
+        upstream = requests.request(
+            method,
+            url,
+            headers=headers,
+            json=payload if payload is not None else None,
+            timeout=10,
+        )
+        body = upstream.json() if upstream.content else {}
+        if not isinstance(body, dict):
+            body = {"ok": False, "error": "INVALID_JARVIS_RESPONSE"}
+        return jsonify(body), upstream.status_code
+    except requests.RequestException as exc:
+        print("[JARVIS FIRMWARE BRIDGE] upstream unavailable: " + type(exc).__name__)
+        return jsonify({"ok": False, "error": "JARVIS_UPSTREAM_UNAVAILABLE"}), 502
+
+
+@app.route("/api/jarvis/v1/firmware/pending", methods=["GET"])
+def jarvis_firmware_pending():
+    device_id = request.args.get("device_id", "")
+    return _jarvis_firmware_proxy("GET", device_id, "pending")
+
+
+@app.route("/api/jarvis/v1/firmware/claim", methods=["POST"])
+def jarvis_firmware_claim():
+    data = request.get_json(silent=True) or {}
+    device_id = data.get("device_id", "")
+    update_id = data.get("update_id", "")
+    if not isinstance(update_id, str) or not update_id:
+        return jsonify({"ok": False, "error": "INVALID_CLAIM_REQUEST"}), 400
+    return _jarvis_firmware_proxy(
+        "POST", device_id, "claim", {"update_id": update_id}
+    )
+
+
+@app.route("/api/jarvis/v1/firmware/status", methods=["POST"])
+def jarvis_firmware_status():
+    data = request.get_json(silent=True) or {}
+    device_id = data.get("device_id", "")
+    update_id = data.get("update_id", "")
+    status = data.get("status", "")
+    message = data.get("message", "")
+    if not isinstance(update_id, str) or not update_id:
+        return jsonify({"ok": False, "error": "INVALID_UPDATE_STATUS"}), 400
+    if status not in {"receiving", "verified", "completed", "failed"}:
+        return jsonify({"ok": False, "error": "INVALID_UPDATE_STATUS"}), 400
+    return _jarvis_firmware_proxy(
+        "POST", device_id, "status",
+        {"update_id": update_id, "status": status, "message": str(message)[:240]}
+    )
+
+
+def _jarvis_firmware_relay_proxy(method, action, payload=None):
+    # MASTER token authenticates the relay transport; JARVIS keeps the target fixed to BACKUP.
+    if not JARVIS_INTEGRATION_TOKEN or len(JARVIS_INTEGRATION_TOKEN) < 32:
+        return jsonify({"ok": False, "error": "JARVIS_INTEGRATION_NOT_CONFIGURED"}), 503
+    device_token = request.headers.get("X-Device-Token", "")
+    if not isinstance(device_token, str) or not 32 <= len(device_token) <= 256:
+        return jsonify({"ok": False, "error": "INVALID_DEVICE_CREDENTIAL"}), 401
+    url = (
+        JARVIS_CORE_API_URL
+        + "/api/jarvis/v1/safe-elec/firmware/device/SAFE-001/relay/SAFE-001-BAK/"
+        + action
+    )
+    headers = {
+        "Authorization": "Bearer " + JARVIS_INTEGRATION_TOKEN,
+        "X-Device-Token": device_token,
+        "Accept": "application/json",
+    }
+    try:
+        upstream = requests.request(
+            method, url, headers=headers,
+            json=payload if payload is not None else None,
+            timeout=10,
+        )
+        body = upstream.json() if upstream.content else {}
+        if not isinstance(body, dict):
+            body = {"ok": False, "error": "INVALID_JARVIS_RESPONSE"}
+        return jsonify(body), upstream.status_code
+    except requests.RequestException as exc:
+        print("[JARVIS FIRMWARE RELAY] upstream unavailable: " + type(exc).__name__)
+        return jsonify({"ok": False, "error": "JARVIS_UPSTREAM_UNAVAILABLE"}), 502
+
+
+@app.route("/api/jarvis/v1/firmware/relay/pending", methods=["GET"])
+def jarvis_firmware_relay_pending():
+    return _jarvis_firmware_relay_proxy("GET", "pending")
+
+
+@app.route("/api/jarvis/v1/firmware/relay/claim", methods=["POST"])
+def jarvis_firmware_relay_claim():
+    data = request.get_json(silent=True) or {}
+    update_id = data.get("update_id", "")
+    if not isinstance(update_id, str) or not update_id:
+        return jsonify({"ok": False, "error": "INVALID_CLAIM_REQUEST"}), 400
+    return _jarvis_firmware_relay_proxy("POST", "claim", {"update_id": update_id})
+
+
+@app.route("/api/jarvis/v1/firmware/relay/status", methods=["POST"])
+def jarvis_firmware_relay_status():
+    data = request.get_json(silent=True) or {}
+    update_id = data.get("update_id", "")
+    status = data.get("status", "")
+    message = data.get("message", "")
+    if not isinstance(update_id, str) or not update_id:
+        return jsonify({"ok": False, "error": "INVALID_UPDATE_STATUS"}), 400
+    if status not in {"receiving", "verified", "completed", "failed"}:
+        return jsonify({"ok": False, "error": "INVALID_UPDATE_STATUS"}), 400
+    return _jarvis_firmware_relay_proxy(
+        "POST", "status",
+        {"update_id": update_id, "status": status, "message": str(message)[:240]}
+    )
 
 
 @app.route("/health", methods=["GET"])
@@ -1407,6 +1569,8 @@ async function toggleRelay(deviceId, zone) {
 }
 load();
 document.getElementById('q').addEventListener('input', applyFilterAndRender);
+// Refresh device status and telemetry without requiring a manual page reload.
+setInterval(load, 5000);
 </script>
 </body>
 </html>
@@ -1514,47 +1678,29 @@ device_ota_status = {}
 
 @app.route("/api/ota/check", methods=["GET"])
 def ota_check():
-    device_id = request.args.get("device_id")
-    current_version = request.args.get("version", "0.0.0")
-    if not device_id:
-        return jsonify({"error": "Missing device_id"}), 400
-    has_update = FIRMWARE_INFO["version"] != current_version
-    device_ota_status[device_id] = {
-        "current_version": current_version,
-        "latest_version": FIRMWARE_INFO["version"],
-        "last_check": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "status": "pending" if has_update else "up_to_date"
-    }
     return jsonify({
-        "has_update": has_update,
-        "latest_version": FIRMWARE_INFO["version"],
-        "download_url": f"/api/ota/download/{FIRMWARE_INFO['filename']}" if has_update else None,
-        "changelog": FIRMWARE_INFO["changelog"]
-    })
+        "ok": False,
+        "error": "LEGACY_OTA_DISABLED",
+        "message": "Firmware updates require JARVIS authorization."
+    }), 410
+
 
 @app.route("/api/ota/download/<filename>", methods=["GET"])
 def ota_download(filename):
-    try:
-        return send_from_directory(FIRMWARE_FOLDER, filename, as_attachment=True)
-    except Exception as e:
-        print(f"[OTA] Download error: {e}")
-        return jsonify({"error": "File not found"}), 404
+    return jsonify({
+        "ok": False,
+        "error": "LEGACY_OTA_DISABLED",
+        "message": "Unsigned firmware downloads are blocked."
+    }), 410
+
 
 @app.route("/api/ota/result", methods=["POST"])
 def ota_result():
-    data = request.get_json() or {}
-    device_id = data.get("device_id")
-    status = data.get("status")
-    version = data.get("version")
-    message = data.get("message", "")
-    if device_id and device_id in device_ota_status:
-        device_ota_status[device_id].update({
-            "status": status, "version": version,
-            "message": message,
-            "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        })
-    print(f"[OTA] {device_id} | {status} | v{version} | {message}")
-    return jsonify({"ok": True})
+    return jsonify({
+        "ok": False,
+        "error": "LEGACY_OTA_DISABLED",
+        "message": "Unsigned OTA result callbacks are not accepted."
+    }), 410
 
 @app.route("/api/ota/status", methods=["GET"])
 def ota_status():

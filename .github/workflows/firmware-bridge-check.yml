@@ -1,0 +1,32 @@
+name: SAFE-ELEC Mini Server Firmware Bridge Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'main.py'
+      - 'requirements.txt'
+      - 'tests/test_firmware_bridge.py'
+      - '.github/workflows/firmware-bridge-check.yml'
+  push:
+    branches: [feature/jarvis-firmware-bridge-20261121]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  firmware-bridge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Compile Mini Server
+        run: python -m py_compile main.py
+      - name: Test JARVIS firmware bridge
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
