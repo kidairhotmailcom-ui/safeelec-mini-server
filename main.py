@@ -25,7 +25,7 @@ DEVICE_TOKENS = json.loads(
 # Dedicated read-only integration credential for PETCHNAKA JARVIS CORE.
 # Keep this separate from ESP32 DEVICE_TOKENS_JSON.
 JARVIS_INTEGRATION_TOKEN = os.environ.get("JARVIS_INTEGRATION_TOKEN", "").strip()
-JARVIS_CORE_API_URL = os.environ.get("JARVIS_CORE_API_URL", "https://petchnikka-jarvis-core.onrender.com").strip().rstrip("/")
+JARVIS_CORE_API_URL = os.environ.get("JARVIS_CORE_API_URL", "https://petchnikka-jarvis-core-1.onrender.com").strip().rstrip("/")
 
 # Supabase IoT Core: service-role key is server-side only (never expose to firmware/browser).
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
