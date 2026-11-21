@@ -139,6 +139,21 @@ def sync_iot_device_registry():
             dev["firmware_version"] = row.get("firmware_version") or dev.get("firmware_version") or ""
             dev["ip_address"] = str(row.get("ip_address") or "")
             dev["connection_type"] = row.get("connection_type") or ""
+
+            # Rehydrate the live heartbeat after a server restart from IoT Core.
+            # Without this, update_online() below sees last_seen=None and marks
+            # an actually-online ESP32 as offline on every dashboard/API request.
+            seen_value = row.get("last_seen_at")
+            if seen_value:
+                try:
+                    parsed_seen = datetime.fromisoformat(str(seen_value).replace("Z", "+00:00"))
+                    if parsed_seen.tzinfo:
+                        parsed_seen = parsed_seen.astimezone().replace(tzinfo=None)
+                    dev["last_seen"] = parsed_seen
+                    dev["last_updated"] = parsed_seen.strftime("%H:%M:%S")
+                    dev["is_online"] = (datetime.now() - parsed_seen).total_seconds() < CONFIG["STANDARD"]["OFFLINE_SEC"]
+                except (TypeError, ValueError):
+                    pass
         _iot_registry_last_sync = time.time()
         print(f"[IOT_CORE] registry synced: {len(rows)} device(s)")
     except Exception as exc:
@@ -1554,6 +1569,8 @@ async function toggleRelay(deviceId, zone) {
 }
 load();
 document.getElementById('q').addEventListener('input', applyFilterAndRender);
+// Refresh device status and telemetry without requiring a manual page reload.
+setInterval(load, 5000);
 </script>
 </body>
 </html>
