@@ -92,9 +92,18 @@ def sync_safe_elec_device_registry():
                     parsed=datetime.fromisoformat(str(seen).replace("Z","+00:00"))
                     if parsed.tzinfo: parsed=parsed.astimezone().replace(tzinfo=None)
                     dev["last_seen"]=parsed; dev["last_updated"]=parsed.strftime("%H:%M:%S")
-                    dev["is_online"]=(datetime.now()-parsed).total_seconds()<CONFIG["STANDARD"]["OFFLINE_SEC"]
-                except (TypeError,ValueError): dev["is_online"]=False
-            else: dev["last_seen"]=None; dev["is_online"]=False
+                    online_now=(datetime.now()-parsed).total_seconds()<CONFIG["STANDARD"]["OFFLINE_SEC"]
+                    dev["is_online"]=online_now
+                except (TypeError,ValueError):
+                    online_now=False; dev["is_online"]=False
+            else:
+                dev["last_seen"]=None; online_now=False; dev["is_online"]=False
+            if bool(row.get("is_online")) != online_now:
+                try:
+                    requests.patch(f"{SUPABASE_URL}/rest/v1/safe_elec_devices",headers={**_db_headers(),"Prefer":"return=minimal"},
+                      params={"device_id":f"eq.{key}"},json={"is_online":online_now,"updated_at":datetime.now().astimezone().isoformat()},timeout=5).raise_for_status()
+                except Exception as exc:
+                    print(f"[SAFE_ELEC] online-state persistence failed: {type(exc).__name__}")
         _safe_elec_registry_last_sync=time.time()
         print(f"[SAFE_ELEC] registry synced: {len(rows)} device(s)")
     except Exception as exc: print(f"[SAFE_ELEC] registry sync failed: {type(exc).__name__}")
