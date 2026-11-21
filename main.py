@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template_string, session, redirect, url_for, send_file
+from flask import Flask, request, jsonify, render_template_string, session, redirect, url_for, send_file, Response
 from flask_cors import CORS
 from datetime import datetime
 import requests
@@ -25,6 +25,7 @@ DEVICE_TOKENS = json.loads(
 # Dedicated read-only integration credential for PETCHNAKA JARVIS CORE.
 # Keep this separate from ESP32 DEVICE_TOKENS_JSON.
 JARVIS_INTEGRATION_TOKEN = os.environ.get("JARVIS_INTEGRATION_TOKEN", "").strip()
+JARVIS_CORE_API_URL = os.environ.get("JARVIS_CORE_API_URL", "https://petchnikka-jarvis-core.onrender.com").strip().rstrip("/")
 
 # Supabase IoT Core: service-role key is server-side only (never expose to firmware/browser).
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
@@ -871,6 +872,10 @@ def check_login():
     if request.path == "/api/jarvis/v1/health" and request.method == "GET":
         return
 
+    # Device-token protected OTA bridge routes; authentication is enforced by device_api_required.
+    if request.path.startswith("/api/jarvis/v1/firmware/"):
+        return
+
     # เส้นทางที่ไม่ต้อง Login
     if request.path in [
         "/", "/login", "/do_login", "/logout",
@@ -1554,55 +1559,35 @@ device_ota_status = {}
 
 @app.route("/api/ota/check", methods=["GET"])
 def ota_check():
-    device_id = request.args.get("device_id")
-    current_version = request.args.get("version", "0.0.0")
-    if not device_id:
-        return jsonify({"error": "Missing device_id"}), 400
-    has_update = FIRMWARE_INFO["version"] != current_version
-    device_ota_status[device_id] = {
-        "current_version": current_version,
-        "latest_version": FIRMWARE_INFO["version"],
-        "last_check": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "status": "pending" if has_update else "up_to_date"
-    }
     return jsonify({
-        "has_update": has_update,
-        "latest_version": FIRMWARE_INFO["version"],
-        "download_url": f"/api/ota/download/{FIRMWARE_INFO['filename']}" if has_update else None,
-        "changelog": FIRMWARE_INFO["changelog"]
-    })
+        "ok": False,
+        "error": "LEGACY_OTA_DISABLED",
+        "message": "Firmware updates require JARVIS signed authorization."
+    }), 410
 
 @app.route("/api/ota/download/<filename>", methods=["GET"])
 def ota_download(filename):
-    try:
-        return send_from_directory(FIRMWARE_FOLDER, filename, as_attachment=True)
-    except Exception as e:
-        print(f"[OTA] Download error: {e}")
-        return jsonify({"error": "File not found"}), 404
+    return jsonify({
+        "ok": False,
+        "error": "LEGACY_OTA_DISABLED",
+        "message": "Unsigned firmware downloads are blocked."
+    }), 410
 
 @app.route("/api/ota/result", methods=["POST"])
 def ota_result():
-    data = request.get_json() or {}
-    device_id = data.get("device_id")
-    status = data.get("status")
-    version = data.get("version")
-    message = data.get("message", "")
-    if device_id and device_id in device_ota_status:
-        device_ota_status[device_id].update({
-            "status": status, "version": version,
-            "message": message,
-            "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        })
-    print(f"[OTA] {device_id} | {status} | v{version} | {message}")
-    return jsonify({"ok": True})
+    return jsonify({
+        "ok": False,
+        "error": "LEGACY_OTA_DISABLED",
+        "message": "Unsigned OTA result callbacks are not accepted."
+    }), 410
 
 @app.route("/api/ota/status", methods=["GET"])
 def ota_status():
     return jsonify({
-        "firmware_latest": FIRMWARE_INFO,
-        "total_devices": len(device_ota_status),
-        "devices": device_ota_status
-    })
+        "ok": False,
+        "error": "LEGACY_OTA_DISABLED",
+        "managed_by": "PETCHNIKKA-JARVIS-CORE"
+    }), 410
 
 @app.route("/ota")
 def ota_page():
@@ -1676,13 +1661,10 @@ def ota_page():
         </div>
 
         <div class="box">
-            <h3>📌 วิธีเผยแพร่เวอร์ชันใหม่</h3>
-            <ol>
-                <li>สร้างโฟลเดอร์ชื่อ <code>firmware</code> ไว้ข้างๆ ไฟล์ main.py</li>
-                <li>นำไฟล์ .bin จาก Arduino IDE ไปวางในโฟลเดอร์นั้น</li>
-                <li>แก้ค่า FIRMWARE_INFO ให้ตรงกับชื่อไฟล์และเวอร์ชัน</li>
-                <li>บันทึกและอัปโหลดขึ้นเซิร์ฟเวอร์ — เสร็จ!</li>
-            </ol>
+            <h3>🔒 Firmware OTA ผ่าน JARVIS</h3>
+            <p>การอัปโหลดและอนุมัติ Firmware ต้องดำเนินการผ่าน PETCHNIKKA JARVIS CORE เท่านั้น</p>
+            <p>ระบบจะตรวจลายเซ็น ES256, Device ID, Role, Nonce, วันหมดอายุ และ SHA-256 ก่อนอนุญาตให้บอร์ดดาวน์โหลด</p>
+            <p><a href="https://petchnikka-jarvis-core.onrender.com/command-center" target="_blank" rel="noopener">เปิด JARVIS Command Center</a></p>
         </div>
     </body>
     </html>
@@ -1690,6 +1672,108 @@ def ota_page():
 # ==================================================
 # สิ้นสุดระบบ OTA UPDATE
 # ==================================================
+
+# ==================================================
+# JARVIS SIGNED FIRMWARE DEVICE BRIDGE
+# Uses existing JARVIS_INTEGRATION_TOKEN and existing device credentials.
+# ==================================================
+SAFE_ELEC_ALLOWED_DEVICE_IDS = {"SAFE-001", "SAFE-001-BAK"}
+
+def _jarvis_firmware_proxy(method, path, payload=None, device_token=None, binary=False):
+    if not JARVIS_INTEGRATION_TOKEN or len(JARVIS_INTEGRATION_TOKEN) < 32:
+        return None, 503, {"ok": False, "error": "JARVIS_INTEGRATION_NOT_CONFIGURED"}
+    if not isinstance(device_token, str) or len(device_token) < 32 or len(device_token) > 256:
+        return None, 401, {"ok": False, "error": "INVALID_DEVICE_CREDENTIAL"}
+    headers = {
+        "Authorization": "Bearer " + JARVIS_INTEGRATION_TOKEN,
+        "X-Device-Token": device_token,
+        "Accept": "application/octet-stream" if binary else "application/json",
+    }
+    try:
+        response = requests.request(
+            method, JARVIS_CORE_API_URL + path, headers=headers,
+            json=payload if payload is not None else None,
+            timeout=(8, 45 if binary else 15), allow_redirects=False
+        )
+        if binary and response.ok:
+            return response, response.status_code, None
+        try:
+            body = response.json()
+        except Exception:
+            body = {"ok": False, "error": "JARVIS_INVALID_RESPONSE"}
+        return response, response.status_code, body
+    except requests.Timeout:
+        return None, 504, {"ok": False, "error": "JARVIS_REQUEST_TIMEOUT"}
+    except requests.RequestException:
+        return None, 502, {"ok": False, "error": "JARVIS_CONNECTION_FAILED"}
+
+
+@app.route("/api/jarvis/v1/firmware/pending", methods=["GET"])
+@device_api_required
+def jarvis_firmware_pending():
+    device_id = request.args.get("device_id", "").strip()
+    if device_id not in SAFE_ELEC_ALLOWED_DEVICE_IDS:
+        return jsonify({"ok": False, "error": "INVALID_DEVICE_ID"}), 400
+    _, status, body = _jarvis_firmware_proxy(
+        "GET", "/api/jarvis/v1/safe-elec/firmware/device/" + device_id + "/pending",
+        device_token=request.headers.get("X-Device-Token", "")
+    )
+    return jsonify(body or {"ok": False, "error": "JARVIS_RESPONSE_UNAVAILABLE"}), status
+
+
+@app.route("/api/jarvis/v1/firmware/claim", methods=["POST"])
+@device_api_required
+def jarvis_firmware_claim():
+    data = request.get_json(silent=True) or {}
+    device_id = str(data.get("device_id", "")).strip()
+    if device_id not in SAFE_ELEC_ALLOWED_DEVICE_IDS:
+        return jsonify({"ok": False, "error": "INVALID_DEVICE_ID"}), 400
+    _, status, body = _jarvis_firmware_proxy(
+        "POST", "/api/jarvis/v1/safe-elec/firmware/device/" + device_id + "/claim",
+        {"update_id": data.get("update_id")},
+        device_token=request.headers.get("X-Device-Token", "")
+    )
+    return jsonify(body or {"ok": False, "error": "JARVIS_RESPONSE_UNAVAILABLE"}), status
+
+
+@app.route("/api/jarvis/v1/firmware/status", methods=["POST"])
+@device_api_required
+def jarvis_firmware_status():
+    data = request.get_json(silent=True) or {}
+    device_id = str(data.get("device_id", "")).strip()
+    if device_id not in SAFE_ELEC_ALLOWED_DEVICE_IDS:
+        return jsonify({"ok": False, "error": "INVALID_DEVICE_ID"}), 400
+    _, status, body = _jarvis_firmware_proxy(
+        "POST", "/api/jarvis/v1/safe-elec/firmware/device/" + device_id + "/status",
+        {"device_id": device_id, "update_id": data.get("update_id"),
+         "status": data.get("status"), "message": data.get("message", "")},
+        device_token=request.headers.get("X-Device-Token", "")
+    )
+    return jsonify(body or {"ok": False, "error": "JARVIS_RESPONSE_UNAVAILABLE"}), status
+
+
+@app.route("/api/jarvis/v1/firmware/download/<update_id>", methods=["GET"])
+@device_api_required
+def jarvis_firmware_download(update_id):
+    device_id = request.args.get("device_id", "").strip()
+    if device_id not in SAFE_ELEC_ALLOWED_DEVICE_IDS or not update_id:
+        return jsonify({"ok": False, "error": "INVALID_FIRMWARE_DOWNLOAD_REQUEST"}), 400
+    upstream, status, body = _jarvis_firmware_proxy(
+        "GET", "/api/jarvis/v1/safe-elec/firmware/device/" + device_id +
+        "/download/" + update_id,
+        device_token=request.headers.get("X-Device-Token", ""), binary=True
+    )
+    if status != 200 or upstream is None:
+        return jsonify(body or {"ok": False, "error": "FIRMWARE_DOWNLOAD_FAILED"}), status
+    firmware = upstream.content
+    if not firmware or len(firmware) > 0x140000:
+        return jsonify({"ok": False, "error": "FIRMWARE_SIZE_INVALID"}), 502
+    return Response(firmware, status=200, mimetype="application/octet-stream",
+        headers={"Content-Length": str(len(firmware)), "Cache-Control": "no-store",
+                 "X-Content-Type-Options": "nosniff"})
+
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
