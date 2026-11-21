@@ -69,10 +69,6 @@ class JarvisFirmwareBridgeTests(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.get_json()["error"], "INVALID_UPDATE_STATUS")
 
-
-if __name__ == "__main__":
-    unittest.main()
-
     @patch("main.requests.request", return_value=FakeResponse())
     def test_master_relay_pending_uses_master_credential_and_fixed_backup_target(self, request_mock):
         response = self.client.get(
@@ -131,3 +127,7 @@ if __name__ == "__main__":
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.get_json()["error"], "INVALID_UPDATE_STATUS")
 
+
+
+if __name__ == "__main__":
+    unittest.main()
