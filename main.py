@@ -1013,6 +1013,68 @@ def jarvis_firmware_status():
     )
 
 
+def _jarvis_firmware_relay_proxy(method, action, payload=None):
+    # MASTER token authenticates the relay transport; JARVIS keeps the target fixed to BACKUP.
+    if not JARVIS_INTEGRATION_TOKEN or len(JARVIS_INTEGRATION_TOKEN) < 32:
+        return jsonify({"ok": False, "error": "JARVIS_INTEGRATION_NOT_CONFIGURED"}), 503
+    device_token = request.headers.get("X-Device-Token", "")
+    if not isinstance(device_token, str) or not 32 <= len(device_token) <= 256:
+        return jsonify({"ok": False, "error": "INVALID_DEVICE_CREDENTIAL"}), 401
+    url = (
+        JARVIS_CORE_API_URL
+        + "/api/jarvis/v1/safe-elec/firmware/device/SAFE-001/relay/SAFE-001-BAK/"
+        + action
+    )
+    headers = {
+        "Authorization": "Bearer " + JARVIS_INTEGRATION_TOKEN,
+        "X-Device-Token": device_token,
+        "Accept": "application/json",
+    }
+    try:
+        upstream = requests.request(
+            method, url, headers=headers,
+            json=payload if payload is not None else None,
+            timeout=10,
+        )
+        body = upstream.json() if upstream.content else {}
+        if not isinstance(body, dict):
+            body = {"ok": False, "error": "INVALID_JARVIS_RESPONSE"}
+        return jsonify(body), upstream.status_code
+    except requests.RequestException as exc:
+        print("[JARVIS FIRMWARE RELAY] upstream unavailable: " + type(exc).__name__)
+        return jsonify({"ok": False, "error": "JARVIS_UPSTREAM_UNAVAILABLE"}), 502
+
+
+@app.route("/api/jarvis/v1/firmware/relay/pending", methods=["GET"])
+def jarvis_firmware_relay_pending():
+    return _jarvis_firmware_relay_proxy("GET", "pending")
+
+
+@app.route("/api/jarvis/v1/firmware/relay/claim", methods=["POST"])
+def jarvis_firmware_relay_claim():
+    data = request.get_json(silent=True) or {}
+    update_id = data.get("update_id", "")
+    if not isinstance(update_id, str) or not update_id:
+        return jsonify({"ok": False, "error": "INVALID_CLAIM_REQUEST"}), 400
+    return _jarvis_firmware_relay_proxy("POST", "claim", {"update_id": update_id})
+
+
+@app.route("/api/jarvis/v1/firmware/relay/status", methods=["POST"])
+def jarvis_firmware_relay_status():
+    data = request.get_json(silent=True) or {}
+    update_id = data.get("update_id", "")
+    status = data.get("status", "")
+    message = data.get("message", "")
+    if not isinstance(update_id, str) or not update_id:
+        return jsonify({"ok": False, "error": "INVALID_UPDATE_STATUS"}), 400
+    if status not in {"receiving", "verified", "completed", "failed"}:
+        return jsonify({"ok": False, "error": "INVALID_UPDATE_STATUS"}), 400
+    return _jarvis_firmware_relay_proxy(
+        "POST", "status",
+        {"update_id": update_id, "status": status, "message": str(message)[:240]}
+    )
+
+
 @app.route("/health", methods=["GET"])
 def health():
     project_id = _iot_project_id() if _iot_enabled() else None
