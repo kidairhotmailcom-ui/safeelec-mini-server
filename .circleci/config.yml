@@ -28,6 +28,17 @@ jobs:
             (response.status_code, payload);
             print("SAFE-ELEC Flask import and health smoke test passed")'
       - run:
+          name: Smoke-test authenticated AUTO IoT read-only endpoint
+          command: >-
+            python -c 'import main; main.JARVIS_INTEGRATION_TOKEN = "circleci-read-only-test-token"; client = main.app.test_client();
+            response = client.get("/api/jarvis/v1/auto-iot/health", headers={"X-Jarvis-Integration-Token": "circleci-read-only-test-token"});
+            payload = response.get_json();
+            assert response.status_code == 200 and payload and payload.get("ok") is True and
+            payload.get("service") == "AUTO IoT PRO" and payload.get("read_only") is True and
+            payload.get("iot_project_connected") is False,
+            (response.status_code, payload);
+            print("AUTO IoT read-only integration endpoint smoke test passed; separate IoT Core binding remains explicitly unconfigured")'
+      - run:
           name: Report validation scope
           command: |
             echo "Python dependency installation: passed"
