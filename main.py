@@ -790,7 +790,7 @@ def check_login():
         return
 
     # JARVIS has its own token-protected read-only integration endpoint.
-    if request.path == "/api/jarvis/v1/health" and request.method == "GET":
+    if request.path in ("/api/jarvis/v1/health", "/api/jarvis/v1/auto-iot/health") and request.method == "GET":
         return
 
     # Device-token protected OTA bridge routes; authentication is enforced by device_api_required.
@@ -877,6 +877,46 @@ def jarvis_integration_health():
         "safe_elec_db_configured": _db_enabled(),
         "safe_elec_project_connected": bool(project_id),
         "registered_devices_loaded": len(devices),
+        "devices": device_rows,
+    }), 200
+
+
+@app.route("/api/jarvis/v1/auto-iot/health", methods=["GET"])
+@jarvis_api_required
+def jarvis_auto_iot_health():
+    """Read-only AUTO IoT PRO view over the existing shared Mini Server."""
+    project_id = _safe_elec_project_id() if _db_enabled() else None
+    device_rows = []
+    for dev in devices:
+        device_rows.append({
+            "device_id": dev.get("device_id"),
+            "role": dev.get("role"),
+            "is_online": bool(dev.get("is_online")),
+            "status": dev.get("status_summary"),
+            "alert_level": dev.get("alert_level"),
+            "last_seen": dev["last_seen"].astimezone().isoformat() if dev.get("last_seen") else None,
+            "last_updated": dev.get("last_updated"),
+            "current_temp": dev.get("current_temp"),
+            "humidity": dev.get("humidity"),
+            "v_l1_l2": dev.get("v_l1_l2"),
+            "v_l2_l3": dev.get("v_l2_l3"),
+            "v_l3_l1": dev.get("v_l3_l1"),
+            "a_l1": dev.get("a_l1"),
+            "a_l2": dev.get("a_l2"),
+            "a_l3": dev.get("a_l3"),
+            "power_kw": dev.get("power_kw"),
+            "firmware_version": dev.get("firmware_version"),
+        })
+    return jsonify({
+        "ok": True,
+        "service": "AUTO IoT PRO",
+        "integration": "JARVIS CONNECTOR V1",
+        "read_only": True,
+        "shared_mini_server": True,
+        "server_time": datetime.now().astimezone().isoformat(),
+        "iot_core_configured": _db_enabled(),
+        "iot_project_connected": bool(project_id),
+        "registered_devices_loaded": len(device_rows),
         "devices": device_rows,
     }), 200
 
