@@ -881,15 +881,103 @@ def jarvis_integration_health():
     }), 200
 
 
+def load_auto_iot_core_snapshot():
+    """Read AUTO IoT Core project, device mappings and telemetry without writes."""
+    project_key = os.environ.get("IOT_PROJECT_KEY", "").strip()
+    if not _db_enabled() or not project_key:
+        return {
+            "configured": False, "connected": False,
+            "reason": "IOT_CORE_ENVIRONMENT_NOT_CONFIGURED",
+            "mapped_devices": [], "telemetry_rows": []
+        }
+    try:
+        project_response = requests.get(
+            f"{SUPABASE_URL}/rest/v1/iot_core_projects",
+            headers=_db_headers(),
+            params={"project_key": f"eq.{project_key}", "select": "id,project_key,status", "limit": "1"},
+            timeout=8
+        )
+        project_response.raise_for_status()
+        project_rows = project_response.json()
+        if not project_rows:
+            return {
+                "configured": True, "connected": False,
+                "reason": "IOT_CORE_PROJECT_NOT_FOUND",
+                "mapped_devices": [], "telemetry_rows": []
+            }
+        iot_project = project_rows[0]
+        safe_project_id = _safe_elec_project_id()
+        if not safe_project_id:
+            return {
+                "configured": True, "connected": False,
+                "reason": "SAFE_ELEC_PROJECT_NOT_FOUND",
+                "project_key": project_key, "mapped_devices": [], "telemetry_rows": []
+            }
+        mapping_response = requests.get(
+            f"{SUPABASE_URL}/rest/v1/safe_elec_iot_core_mappings",
+            headers=_db_headers(),
+            params={
+                "safe_elec_project_id": f"eq.{safe_project_id}",
+                "mapping_status": "eq.active",
+                "select": "device_id,iot_core_device_id,mapping_status",
+                "limit": "100"
+            },
+            timeout=8
+        )
+        mapping_response.raise_for_status()
+        mappings = mapping_response.json()
+        telemetry_response = requests.get(
+            f"{SUPABASE_URL}/rest/v1/iot_core_telemetry",
+            headers=_db_headers(),
+            params={
+                "project_id": f"eq.{iot_project['id']}",
+                "select": "device_id,observed_at,received_at,payload",
+                "order": "received_at.desc",
+                "limit": "100"
+            },
+            timeout=8
+        )
+        telemetry_response.raise_for_status()
+        telemetry_rows = telemetry_response.json()
+        mapped_by_iot_id = {row["iot_core_device_id"]: row for row in mappings}
+        latest_by_local_device = {}
+        for row in telemetry_rows:
+            mapping = mapped_by_iot_id.get(row.get("device_id"))
+            if mapping and mapping["device_id"] not in latest_by_local_device:
+                latest_by_local_device[mapping["device_id"]] = row
+        return {
+            "configured": True, "connected": True,
+            "project_key": project_key,
+            "project_status": iot_project.get("status"),
+            "mapped_devices": mappings,
+            "telemetry_rows": telemetry_rows,
+            "latest_by_local_device": latest_by_local_device
+        }
+    except Exception as exc:
+        print(f"[AUTO_IOT] read-only Core lookup failed: {type(exc).__name__}")
+        return {
+            "configured": True, "connected": False,
+            "reason": "IOT_CORE_READ_FAILED",
+            "mapped_devices": [], "telemetry_rows": []
+        }
+
+
 @app.route("/api/jarvis/v1/auto-iot/health", methods=["GET"])
 @jarvis_api_required
 def jarvis_auto_iot_health():
-    """Read-only AUTO IoT PRO view over the existing shared Mini Server."""
-    project_id = _safe_elec_project_id() if _db_enabled() else None
+    """Authenticated, read-only AUTO IoT PRO view using the existing IoT Core."""
+    snapshot = load_auto_iot_core_snapshot()
+    mappings_by_device = {
+        row["device_id"]: row for row in snapshot.get("mapped_devices", [])
+    }
+    latest_by_device = snapshot.get("latest_by_local_device", {})
     device_rows = []
     for dev in devices:
+        device_id = dev.get("device_id")
+        mapping = mappings_by_device.get(device_id, {})
+        latest = latest_by_device.get(device_id, {})
         device_rows.append({
-            "device_id": dev.get("device_id"),
+            "device_id": device_id,
             "role": dev.get("role"),
             "is_online": bool(dev.get("is_online")),
             "status": dev.get("status_summary"),
@@ -906,6 +994,11 @@ def jarvis_auto_iot_health():
             "a_l3": dev.get("a_l3"),
             "power_kw": dev.get("power_kw"),
             "firmware_version": dev.get("firmware_version"),
+            "iot_core_device_id": mapping.get("iot_core_device_id"),
+            "iot_core_mapping_status": mapping.get("mapping_status"),
+            "iot_core_last_received_at": latest.get("received_at"),
+            "iot_core_last_observed_at": latest.get("observed_at"),
+            "iot_core_payload": latest.get("payload"),
         })
     return jsonify({
         "ok": True,
@@ -913,10 +1006,15 @@ def jarvis_auto_iot_health():
         "integration": "JARVIS CONNECTOR V1",
         "read_only": True,
         "shared_mini_server": True,
+        "shared_mini_server_connected": _db_enabled(),
         "server_time": datetime.now().astimezone().isoformat(),
-        "iot_core_configured": False,
-        "iot_project_connected": False,
-        "shared_mini_server_connected": _db_enabled() and bool(project_id),
+        "iot_core_configured": snapshot.get("configured", False),
+        "iot_project_connected": snapshot.get("connected", False),
+        "iot_project_key": snapshot.get("project_key"),
+        "iot_project_status": snapshot.get("project_status"),
+        "iot_core_devices_mapped": len(snapshot.get("mapped_devices", [])),
+        "iot_core_telemetry_rows_loaded": len(snapshot.get("telemetry_rows", [])),
+        "iot_core_connection_error": snapshot.get("reason"),
         "registered_devices_loaded": len(device_rows),
         "devices": device_rows,
     }), 200
