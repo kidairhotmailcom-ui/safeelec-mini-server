@@ -20,21 +20,7 @@ jobs:
           command: python -m py_compile main.py
       - run:
           name: Smoke-test the Flask health endpoint
-          command: |
-            python - <<'PY'
-            from main import app
-
-            client = app.test_client()
-            response = client.get("/health")
-            assert response.status_code == 200, (
-                f"/health returned HTTP {response.status_code}: "
-                f"{response.get_data(as_text=True)[:500]}"
-            )
-            payload = response.get_json()
-            assert payload and payload.get("ok") is True, payload
-            assert payload.get("service") == "SAFE-ELEC", payload
-            print("SAFE-ELEC Flask import and /health smoke test: passed")
-            PY
+          command: python -c 'from main import app; client = app.test_client(); response = client.get("/health"); payload = response.get_json(); assert response.status_code == 200 and payload and payload.get("ok") is True and payload.get("service") == "SAFE-ELEC", (response.status_code, payload); print("SAFE-ELEC Flask import and /health smoke test: passed")'
       - run:
           name: Report validation scope
           command: |
