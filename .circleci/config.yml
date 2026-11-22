@@ -16,13 +16,32 @@ jobs:
           name: Check dependency consistency
           command: python -m pip check
       - run:
-          name: Compile the existing Flask server source
-          command: python -m py_compile server.js
+          name: Compile the active Flask server source
+          command: python -m py_compile main.py
+      - run:
+          name: Smoke-test the Flask health endpoint
+          command: |
+            python - <<'PY'
+            from main import app
+
+            client = app.test_client()
+            response = client.get("/health")
+            assert response.status_code == 200, (
+                f"/health returned HTTP {response.status_code}: "
+                f"{response.get_data(as_text=True)[:500]}"
+            )
+            payload = response.get_json()
+            assert payload and payload.get("ok") is True, payload
+            assert payload.get("service") == "SAFE-ELEC", payload
+            print("SAFE-ELEC Flask import and /health smoke test: passed")
+            PY
       - run:
           name: Report validation scope
           command: |
             echo "Python dependency installation: passed"
-            echo "Python syntax compilation of server.js: passed"
+            echo "Active Flask source compilation: passed"
+            echo "Flask health endpoint smoke test: passed"
+            echo "Legacy server.js is not compiled as Node.js; it is a separate legacy Python file."
             echo "This pipeline does not claim ESP firmware OTA or hardware validation."
 
 workflows:
