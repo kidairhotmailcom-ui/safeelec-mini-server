@@ -445,20 +445,56 @@ def _persist_web_alert_event(event):
         print(f"[SAFE_ELEC] web alert persistence failed: {type(exc).__name__}")
         return False
 
+def _record_web_alert_event(dev, level, status_text, faults, now):
+    event_signature = hashlib.sha256(
+        json.dumps({
+            "device_id": dev.get("device_id"),
+            "level": level,
+            "status_text": status_text,
+            "faults": faults,
+            "occurred_at": now.isoformat()
+        }, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    event = {
+        "event_id": event_signature[:24],
+        "device_id": dev.get("device_id"),
+        "site_name": dev.get("site_name"),
+        "customer_id": dev.get("customer_id"),
+        "province": dev.get("province"),
+        "level": level,
+        "status_text": status_text,
+        "faults": list(faults),
+        "message": f'{dev.get("device_id")} — {status_text}',
+        "occurred_at": now.isoformat()
+    }
+    alert_events.insert(0, event)
+    del alert_events[100:]
+    _persist_web_alert_event(event)
+    print(f'[SAFE_ELEC] web alert recorded: {dev.get("device_id")} ({level})')
+    return event
+
 def trigger_alert(dev):
     if not CONFIG["ALERT"]["ENABLED"]:
         return
+    device_id = dev["device_id"]
     level = dev.get("alert_level", "normal")
+    previous = _alert_state_by_device.get(device_id)
+    now = datetime.now().astimezone()
+
     if level == "normal":
-        _alert_state_by_device.pop(dev["device_id"], None)
+        if previous:
+            _record_web_alert_event(dev, "normal", "กลับสู่ภาวะปกติ", [], now)
+        _alert_state_by_device.pop(device_id, None)
         return
 
+    # Preserve the distinct offline state in the history even though the
+    # health evaluator groups offline devices under the critical alert level.
+    if dev.get("status_summary") == "offline":
+        level = "offline"
     faults = list(dev.get("fault_list") or [])
     signature = hashlib.sha256(
         json.dumps({"level": level, "faults": faults}, ensure_ascii=False, sort_keys=True).encode("utf-8")
     ).hexdigest()
-    now = datetime.now().astimezone()
-    previous = _alert_state_by_device.get(dev["device_id"])
     repeat_seconds = CONFIG["ALERT"]["SEND_REPEAT_DELAY_MIN"] * 60
     if previous and previous["signature"] == signature:
         if (now - previous["created_at"]).total_seconds() < repeat_seconds:
@@ -469,26 +505,9 @@ def trigger_alert(dev):
         "warning": "มีสิ่งต้องเฝ้าระวัง",
         "critical": "ปัญหาร้ายแรง"
     }.get(level, "แจ้งเตือน")
-    event = {
-        "event_id": hashlib.sha256(
-            f'{dev["device_id"]}|{signature}|{now.isoformat()}'.encode("utf-8")
-        ).hexdigest()[:24],
-        "device_id": dev.get("device_id"),
-        "site_name": dev.get("site_name"),
-        "customer_id": dev.get("customer_id"),
-        "province": dev.get("province"),
-        "level": level,
-        "status_text": status_text,
-        "faults": faults,
-        "message": f'{dev.get("device_id")} — {status_text}',
-        "occurred_at": now.isoformat()
-    }
-    alert_events.insert(0, event)
-    del alert_events[100:]
-    _alert_state_by_device[dev["device_id"]] = {"signature": signature, "created_at": now}
+    _record_web_alert_event(dev, level, status_text, faults, now)
+    _alert_state_by_device[device_id] = {"signature": signature, "created_at": now}
     dev["last_alert_sent"] = now.replace(tzinfo=None)
-    _persist_web_alert_event(event)
-    print(f'[SAFE_ELEC] web alert recorded: {dev["device_id"]} ({level})')
 
 def generate_excel_report():
     output = io.BytesIO()
@@ -1183,6 +1202,7 @@ def get_alert_history():
                 params={
                     "project_id": f"eq.{project_id}",
                     "select": "device_id,observed_at,received_at,payload",
+                    "payload->_safe_elec_alert_event": "not.is.null",
                     "order": "received_at.desc",
                     "limit": "500"
                 },
@@ -1515,10 +1535,11 @@ async function loadAlerts(){
       return;
     }
     box.innerHTML = events.slice(0,30).map(event => {
-      const level = event.level === 'critical' || event.level === 'offline' ? 'dang' : 'warn';
+      const level = event.level === 'critical' || event.level === 'offline' ? 'dang' : event.level === 'normal' ? 'ok' : 'warn';
       const when = event.occurred_at ? new Date(event.occurred_at).toLocaleString('th-TH') : '-';
       const faults = (event.faults || []).map(f => '<div class="row">'+escapeAlertText(f)+'</div>').join('');
-      return '<div class="fbox" style="border-color:'+(level==='dang'?'#f44':'#fa4')+'">'
+      const border = level === 'dang' ? '#f44' : level === 'ok' ? '#2f9' : '#fa4';
+      return '<div class="fbox" style="border-color:'+border+'">'
         +'<b class="'+level+'">'+escapeAlertText(event.status_text || 'แจ้งเตือน')+'</b>'
         +'<div class="row">อุปกรณ์: '+escapeAlertText(event.device_id)+' — '+escapeAlertText(event.site_name)+'</div>'
         +'<div class="row">เวลา: '+escapeAlertText(when)+'</div>'+faults+'</div>';
