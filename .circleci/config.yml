@@ -28,6 +28,9 @@ jobs:
             (response.status_code, payload);
             print("SAFE-ELEC Flask import and health smoke test passed")'
       - run:
+          name: Test SAFE-ELEC web-only alert history
+          command: python -m unittest discover -s tests -p 'test_*.py' -v
+      - run:
           name: Smoke-test authenticated AUTO IoT read-only endpoint
           command: >-
             python -c 'import main; main.JARVIS_INTEGRATION_TOKEN = "circleci-read-only-test-token"; client = main.app.test_client();
