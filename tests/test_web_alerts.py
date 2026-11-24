@@ -46,7 +46,8 @@ class WebAlertTests(unittest.TestCase):
         self.assertEqual(main.alert_events[0]["level"], "critical")
 
     @patch.object(main, "_safe_elec_project_id", return_value=None)
-    def test_alert_history_api_is_session_scoped(self, _project):
+    @patch.object(main, "check_all")
+    def test_alert_history_api_is_session_scoped(self, _check_all, _project):
         main.alert_events.append({
             "event_id": "test-event",
             "device_id": "SAFE-001",
