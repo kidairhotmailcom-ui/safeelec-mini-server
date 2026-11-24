@@ -29,6 +29,27 @@ class WebAlertTests(unittest.TestCase):
         email_sender.assert_not_called()
 
     @patch.object(main, "_persist_web_alert_event", return_value=True)
+    def test_recovery_is_recorded_when_device_returns_to_normal(self, persist):
+        main.trigger_alert(self.device)
+        recovered = dict(self.device)
+        recovered["alert_level"] = "normal"
+        recovered["status_summary"] = "online"
+        recovered["fault_list"] = []
+        main.trigger_alert(recovered)
+        self.assertEqual(len(main.alert_events), 2)
+        self.assertEqual(main.alert_events[0]["level"], "normal")
+        self.assertEqual(main.alert_events[0]["status_text"], "กลับสู่ภาวะปกติ")
+
+    @patch.object(main, "_persist_web_alert_event", return_value=True)
+    def test_offline_is_distinguished_from_other_critical_faults(self, persist):
+        offline = dict(self.device)
+        offline["alert_level"] = "critical"
+        offline["status_summary"] = "offline"
+        main.trigger_alert(offline)
+        self.assertEqual(main.alert_events[0]["level"], "offline")
+        self.assertEqual(main.alert_events[0]["status_text"], "ขาดการติดต่อ")
+
+    @patch.object(main, "_persist_web_alert_event", return_value=True)
     def test_same_fault_is_not_repeated_immediately(self, persist):
         main.trigger_alert(self.device)
         main.trigger_alert(self.device)
