@@ -183,7 +183,6 @@ CONFIG = {
     },
     "ALERT": {
         "ENABLED": True,
-        "LINE_TOKEN": os.environ.get("LINE_TOKEN", ""),
         "EMAIL_TO": os.environ.get("EMAIL_TO", ""),
         "EMAIL_FROM": os.environ.get("EMAIL_FROM", ""),
         "SMTP_SERVER": "smtp.gmail.com",  
@@ -334,26 +333,6 @@ for dev_id, site, cust, prov, stype in DEVICE_LIST:
     d["sensors"]["comm"].update({"value": "ไม่เชื่อมต่อ", "ok": None})
     devices.append(d)
 
-def send_line_alert(message):
-    token = CONFIG["ALERT"]["LINE_TOKEN"]
-    if not token or not CONFIG["ALERT"]["ENABLED"]:
-        print("[LINE] ข้ามส่ง: ยังไม่ได้ตั้งค่า Token หรือปิดใช้งาน")
-        return False
-    try:
-        url = "https://notify-api.line.me/api/notify"
-        headers = {"Authorization": f"Bearer {token}"}
-        data = {"message": f"\n{message}"}
-        res = requests.post(url, headers=headers, data=data, timeout=15)
-        if res.status_code == 200:
-            print("[LINE] ส่งสำเร็จ ✅")
-            return True
-        else:
-            print(f"[LINE] ส่งไม่สำเร็จ: รหัส {res.status_code} — {res.text}")
-            return False
-    except Exception as e:
-        print(f"[LINE] ผิดพลาด: {type(e).__name__} — {e}")
-        return False
-
 def send_email_alert(subject, body, to_email=None, attach_file=None):
     cfg = CONFIG["ALERT"]
     recipient = to_email or cfg["EMAIL_TO"]
@@ -437,20 +416,79 @@ def build_alert_message(dev):
     msg += f"\nดูรายละเอียด: {request.host_url}\n{'='*35}"
     return msg
 
+# Web-only alert history. Events are also stored as tagged rows in the existing
+# SAFE-ELEC telemetry table; no database schema or external notification service
+# is required. ESP32 local buzzer and protection remain firmware responsibilities.
+alert_events = []
+_alert_state_by_device = {}
+
+def _persist_web_alert_event(event):
+    project_id = _safe_elec_project_id()
+    if not project_id or not _db_enabled() or not _safe_elec_device_record(event["device_id"]):
+        return False
+    try:
+        response = requests.post(
+            f"{SUPABASE_URL}/rest/v1/safe_elec_telemetry",
+            headers={**_db_headers(), "Prefer": "return=minimal"},
+            json={
+                "project_id": project_id,
+                "device_id": event["device_id"],
+                "observed_at": event["occurred_at"],
+                "payload": {"_safe_elec_alert_event": event},
+                "quality": {"record_type": "web_alert_event", "source": "SAFE-ELEC"}
+            },
+            timeout=8
+        )
+        response.raise_for_status()
+        return True
+    except Exception as exc:
+        print(f"[SAFE_ELEC] web alert persistence failed: {type(exc).__name__}")
+        return False
+
 def trigger_alert(dev):
-    if not should_send_alert(dev):
+    if not CONFIG["ALERT"]["ENABLED"]:
         return
-    msg = build_alert_message(dev)
-    line_ok = send_line_alert(msg)
+    level = dev.get("alert_level", "normal")
+    if level == "normal":
+        _alert_state_by_device.pop(dev["device_id"], None)
+        return
+
+    faults = list(dev.get("fault_list") or [])
+    signature = hashlib.sha256(
+        json.dumps({"level": level, "faults": faults}, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    now = datetime.now().astimezone()
+    previous = _alert_state_by_device.get(dev["device_id"])
+    repeat_seconds = CONFIG["ALERT"]["SEND_REPEAT_DELAY_MIN"] * 60
+    if previous and previous["signature"] == signature:
+        if (now - previous["created_at"]).total_seconds() < repeat_seconds:
+            return
+
     status_text = {
         "offline": "ขาดการติดต่อ",
-        "warning": "เฝ้าระวัง",
-        "critical": "แจ้งเตือนรุนแรง"
-    }.get(dev["alert_level"], "แจ้งเตือน")
-    email_ok = send_email_alert(f"{dev['device_id']} — {status_text}", msg)
-    if line_ok or email_ok:
-        dev["last_alert_sent"] = datetime.now()
-        print(f"✅ ส่งแจ้งเตือนสำเร็จ: {dev['device_id']}")
+        "warning": "มีสิ่งต้องเฝ้าระวัง",
+        "critical": "ปัญหาร้ายแรง"
+    }.get(level, "แจ้งเตือน")
+    event = {
+        "event_id": hashlib.sha256(
+            f'{dev["device_id"]}|{signature}|{now.isoformat()}'.encode("utf-8")
+        ).hexdigest()[:24],
+        "device_id": dev.get("device_id"),
+        "site_name": dev.get("site_name"),
+        "customer_id": dev.get("customer_id"),
+        "province": dev.get("province"),
+        "level": level,
+        "status_text": status_text,
+        "faults": faults,
+        "message": f'{dev.get("device_id")} — {status_text}',
+        "occurred_at": now.isoformat()
+    }
+    alert_events.insert(0, event)
+    del alert_events[100:]
+    _alert_state_by_device[dev["device_id"]] = {"signature": signature, "created_at": now}
+    dev["last_alert_sent"] = now.replace(tzinfo=None)
+    _persist_web_alert_event(event)
+    print(f'[SAFE_ELEC] web alert recorded: {dev["device_id"]} ({level})')
 
 def generate_excel_report():
     output = io.BytesIO()
@@ -1130,6 +1168,47 @@ def get_devices():
         return jsonify(devices)
     return jsonify([d for d in devices if d["customer_id"] == my_cust])
 
+@app.route("/api/alerts", methods=["GET"])
+def get_alert_history():
+    my_cust = session.get("cust_id", "")
+    visible_devices = {d["device_id"] for d in devices if my_cust == "ALL" or d.get("customer_id") == my_cust}
+    events = list(alert_events)
+    persisted = False
+    project_id = _safe_elec_project_id() if _db_enabled() else None
+    if project_id:
+        try:
+            response = requests.get(
+                f"{SUPABASE_URL}/rest/v1/safe_elec_telemetry",
+                headers=_db_headers(),
+                params={
+                    "project_id": f"eq.{project_id}",
+                    "select": "device_id,observed_at,received_at,payload",
+                    "order": "received_at.desc",
+                    "limit": "500"
+                },
+                timeout=8
+            )
+            response.raise_for_status()
+            for row in response.json():
+                payload = row.get("payload") or {}
+                event = payload.get("_safe_elec_alert_event")
+                if event and event.get("device_id") in visible_devices:
+                    events.append(event)
+            persisted = True
+        except Exception as exc:
+            print(f"[SAFE_ELEC] web alert history read failed: {type(exc).__name__}")
+    unique = {}
+    for event in events:
+        if event.get("device_id") in visible_devices:
+            unique[event.get("event_id") or f'{event.get("device_id")}|{event.get("occurred_at")}'] = event
+    result = sorted(unique.values(), key=lambda item: item.get("occurred_at", ""), reverse=True)[:50]
+    return jsonify({
+        "ok": True,
+        "events": result,
+        "count": len(result),
+        "persistent_history_available": persisted
+    }), 200
+
 @app.route("/api/report-excel")
 def download_report():
     if "username" not in session:
@@ -1402,6 +1481,10 @@ h1{text-align:center;color:#6cf;margin-bottom:4px}
   </div>
   <div id="result-info" class="result-info"></div>
 </div>
+<div class="card" style="border-left:4px solid #fa4;margin-bottom:16px">
+  <div class="name">🔔 ประวัติการแจ้งเตือน SAFE-ELEC</div>
+  <div id="alert-history" class="section" aria-live="polite">กำลังโหลดประวัติการแจ้งเตือน...</div>
+</div>
 <div id="list"></div>
 <script>
 let all = [];
@@ -1410,8 +1493,39 @@ const CONFIG_SITE_TYPES = """ + json.dumps(CONFIG["SITE_TYPES"], ensure_ascii=Fa
 
 async function load(){
   const res = await fetch('/api/devices');
+  if (!res.ok) return;
   all = await res.json();
   applyFilterAndRender();
+  await loadAlerts();
+}
+function escapeAlertText(value){
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[ch]));
+}
+async function loadAlerts(){
+  const box = document.getElementById('alert-history');
+  try {
+    const response = await fetch('/api/alerts', {cache:'no-store'});
+    if (!response.ok) throw new Error('โหลดประวัติไม่สำเร็จ');
+    const data = await response.json();
+    const events = data.events || [];
+    if (!events.length) {
+      box.innerHTML = '<div class="row">ยังไม่มีเหตุการณ์แจ้งเตือน</div>';
+      return;
+    }
+    box.innerHTML = events.slice(0,30).map(event => {
+      const level = event.level === 'critical' || event.level === 'offline' ? 'dang' : 'warn';
+      const when = event.occurred_at ? new Date(event.occurred_at).toLocaleString('th-TH') : '-';
+      const faults = (event.faults || []).map(f => '<div class="row">'+escapeAlertText(f)+'</div>').join('');
+      return '<div class="fbox" style="border-color:'+(level==='dang'?'#f44':'#fa4')+'">'
+        +'<b class="'+level+'">'+escapeAlertText(event.status_text || 'แจ้งเตือน')+'</b>'
+        +'<div class="row">อุปกรณ์: '+escapeAlertText(event.device_id)+' — '+escapeAlertText(event.site_name)+'</div>'
+        +'<div class="row">เวลา: '+escapeAlertText(when)+'</div>'+faults+'</div>';
+    }).join('');
+  } catch (error) {
+    box.textContent = 'ไม่สามารถโหลดประวัติการแจ้งเตือนได้ในขณะนี้';
+  }
 }
 function setView(view){
   currentView = view;
@@ -1512,6 +1626,7 @@ async function toggleRelay(deviceId, zone) {
 load();
 document.getElementById('q').addEventListener('input', applyFilterAndRender);
 setInterval(load, 5000);
+setInterval(loadAlerts, 10000);
 </script>
 </body>
 </html>
